@@ -1,6 +1,9 @@
 import click
 
 from sportslab.data.ingest_nfl import ingest_nfl
+from sportslab.evaluation.confidence_calibration_experiment import (
+    run_confidence_calibration_experiment,
+)
 from sportslab.evaluation.elo_tuning import run_elo_tuning
 from sportslab.evaluation.epa_features_experiment import run_epa_features_experiment
 from sportslab.evaluation.expressive_models_experiment import run_expressive_models_experiment
@@ -121,3 +124,9 @@ def residual_diagnostics_cmd():
 def epa_features_cmd():
     """Run EPA team-efficiency feature experiment."""
     run_epa_features_experiment()
+
+
+@cli.command()
+def confidence_calibration_cmd():
+    """Run confidence calibration and probability shrinkage experiment."""
+    run_confidence_calibration_experiment()

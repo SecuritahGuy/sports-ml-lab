@@ -23,7 +23,6 @@ from sportslab.features.build_features import (
 from sportslab.features.epa import (
     EPA_FEATURE_COLUMNS,
     compute_epa_features,
-    load_pbp_data,
 )
 from sportslab.features.qb import compute_qb_features
 from sportslab.features.ratings import compute_elo_features
@@ -116,7 +115,9 @@ def run_epa_features_experiment(
     print("\n=== Computing QB features (for subset analysis) ===")
     df_all = compute_qb_features(df_all)
     qb_added = [c for c in df_all.columns if c not in df_elo.columns and c not in added]
-    print(f"  Added {len([c for c in qb_added if not c.startswith('home_qb_id')])} QB feature columns")
+    print(
+        f"  Added {len([c for c in qb_added if not c.startswith('home_qb_id')])} QB feature columns"
+    )
 
     # ── Filter ──
     df_all = _filter_df(df_all)
@@ -487,12 +488,8 @@ def run_epa_features_experiment(
                 hold_y[hold_qb_changed], platt_hold_proba[hold_qb_changed]
             )["log_loss"]
         qb_stable_ll = compute_classification_metrics(
-                hold_y[hold_qb_stable], platt_hold_proba[hold_qb_stable]
-            )["log_loss"]
-        if hold_qb_stable.sum() >= 5:
-            qb_stable_ll = compute_classification_metrics(
-                hold_y[hold_qb_stable], platt_hold_proba[hold_qb_stable]
-            )["log_loss"]
+            hold_y[hold_qb_stable], platt_hold_proba[hold_qb_stable]
+        )["log_loss"]
 
         f.write("\n### QB-Change Failure Mode Assessment\n\n")
         if hold_qb_changed.sum() >= 5:

@@ -4,7 +4,7 @@ SPORTSLAB = $(VENV)/bin/sportslab
 RUFF = $(VENV)/bin/ruff
 PIP = $(VENV)/bin/pip
 
-.PHONY: install install-dev test lint format clean mlflow ingest-nfl build-features train-baseline train-baseline-team-strength elo-tuning rolling-origin-elo schedule-features margin-aware-elo qb-features weather-features expressive-models market-baseline residual-diagnostics epa-features venv
+.PHONY: install install-dev test lint format clean mlflow ingest-nfl build-features train-baseline train-baseline-team-strength elo-tuning rolling-origin-elo schedule-features margin-aware-elo qb-features weather-features expressive-models market-baseline residual-diagnostics epa-features confidence-calibration venv
 
 venv:
 	python3 -m venv $(VENV)
@@ -75,3 +75,6 @@ residual-diagnostics:
 
 epa-features:
 	$(SPORTSLAB) epa-features
+
+confidence-calibration:
+	$(SPORTSLAB) confidence-calibration
