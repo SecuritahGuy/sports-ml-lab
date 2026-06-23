@@ -1,6 +1,6 @@
-# First Logistic Regression Baseline
+# Baseline Logistic (identity features)
 
-*Pure non-market NFL home-win baseline.*
+*Pregame-only NFL home-win baseline.*
 
 ## Data Split
 
@@ -15,16 +15,22 @@
 - `model_eligible == True` (ties excluded)
 - `is_neutral == False` (neutral-site games excluded)
 
+## Leakage Prevention
+
+- Elo features: ratings updated **after** computing pregame features for each game. Games processed chronologically.
+- Rolling features: computed from games **before** the current game only. The current game's result is never included.
+- All features are pregame-safe: no future information leaks into any row.
+
 ## Excluded Column Groups
 
 | Reason | Columns |
 |--------|---------|
-| leakage (score/result/overtime/target flag) | away_score, home_score, result, total, overtime |
+| leakage (score/result/overtime) | away_score, home_score, result, total, overtime |
 | market / odds | away_moneyline, home_moneyline, spread_line, away_spread_odds, home_spread_odds, total_line, under_odds, over_odds |
-| weather (deferred to iteration 2) | weather_temp, weather_tmin, weather_tmax, weather_humidity, weather_precip, weather_wind_speed, weather_pressure, weather_cloud_cover |
+| weather (deferred) | weather_temp, weather_tmin, weather_tmax, weather_humidity, weather_precip, weather_wind_speed, weather_pressure, weather_cloud_cover |
 | row identifiers | game_id, gameday, gametime, stadium, old_game_id, gsis, nfl_detail_id, pfr, pff, espn, ftn |
-| raw string (encoded version used) | away_team, home_team, away_qb_id, home_qb_id, away_qb_name, home_qb_name, away_coach, home_coach, referee, stadium_id, game_type, weekday, roof, surface, location |
-| target / flag columns | home_win, model_eligible, is_tie, is_neutral |
+| raw string columns | away_team, home_team, away_qb_id, home_qb_id, away_qb_name, home_qb_name, away_coach, home_coach, referee, stadium_id, game_type, weekday, roof, surface, location |
+| target / flags | home_win, model_eligible, is_tie, is_neutral |
 
 ## Included Features (19)
 
@@ -111,6 +117,14 @@
 | [0.7, 0.8) | 73 | 0.7414 | 0.5205 | 0.2209 |
 | [0.8, 0.9) | 8 | 0.8301 | 0.5 | 0.3301 |
 
+## Comparison Baselines
+
+| Baseline | Val LL | Val Brier | Val Acc | Val AUC | Hold LL | Hold Brier | Hold Acc | Hold AUC |
+|----------|-------------|----------|---------|---------|---------|------------|----------|----------|
+| random | 0.6931 | 0.2500 | 0.5360 | 0.5000 | 0.6931 | 0.2500 | 0.5362 | 0.5000 |
+| home_prior | 0.6910 | 0.2489 | 0.5360 | 0.5000 | 0.6910 | 0.2489 | 0.5362 | 0.5000 |
+| **Logistic (Baseline Logistic (identity features))** | 0.7213 | 0.2625 | 0.5252 | 0.5222 | 0.7486 | 0.2735 | 0.5326 | 0.4900 |
+
 ## Calibration Notes
 
 Validation: max decile calibration error 0.3770, mean decile error 0.1502
@@ -122,4 +136,4 @@ Holdout: max decile calibration error 0.3952, mean decile error 0.2084
 
 ## Recommendation
 
-⚠️ **Improve before championing.** Log loss is high. Consider adding weather features, team-strength ratings, or switching to a more expressive model (GradientBoosting, RandomForest, AutoGluon).
+❌ **Do not champion.** Holdout log loss 0.7486 does not beat the best simple baseline (0.6910). Consider adding weather features, team-strength ratings with different K-factors, or switching to a more expressive model (GradientBoosting, RandomForest, AutoGluon).

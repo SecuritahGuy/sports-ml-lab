@@ -102,6 +102,95 @@ BASELINE_FEATURE_COLUMNS = [
     "surface_enc",
 ]
 
+SCHEDULING_FEATURE_COLUMNS = [
+    "home_short_week",
+    "away_short_week",
+    "home_off_bye",
+    "away_off_bye",
+    "thursday_flag",
+    "monday_flag",
+    NEUTRAL_COLUMN,
+    "is_international",
+    "home_consecutive_road",
+    "away_consecutive_road",
+]
+
+QB_FEATURE_COLUMNS = [
+    "home_qb_changed",
+    "away_qb_changed",
+    "qb_change_diff",
+    "home_qb_starts_this_season_pre",
+    "away_qb_starts_this_season_pre",
+    "qb_starts_diff",
+    "home_qb_team_starts_pre",
+    "away_qb_team_starts_pre",
+    "home_qb_win_pct_pre",
+    "away_qb_win_pct_pre",
+    "qb_win_pct_diff",
+    "home_games_since_qb_change",
+    "away_games_since_qb_change",
+    "games_since_qb_change_diff",
+    "home_new_qb_flag",
+    "away_new_qb_flag",
+    "new_qb_diff",
+    "home_qb_missing_flag",
+    "away_qb_missing_flag",
+]
+
+QB_IDENTITY_COLUMNS = [
+    "home_qb_id",
+    "away_qb_id",
+]
+
+WEATHER_FEATURE_COLUMNS = [
+    "temperature_f",
+    "wind_mph",
+    "precipitation_flag",
+    "cold_flag",
+    "very_cold_flag",
+    "hot_flag",
+    "windy_flag",
+    "very_windy_flag",
+    "bad_weather_flag",
+    "outdoor_game_flag",
+    "is_dome",
+    "weather_missing_flag",
+    "temp_missing_flag",
+    "wind_missing_flag",
+]
+
+TEAM_STRENGTH_FEATURE_COLUMNS = [
+    "season",
+    "week",
+    # Elo features
+    "home_elo_pre",
+    "away_elo_pre",
+    "elo_diff",
+    # Rolling features
+    "home_rolling_win_pct",
+    "away_rolling_win_pct",
+    "rolling_win_pct_diff",
+    "home_rolling_point_diff",
+    "away_rolling_point_diff",
+    "rolling_point_diff_diff",
+    "home_rolling_points_for",
+    "away_rolling_points_for",
+    "home_rolling_points_against",
+    "away_rolling_points_against",
+    # Rest
+    "home_rest",
+    "away_rest",
+    "rest_diff",
+    # Structural features (low-cardinality, OK label-encoded)
+    "div_game",
+    "is_dome",
+    NEUTRAL_COLUMN,
+    "game_type_enc",
+    "weekday_enc",
+    "roof_enc",
+    "surface_enc",
+]
+
 
 def _validate_seasons(df: pd.DataFrame) -> None:
     """Ensure all rows have season >= SPORTSLAB_MIN_SEASON."""

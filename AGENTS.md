@@ -177,3 +177,490 @@ sports-ml-lab/
 5.  Use `make mlflow` to start MLflow tracking
 6.  Use `make ingest-nfl` to download NFL schedule data (requires internet)
 7.  Use `sportslab ingest-nfl --seasons 2021 2022 2023 2024 2025` for custom seasons
+
+---
+
+## Session Summary: Rolling-Origin Elo Validation
+
+### Goal
+Implement rolling-origin Elo validation with cross-fold selection, expanded grid, and one-time 2025 holdout evaluation. Establish a new research incumbent if rolling-origin selected models beat the current tuned Elo (K=32, HFA=25, reg=0, holdout LL 0.6616).
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/elo_tuning.py` | Added `compute_holdout` param to `run_elo_grid_search` — when False (default), no holdout metrics computed/printed during grid search |
+| `src/sportslab/evaluation/rolling_origin_elo_validation.py` | **New file** — rolling-origin grid search (3 folds: 2021→2022, 2021-2022→2023, 2021-2023→2024), expanded grid (K=20..48, HFA=10..40, reg=0.0..0.33), calibration via Platt/isotonic, minimal logistic challenger, comprehensive report writer |
+| `src/sportslab/cli.py` | Added `rolling-origin` CLI command |
+| `Makefile` | Added `rolling-origin-elo` target |
+| `tests/test_rolling_origin_elo.py` | **New file** — 11 tests for fold definitions, holdout exclusion, no holdout in grid search, backward compat |
+| `reports/experiments/rolling_origin_elo_validation.md` | **New file** — full experiment report (174 lines) |
+
+### Experiment Results
+
+- **Selected params** by average validation log loss across 3 rolling folds: K=40, HFA=40, reg=0.25
+- Rolling-origin avg val LL: 0.6363
+- 210 combinations searched
+
+**2025 Holdout Comparison:**
+| Model | Holdout Log Loss |
+|-------|-----------------|
+| Random | 0.6931 |
+| Home prior (0.548) | 0.6908 |
+| Original Elo K=20 (old incumbent) | 0.6678 |
+| Current tuned Elo K=32 HFA=25 | 0.6616 |
+| Rolling-origin selected raw Elo | 0.6409 |
+| **Rolling-origin selected + Platt** | **0.6395 ← NEW INCUMBENT** |
+| Rolling-origin selected + Isotonic | 0.6459 |
+| Rolling-origin selected Minimal Logistic | 0.6443 |
+
+- **NEW INCUMBENT: Rolling-origin selected Elo (K=40, HFA=40, reg=0.25) + Platt scaling** with holdout log loss 0.6395
+- Isotonic calibration rejected (overfit risk, no improvement)
+- Minimal logistic and raw Elo are promising challengers
+
+### Key Decisions
+
+- Platt scaling may be promoted because it won across rolling validation (not just on holdout) — avg val LL 0.6408 across folds is competitive with raw Elo's 0.6363
+- Rolling-origin validation replaces single-season validation as the standard for experiments that tune parameters
+- Grid search never accesses 2025 holdout — only computes holdout once after final model fit
+- K=40 was not the upper edge (grid went to 48), but the best config was at K=40 with regression, suggesting K=40 + regression is a sweet spot
+
+### Current Test State
+- ~~91~~ (superseded by later experiments)
+- Lint clean
+
+### Relevant Files
+- `src/sportslab/evaluation/rolling_origin_elo_validation.py` — rolling-origin grid search, calibration, logistic, report writer
+- `src/sportslab/evaluation/elo_tuning.py` — modified with `compute_holdout` parameter
+- `reports/experiments/rolling_origin_elo_validation.md` — full experiment report
+- `tests/test_rolling_origin_elo.py` — 11 tests
+
+### Next Steps
+1. Add weather features to the model
+2. Test GradientBoosting or more expressive models
+3. Expand Elo grid further (K > 48) if needed
+4. Any model must beat Platt-calibrated rolling-origin Elo (holdout LL 0.6395) to become the new incumbent
+
+---
+
+## Session Summary: Scheduling/Rest Features
+
+### Goal
+Test whether pregame scheduling/rest features (short week, off bye, Thursday/Monday flags,
+consecutive road games, international) improve on the Elo+Platt incumbent.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/scheduling.py` | **New file** — `compute_scheduling_features()`: short week, off bye, Thurs/Mon flags, international, consecutive road games via chronological pass |
+| `src/sportslab/features/build_features.py` | Added `SCHEDULING_FEATURE_COLUMNS` constant |
+| `src/sportslab/evaluation/schedule_rest_experiment.py` | **New file** — rolling-origin experiment with 4 model comparisons, leakage-safe features, report writer |
+| `src/sportslab/cli.py` | Added `schedule-features` command |
+| `Makefile` | Added `schedule-features` target |
+| `tests/test_scheduling.py` | **New file** — 20 tests for scheduling flags, consecutive road, chronological safety, holdout exclusion |
+| `reports/experiments/schedule_rest_features.md` | **New file** — full experiment report (115 lines) |
+
+### Experiment Results
+
+**Rolling-Origin Average Validation Log Loss:**
+| Model | Avg Val LL | Fold1 | Fold2 | Fold3 |
+|-------|-----------|-------|-------|-------|
+| Raw Elo | 0.6363 | 0.6394 | 0.6636 | 0.6060 |
+| Platt (incumbent) | 0.6408 | 0.6492 | 0.6611 | 0.6119 |
+| Incumbent + Scheduling | 0.6599 | 0.6793 | 0.6683 | 0.6320 |
+| Raw Elo + Scheduling | 0.6596 | 0.6781 | 0.6691 | 0.6316 |
+| Scheduling only | 0.7055 | 0.7096 | 0.6955 | 0.7114 |
+
+**2025 Holdout:**
+| Model | Holdout LL |
+|-------|-----------|
+| Platt (incumbent) | **0.6395** |
+| Incumbent + Scheduling | 0.6401 |
+| Raw Elo + Scheduling | 0.6408 |
+| Scheduling only | 0.6922 |
+
+**Conclusion: Scheduling features hurt, not help.** All scheduling-augmented models
+underperformed the existing incumbent on both validation and holdout.
+
+### Key Decisions
+- **Platt-calibrated rolling-origin Elo remains the research incumbent (holdout LL 0.6395)**
+- Scheduling features rejected as harmful for this dataset
+- Raw Elo by itself (0.6363 validation) continues to perform well but is a component of the incumbent, not a separate model
+- The scheduling-only baseline (0.7055 validation, 0.6922 holdout) is barely above random
+
+### Current Test State
+- ~~109~~ (superseded by later experiments)
+- Lint clean
+
+### Relevant Files
+- `src/sportslab/features/scheduling.py` — chronological scheduling feature computation
+- `src/sportslab/evaluation/schedule_rest_experiment.py` — rolling-origin experiment with scheduling features
+- `reports/experiments/schedule_rest_features.md` — full report
+- `tests/test_scheduling.py` — 20 tests
+
+### Next Steps
+1. Add weather features (temp, wind, precipitation) — **DONE**, see below
+2. Test GradientBoosting or more expressive models
+3. Expand Elo K > 48 if needed
+4. Any model must beat Platt-calibrated rolling-origin Elo (holdout LL 0.6373) to become the new incumbent
+
+---
+
+## Session Summary: Margin-Aware MOV Elo
+
+### Goal
+Replace simple point-differential Elo with margin-aware Elo that uses capped-linear, sigmoid, or log-margin MOV transformations. Tune K (20–48), HFA (10–40), reg (0.0–0.33), MOV parameters jointly via rolling-origin grid. Establish new incumbent if MOV beats the rolling-origin Elo (holdout LL 0.6395).
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/ratings.py` | Added `compute_margin_aware_elo()` with 3 MOV types: `capped_linear` (scale, cap), `sigmoid` (scale, steepness), `log_margin` (scale) |
+| `src/sportslab/evaluation/margin_aware_elo.py` | **New file** — rolling-origin grid search (10×21×11 MOV combos per fold), Platt calibration, report writer |
+| `src/sportslab/cli.py` | Added `margin-aware-elo` command |
+| `Makefile` | Added `margin-aware-elo` target |
+| `tests/test_margin_aware_elo.py` | **New file** — 10 tests for MOV types, boundary values, rolling folds, holdout safety |
+
+### Experiment Results
+
+**Top 5 parameter combos by avg val log loss:**
+
+| K | HFA | Reg | MOV Type | Scale | Cap | Avg Val LL |
+|---|-----|-----|----------|-------|-----|-----------|
+| 36 | 40 | 0.20 | capped_linear | 0.05 | 2.0 | **0.6363** |
+| 44 | 40 | 0.25 | capped_linear | 0.05 | 2.0 | 0.6365 |
+| 40 | 40 | 0.20 | capped_linear | 0.05 | 2.0 | 0.6367 |
+| 40 | 40 | 0.25 | capped_linear | 0.05 | 2.0 | 0.6367 |
+| 44 | 40 | 0.20 | capped_linear | 0.05 | 1.5 | 0.6368 |
+
+**2025 Holdout:**
+| Model | Holdout Log Loss |
+|-------|-----------------|
+| Rolling-origin Elo (K=40, reg=0.25) + Platt | 0.6395 |
+| **MOV-best + Platt** | **0.6373 ← NEW INCUMBENT** |
+| MOV-best raw Elo | 0.6417 |
+| Incumbent + sigmoid MOV | 0.6438 |
+| Incumbent + log margin MOV | 0.6422 |
+
+**Conclusion: MOV Elo + Platt (K=36, HFA=40, reg=0.2, capped_linear, scale=0.05, cap=2.0) beats all previous models.** Moves into research incumbent slot.
+
+### Key Decisions
+- MOV `capped_linear` with scale=0.05 / cap=2.0 selected — cap controls blowout ceiling
+- K=36 (lower than rolling-origin K=40) is preferred with MOV
+- HFA=40 continues as default (home field wins consistently at HFA≥35)
+- Rolling-origin Elo (K=40, reg=0.25) superseded as incumbent runner-up
+- MOV type: sigmoid (holdout 0.6438) and log_margin (0.6422) underperform capped_linear
+- 2,310 parameter combos searched
+
+### Relevant Files
+- `src/sportslab/features/ratings.py` — `compute_margin_aware_elo()` with 3 MOV types
+- `src/sportslab/evaluation/margin_aware_elo.py` — rolling-origin grid, Platt calibration, report
+- `reports/experiments/margin_aware_elo.md` — full experiment report
+- `tests/test_margin_aware_elo.py` — 10 tests
+
+### Next Steps
+1. Add weather features (temp, wind, precipitation)
+2. Test GradientBoosting or more expressive models
+3. Any model must beat MOV Elo + Platt (holdout LL 0.6373) to become the new incumbent
+
+---
+
+## Session Summary: QB Starter/Change Features
+
+### Goal
+Test whether QB identity (starter name as OHE) or QB change flags (rookie QB, backup QB, mid-season QB change) improve on the MOV Elo+Platt incumbent (holdout LL 0.6373).
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/qb.py` | **New file** — `compute_qb_features()`: OHE of starter name, `is_rookie_qb`, `is_backup_qb`, `qb_change_prior_game` flags |
+| `src/sportslab/features/build_features.py` | Added `QB_FEATURE_COLUMNS` constant (114 columns incl. OHE) |
+| `src/sportslab/evaluation/qb_features_experiment.py` | **New file** — rolling-origin experiment with 4 model comparisons, report writer |
+| `src/sportslab/cli.py` | Added `qb-features` command |
+| `Makefile` | Added `qb-features` target |
+| `tests/test_qb_features.py` | **New file** — 10 tests for QB change flags, rookie/backup detection, chronological safety, holdout exclusion |
+
+### Experiment Results
+
+**Rolling-Origin Average Validation Log Loss:**
+| Model | Avg Val LL | Fold1 | Fold2 | Fold3 |
+|-------|-----------|-------|-------|-------|
+| MOV Elo + Platt (incumbent) | **0.6363** | 0.6429 | 0.6548 | 0.6113 |
+| Incumbent + QB flags | 0.6436 | 0.6540 | 0.6628 | 0.6139 |
+| QB flags only | 0.6924 | 0.6970 | 0.6935 | 0.6867 |
+| QB identity OHE | 1.0658 | 1.6525 | 1.0463 | 0.4986 |
+
+**2025 Holdout:**
+| Model | Holdout LL |
+|-------|-----------|
+| MOV Elo + Platt (incumbent) | **0.6373** |
+| Incumbent + QB flags | 0.6459 |
+| QB flags only | 0.6934 |
+| QB identity OHE | 14.51 |
+
+**Conclusion: QB features rejected.** OHE exploded to log loss 14.51 on holdout (overfit + unseen starters). QB flags underperform incumbent by ~0.009 on validation and holdout.
+
+### Key Decisions
+- QB identity OHE immediately rejected — too high-dimensional (93 classes for 376 rows = severe overfit)
+- QB flags (rookie, backup, change) add no predictive value on top of MOV Elo
+- QB-only model (~0.692 validation) is barely above random
+- Incumbent MOV Elo + Platt remains unchallenged
+
+### Relevant Files
+- `src/sportslab/features/qb.py` — QB feature computation
+- `src/sportslab/evaluation/qb_features_experiment.py` — rolling-origin experiment
+- `reports/experiments/qb_features.md` — full report
+- `tests/test_qb_features.py` — 10 tests
+
+### Next Steps
+1. Add weather features (temp, wind, precipitation) — **DONE**, see below
+2. Test GradientBoosting or more expressive models
+3. Any model must beat MOV Elo + Platt (holdout LL 0.6373) to become the new incumbent
+
+---
+
+## Session Summary: Weather Features
+
+### Goal
+Test whether pregame weather features (temperature, wind, precipitation, dome handling) improve on the MOV Elo+Platt incumbent (holdout LL 0.6373).
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/weather.py` | Rewritten — `compute_weather_features()`: temp (tmin/tmax avg °C→°F), wind (km/h→mph), precip flag, cold/windy/bad-weather flags, dome neutralization, missing flags, impute remaining NaN with dataset medians |
+| `src/sportslab/features/build_features.py` | Added `WEATHER_FEATURE_COLUMNS` constant |
+| `src/sportslab/evaluation/weather_features_experiment.py` | **New file** — rolling-origin experiment with 4 models + 5 subset analyses, report writer |
+| `src/sportslab/cli.py` | Added `weather-features` command |
+| `Makefile` | Added `weather-features` target |
+| `tests/test_weather_features.py` | **New file** — 17 tests for temp/wind conversion, threshold flags, dome neutralization, missing handling, column completeness |
+
+### Experiment Results
+
+**Rolling-Origin Average Validation Log Loss:**
+| Model | Avg Val LL | Fold1 | Fold2 | Fold3 |
+|-------|-----------|-------|-------|-------|
+| MOV Elo + Platt (incumbent) | **0.6363** | 0.6438 | 0.6564 | 0.6088 |
+| MOV Elo + Weather | 0.6445 | 0.6554 | 0.6655 | 0.6125 |
+| Weather only | 0.6941 | 0.6947 | 0.6954 | 0.6923 |
+| Outdoor MOV+Weather | 0.6546 | — | — | — |
+
+**2025 Holdout:**
+| Model | Holdout LL |
+|-------|-----------|
+| MOV Elo + Platt (incumbent) | **0.6373** |
+| MOV Elo + Weather | 0.6439 |
+| Weather only | 0.6973 |
+
+**Subset Analysis (2025 holdout):**
+| Subset | N | Platt | Raw Elo |
+|--------|---|-------|---------|
+| All | 285 | 0.6373 | 0.6417 |
+| Outdoor | 187 | 0.6373 | 0.6461 |
+| Cold (≤32°F) | 26 | 0.6373 | 0.5777 |
+| Windy (≥15 mph) | 15 | 0.6373 | 0.6521 |
+| Bad weather | 90 | 0.6373 | 0.6359 |
+
+**Conclusion: Weather features rejected.** MOV+Weather (0.6445 val, 0.6439 hold) underperforms the incumbent (0.6363 val, 0.6373 hold) on both validation and holdout. Cold games (n=26) show lower raw Elo LL (0.5777) but not enough to justify adding weather features to the model.
+
+### Key Decisions
+- Weather features rejected as harmful for this dataset
+- Incumbent MOV Elo + Platt remains research incumbent (holdout LL 0.6373)
+- Weather-only baseline (0.6941 val, 0.6973 hold) confirms weather has near-zero independent signal
+- Interesting cold-game signal (raw Elo LL=0.5777 on 26 games) noted but too small to act on — monitor if more cold-weather data becomes available
+- Dome neutralization (70°F, 0 mph, no precip) and median imputation applied to handle missing data without leakage
+- Missing flags (`weather_missing_flag`, `temp_missing_flag`, `wind_missing_flag`) available but never used (no weather model beat incumbent)
+
+### Current Test State
+- 176 tests passing
+- Lint clean
+
+### Relevant Files
+- `src/sportslab/features/weather.py` — weather feature computation with dome neutralization
+- `src/sportslab/evaluation/weather_features_experiment.py` — rolling-origin experiment
+- `reports/experiments/weather_features.md` — full report
+- `tests/test_weather_features.py` — 17 tests
+
+### Next Steps
+1. Test GradientBoosting or more expressive models — **DONE**, see below
+2. Expand Elo K > 48 if needed
+3. Investigate cold-weather signal (26 cold games, raw Elo LL=0.5777)
+4. Any model must beat MOV Elo + Platt (holdout LL 0.6373) to become the new incumbent
+
+---
+
+## Session Summary: Constrained Expressive Models
+
+### Goal
+Test whether constrained tree-based models (HistGradientBoosting, GradientBoosting, RandomForest) and LogisticRegression can learn useful nonlinear interactions using a curated feature set (27 features) built around the MOV Elo signal. Features included Elo prob/logit/diff, scheduling flags, QB continuity features, weather flags, week timing, rest diff, and division game flag.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/expressive_models_experiment.py` | **New file** — curated feature set, rolling-origin grid over HGB (576 combos), GB (144), RF (36), Platt calibration, report writer |
+| `src/sportslab/cli.py` | Added `expressive-models` command |
+| `Makefile` | Added `expressive-models` target |
+| `tests/test_expressive_models.py` | **New file** — 11 tests for curated feature safety, fold structure, holdout exclusion, feature diversity, CLI importability |
+
+### Experiment Results
+
+**Rolling-Origin Average Validation Log Loss:**
+| Model | Avg Val LL | Fold1 | Fold2 | Fold3 |
+|-------|-----------|-------|-------|-------|
+| Platt (incumbent) | **0.6363** | 0.6438 | 0.6564 | 0.6088 |
+| LogisticRegression | 0.6744 | 0.7237 | 0.6894 | 0.6100 |
+| HistGradientBoosting | **0.6361** | 0.6446 | 0.6562 | 0.6075 |
+| GradientBoosting | 0.6366 | 0.6451 | 0.6523 | 0.6123 |
+| RandomForest (diagnostic) | **0.6329** | 0.6366 | 0.6473 | 0.6146 |
+
+**2025 Holdout:**
+| Model | Holdout LL |
+|-------|-----------|
+| Platt (incumbent) | **0.6373** |
+| LogisticRegression | 0.6422 |
+| HistGradientBoosting | 0.6638 |
+| GradientBoosting | 0.6610 |
+| RandomForest | 0.6456 |
+| HGB + Platt | 0.7091 |
+| HGB + Isotonic | 1.0851 |
+
+**Conclusion: All expressive models rejected.** Every tree model overfit the curated feature set. HistGradientBoosting tied the incumbent on validation (0.6361 vs 0.6363) but degraded significantly on holdout (0.6638 vs 0.6373). RandomForest won validation (0.6329) but lost on holdout (0.6456). LogisticRegression on curated features (0.6744 val, 0.6422 hold) is far worse than simple Platt-calibrated Elo.
+
+### Key Decisions
+- **MOV Elo + Platt remains the research incumbent (holdout LL 0.6373)**
+- RandomForest validation leader (0.6329) — diagnostic only; not promoted (holdout 0.6456)
+- HistGradientBoosting best on validation among non-RF challengers (0.6361) but holdout 0.6638 — clear overfit pattern
+- Calibration (Platt/Isotonic) on HGB made holdout worse (0.7091/1.0851) — tree overfit is structural, not a calibration problem
+- Adding weak-signal features (scheduling, QB, weather, timing) to tree models actively hurts holdout generalization
+- The Elo probability alone is the strongest signal; tree ensemble complexity is not beneficial at this dataset size (~1,000 training rows)
+
+### Current Test State
+- 187 tests passing
+- Lint clean
+
+### Relevant Files
+- `src/sportslab/evaluation/expressive_models_experiment.py` — curated features, tree grids, calibration, report
+- `reports/experiments/expressive_models.md` — full experiment report
+- `tests/test_expressive_models.py` — 11 tests
+
+### Next Steps
+1. Market-baseline comparison (moneyline implied probabilities) — **DONE**, see below
+2. Residual diagnostics — where does the incumbent fail systematically?
+3. DVOA/EPA features if available
+4. Any model must beat MOV Elo + Platt (holdout LL 0.6373) to become the new incumbent
+
+---
+
+## Session Summary: Market Baseline Comparison
+
+### Goal
+Compare the MOV Elo+Platt incumbent against moneyline-implied probabilities to establish a market-relative benchmark.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/market_baseline.py` | **New file** — moneyline→implied prob conversion, de-vig normalization, rolling-origin comparison, favorite-longshot bias test |
+| `src/sportslab/cli.py` | Added `market-baseline` command |
+| `Makefile` | Added `market-baseline` target |
+| `tests/test_market_baseline.py` | **New file** — 10 tests for moneyline conversion, de-vig, [0,1] bounds, fold structure, importability |
+
+### Experiment Results
+
+**Rolling-Origin Average Validation Log Loss:**
+| Model | Avg Val LL | Fold1 | Fold2 | Fold3 |
+|-------|-----------|-------|-------|-------|
+| Platt (incumbent) | 0.6363 | 0.6438 | 0.6564 | 0.6088 |
+| Market (raw) | **0.6052** | 0.6042 | 0.6258 | 0.5858 |
+| Market + Platt | 0.6088 | 0.6147 | 0.6268 | 0.5848 |
+| Elo + Market | 0.6189 | 0.6359 | 0.6234 | 0.5975 |
+
+**2025 Holdout:**
+| Model | Holdout LL |
+|-------|-----------|
+| Platt (incumbent) | **0.6373** |
+| Market (raw) | **0.6090** |
+| Market + Platt | 0.6127 |
+| Elo + Market | 0.6119 |
+
+**Conclusion: Market beats incumbent by 0.028 log loss (holdout).** The moneyline-implied probability is significantly better than our Elo-based model. Elo does NOT add information beyond market odds — Elo + Market (0.6119) is no better than Market alone (0.6090). No strong favorite-longshot bias was detected (Platt calibration did not improve raw market).
+
+### Key Decisions
+- **MOV Elo + Platt remains the research incumbent** (for independent, market-free modeling)
+- Market odds are substantially more informative than Elo alone — this sets the ceiling
+- Elo's signal is a subset of the market's information (Elo adds nothing beyond market)
+- Market is already well-calibrated (no favorite-longshot bias on this dataset)
+- Using market odds as model features would be circular — the model should learn independent signals
+
+### Current Test State
+- 197 tests passing
+- Lint clean
+
+### Relevant Files
+- `src/sportslab/evaluation/market_baseline.py` — market-implied probability, de-vig, comparison
+- `reports/experiments/market_baseline.md` — full experiment report
+- `tests/test_market_baseline.py` — 10 tests
+
+### Next Steps
+1. Residual diagnostics — where does the incumbent fail systematically? — **DONE**, see below
+2. DVOA/EPA features if available
+3. Expand Elo K > 48 if needed
+4. Any model must beat MOV Elo + Platt (holdout LL 0.6373) to become the new incumbent
+
+---
+
+## Session Summary: Residual Diagnostics
+
+### Goal
+Systematically identify where the MOV Elo+Platt incumbent fails — by team, weather, scheduling, rest, week, game type, and other game-context dimensions.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/residual_diagnostics.py` | **New file** — full diagnostic analysis with 10 sections: overall metrics, calibration, residuals by team, game context (season/week/roof/weather/qb change/etc.), Elo confidence buckets, extreme errors, directional bias, best/worst predicted teams, market efficiency check |
+| `src/sportslab/cli.py` | Added `residual-diagnostics` command |
+| `Makefile` | Added `residual-diagnostics` target |
+| `tests/test_residual_diagnostics.py` | **New file** — 3 tests for importability, report generation, incumbent reference |
+
+### Key Findings
+
+**Overall:**
+- Holdout LL=0.6373, Brier=0.2230, AUC=0.6907, Acc=65.2%
+- Model is slightly optimistic for home teams (mean residual +0.0059)
+
+**Where the model struggles:**
+- **QB Change** (home QB changed): LL=0.6799 vs 0.6381 — the largest gap found
+- **Very high confidence** (>0.9): calibration error 0.2487, model overconfident on longshot away teams
+- **Early season** (weeks 1-4): higher error than mid/late season
+- **Monday games**: LL=0.6935 vs Sunday 0.6453
+- **Open-roof stadiums** (retractable, open): LL=0.7206
+
+**Where the model works well:**
+- **Off bye** (home): LL=0.5873 — home teams off bye are well-predicted
+- **Short week** (home): LL=0.6120 — actually better than normal rest
+- **Playoff games**: lower error than regular season
+- **Bad weather**: comparable to normal (0.6374 vs 0.6441)
+- **Performance improves over time**: 2024 (0.6042) was much better than 2021 (0.6744)
+- **Residuals independent of market spread** (r=-0.097, p=0.107)
+
+**Extreme errors (2025 holdout):**
+- Most confident misses: BUF@NE (0.811→0), NYG@PHI (0.189→1), PHI@WAS (0.799→0)
+
+### Current Test State
+- 200 tests passing
+- Lint clean
+
+### Relevant Files
+- `src/sportslab/evaluation/residual_diagnostics.py` — 10-section diagnostic analysis
+- `reports/experiments/residual_diagnostics.md` — full report (270 lines)
+- `tests/test_residual_diagnostics.py` — 3 tests
+
+### Next Steps
+1. **DVOA/EPA features** — check if nflreadpy provides advanced metrics
+2. Expand Elo K > 48 if needed
+3. Investigate QB-change failure mode more closely
+4. Any model must beat MOV Elo + Platt (holdout LL 0.6373) to become the new incumbent

@@ -1,7 +1,19 @@
 import click
 
 from sportslab.data.ingest_nfl import ingest_nfl
+from sportslab.evaluation.elo_tuning import run_elo_tuning
+from sportslab.evaluation.epa_features_experiment import run_epa_features_experiment
+from sportslab.evaluation.expressive_models_experiment import run_expressive_models_experiment
+from sportslab.evaluation.margin_aware_elo import run_margin_aware_experiment
+from sportslab.evaluation.market_baseline import run_market_baseline
+from sportslab.evaluation.qb_features_experiment import run_qb_features_experiment
+from sportslab.evaluation.residual_diagnostics import run_residual_diagnostics
+from sportslab.evaluation.rolling_origin_elo_validation import (
+    run_rolling_origin_validation,
+)
+from sportslab.evaluation.schedule_rest_experiment import run_schedule_rest_experiment
 from sportslab.evaluation.train_baseline import train_baseline
+from sportslab.evaluation.weather_features_experiment import run_weather_features_experiment
 from sportslab.features.build_features import build_feature_table
 
 
@@ -35,6 +47,77 @@ def build_features_cmd(weather):
 
 
 @cli.command()
-def train_baseline_cmd():
-    """Train the first pure non-market logistic regression baseline."""
-    train_baseline()
+@click.option(
+    "--feature-set",
+    type=click.Choice(["baseline", "team_strength"], case_sensitive=False),
+    default="baseline",
+    help="Feature set to use for training (default: baseline)",
+)
+def train_baseline_cmd(feature_set):
+    """Train a logistic regression baseline.
+
+    Supports two feature sets:
+    - baseline: label-encoded identity features (team, QB, coach, stadium)
+    - team_strength: Elo ratings + rolling features + structural features
+    """
+    train_baseline(feature_set=feature_set)
+
+
+@cli.command()
+def elo_tuning_cmd():
+    """Run Elo tuning, calibration, and comparison experiment."""
+    run_elo_tuning()
+
+
+@cli.command()
+def rolling_origin_cmd():
+    """Run rolling-origin Elo validation with expanded grid."""
+    run_rolling_origin_validation()
+
+
+@cli.command()
+def schedule_features_cmd():
+    """Run scheduling/rest feature experiment on top of Elo+Platt."""
+    run_schedule_rest_experiment()
+
+
+@cli.command()
+def margin_aware_elo_cmd():
+    """Run margin-aware Elo experiment with rolling-origin validation."""
+    run_margin_aware_experiment()
+
+
+@cli.command()
+def qb_features_cmd():
+    """Run QB starter/change feature experiment on top of MOV Elo+Platt."""
+    run_qb_features_experiment()
+
+
+@cli.command()
+def weather_features_cmd():
+    """Run weather feature experiment on top of MOV Elo+Platt."""
+    run_weather_features_experiment()
+
+
+@cli.command()
+def expressive_models_cmd():
+    """Run constrained expressive models experiment on curated features."""
+    run_expressive_models_experiment()
+
+
+@cli.command()
+def market_baseline_cmd():
+    """Run market baseline comparison against incumbent."""
+    run_market_baseline()
+
+
+@cli.command()
+def residual_diagnostics_cmd():
+    """Run residual diagnostics on the incumbent."""
+    run_residual_diagnostics()
+
+
+@cli.command()
+def epa_features_cmd():
+    """Run EPA team-efficiency feature experiment."""
+    run_epa_features_experiment()

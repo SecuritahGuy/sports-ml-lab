@@ -29,12 +29,11 @@ def compute_rolling_features(
             away_rolling_points_for, home_rolling_points_against,
             away_rolling_points_against.
     """
-    out = df.copy()
-    sorted_df = out.sort_values(["season", "week", "gameday"]).reset_index(drop=True)
+    out = df.copy().sort_values(["season", "week", "gameday"]).reset_index(drop=True)
 
     # Build per-team game history (each game adds two entries: home + away)
     all_games: list[dict] = []
-    for idx, row in sorted_df.iterrows():
+    for idx, row in out.iterrows():
         hw = row["home_win"]
         for side, team, pf, pa in [
             ("home", row["home_team"], row["home_score"], row["away_score"]),
@@ -92,7 +91,7 @@ def compute_rolling_features(
     h_pf, a_pf = [], []
     h_pa, a_pa = [], []
 
-    for idx, row in sorted_df.iterrows():
+    for idx, row in out.iterrows():
         h = _rolling(row["home_team"], idx)
         a = _rolling(row["away_team"], idx)
         h_wp.append(h["win_pct"])

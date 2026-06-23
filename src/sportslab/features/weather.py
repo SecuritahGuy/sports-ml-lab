@@ -1,100 +1,109 @@
-"""Weather data enrichment using meteostat."""
-
-from datetime import date, datetime
-from typing import Optional
+"""Pregame weather features — no leakage, dome-aware."""
 
 import pandas as pd
-from meteostat import Daily, Stations
 
-from sportslab.features.stadiums import STADIUM_COORDS
-
-
-def _get_station_id(lat: float, lon: float) -> Optional[str]:
-    """Find the nearest meteostat weather station for a coordinate pair."""
-    nearby = Stations().nearby(lat, lon, radius=50000).fetch()
-    if nearby.empty:
-        return None
-    return str(nearby.index[0])
+DOME_ROOF_TYPES = {"dome", "closed"}
+OUTDOOR_ROOF_TYPES = {"outdoors", "open"}
+NEUTRAL_TEMP_F = 70.0
+NEUTRAL_WIND_MPH = 0.0
 
 
-def fetch_weather(
-    stadium_id: str,
-    game_date: date,
-) -> Optional[pd.Series]:
-    """Fetch daily weather for a stadium on a given date.
+def _c_to_f(c: float) -> float:
+    return c * 9.0 / 5.0 + 32.0
 
-    Returns a Series with meteostat weather columns, or None if
-    the stadium is not mapped or weather data is unavailable.
+
+def _kmh_to_mph(kmh: float) -> float:
+    return kmh * 0.621371
+
+
+def compute_weather_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add pregame weather features from meteostat weather columns.
+
+    Handles dome/indoor games by neutralizing weather signal.
+    Creates flags for cold, wind, precipitation, and bad weather.
+
+    Args:
+        df: Must contain columns: weather_tmin, weather_tmax,
+            weather_wind_speed, weather_precip, roof.
+
+    Returns:
+        DataFrame with added weather feature columns.
     """
-    coords = STADIUM_COORDS.get(stadium_id)
-    if coords is None:
-        return None
+    out = df.copy()
 
-    lat, lon, tz = coords
-    station_id = _get_station_id(lat, lon)
-    if station_id is None:
-        return None
+    # Determine indoor/outdoor
+    roof_str = out["roof"].astype(str).str.lower()
+    out["is_dome"] = roof_str.isin(DOME_ROOF_TYPES).astype(int)
+    out["outdoor_game_flag"] = roof_str.isin(OUTDOOR_ROOF_TYPES).astype(int)
 
-    start = datetime(game_date.year, game_date.month, game_date.day)
-    end = start
+    # Temperature: average of tmin/tmax in Fahrenheit
+    temp_c = (out["weather_tmin"] + out["weather_tmax"]) / 2.0
+    out["temperature_f"] = temp_c.apply(lambda v: _c_to_f(v) if pd.notna(v) else None)
 
-    ts = Daily(station_id, start, end)
-    df = ts.fetch()
-    if df is None or df.empty:
-        return None
+    out["temp_missing_flag"] = out["weather_tmin"].isna().astype(int)
 
-    row = df.iloc[0]
-    return pd.Series(
-        {
-            "weather_temp": row.get("temp"),
-            "weather_tmin": row.get("tmin"),
-            "weather_tmax": row.get("tmax"),
-            "weather_humidity": float(row["rhum"]) if pd.notna(row.get("rhum")) else None,
-            "weather_precip": row.get("prcp"),
-            "weather_wind_speed": row.get("wspd"),
-            "weather_pressure": row.get("pres"),
-            "weather_cloud_cover": float(row["cldc"]) if pd.notna(row.get("cldc")) else None,
-        }
+    # Wind: km/h to mph
+    out["wind_mph"] = out["weather_wind_speed"].apply(
+        lambda v: _kmh_to_mph(v) if pd.notna(v) else None
     )
+    out["wind_missing_flag"] = out["weather_wind_speed"].isna().astype(int)
+
+    # Precipitation flag
+    out["precipitation_flag"] = (
+        out["weather_precip"].notna() & (out["weather_precip"] > 0)
+    ).astype(int)
+
+    # Full weather missing flag
+    out["weather_missing_flag"] = (
+        out["weather_tmin"].isna() | out["weather_wind_speed"].isna()
+    ).astype(int)
+
+    # ── Dome/indoor: neutralize weather ──
+    dome_mask = out["is_dome"] == 1
+    out.loc[dome_mask, "temperature_f"] = NEUTRAL_TEMP_F
+    out.loc[dome_mask, "wind_mph"] = NEUTRAL_WIND_MPH
+    out.loc[dome_mask, "precipitation_flag"] = 0
+    # Missing flags NOT reset — dome doesn't fix missing data, it just
+    # makes weather irrelevant. The model can use is_dome to learn that.
+
+    # ── Impute remaining NaN with dataset medians ──
+    temp_med = out["temperature_f"].median(skipna=True)
+    wind_med = out["wind_mph"].median(skipna=True)
+    if pd.notna(temp_med):
+        out["temperature_f"] = out["temperature_f"].fillna(temp_med)
+    if pd.notna(wind_med):
+        out["wind_mph"] = out["wind_mph"].fillna(wind_med)
+
+    # ── Threshold flags ──
+    temp_ok = out["temperature_f"].notna()
+    out["cold_flag"] = (temp_ok & (out["temperature_f"] <= 32)).astype(int)
+    out["very_cold_flag"] = (temp_ok & (out["temperature_f"] <= 20)).astype(int)
+    out["hot_flag"] = (temp_ok & (out["temperature_f"] >= 85)).astype(int)
+    wind_ok = out["wind_mph"].notna()
+    out["windy_flag"] = (wind_ok & (out["wind_mph"] >= 15)).astype(int)
+    out["very_windy_flag"] = (wind_ok & (out["wind_mph"] >= 20)).astype(int)
+
+    # Bad weather: cold + wind + precip combined
+    cold_or_windy = (out["cold_flag"] == 1) | (out["windy_flag"] == 1)
+    has_precip = out["precipitation_flag"] == 1
+    out["bad_weather_flag"] = (cold_or_windy | has_precip).astype(int)
+
+    return out
 
 
-def build_weather_features(
-    stadium_ids: pd.Series,
-    game_dates: pd.Series,
-) -> pd.DataFrame:
-    """Build a weather feature DataFrame for a set of stadiums and dates.
-
-    Returns a DataFrame indexed identically to the input Series,
-    with meteostat weather columns added.
-    """
-    results = []
-    errors = 0
-    for idx in range(len(stadium_ids)):
-        sid = stadium_ids.iloc[idx]
-        gd = game_dates.iloc[idx]
-        if isinstance(gd, pd.Timestamp):
-            gd = gd.date()
-        w = fetch_weather(sid, gd)
-        if w is not None:
-            results.append(w)
-        else:
-            errors += 1
-            results.append(
-                pd.Series(
-                    {
-                        "weather_temp": None,
-                        "weather_tmin": None,
-                        "weather_tmax": None,
-                        "weather_humidity": None,
-                        "weather_precip": None,
-                        "weather_wind_speed": None,
-                        "weather_pressure": None,
-                        "weather_cloud_cover": None,
-                    }
-                )
-            )
-
-    if errors:
-        print(f"  Weather fetch completed with {errors} missing entries")
-
-    return pd.DataFrame(results, index=stadium_ids.index)
+WEATHER_FEATURE_COLUMNS = [
+    "temperature_f",
+    "wind_mph",
+    "precipitation_flag",
+    "cold_flag",
+    "very_cold_flag",
+    "hot_flag",
+    "windy_flag",
+    "very_windy_flag",
+    "bad_weather_flag",
+    "outdoor_game_flag",
+    "is_dome",
+    "weather_missing_flag",
+    "temp_missing_flag",
+    "wind_missing_flag",
+]

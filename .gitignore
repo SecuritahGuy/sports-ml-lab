@@ -21,6 +21,7 @@ venv/
 
 # Data (generated files, not raw tracked data)
 data/raw/
+data/interim/
 
 # MLflow
 mlruns/
