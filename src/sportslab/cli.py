@@ -9,6 +9,7 @@ from sportslab.evaluation.epa_features_experiment import run_epa_features_experi
 from sportslab.evaluation.expressive_models_experiment import run_expressive_models_experiment
 from sportslab.evaluation.margin_aware_elo import run_margin_aware_experiment
 from sportslab.evaluation.market_baseline import run_market_baseline
+from sportslab.evaluation.market_benchmark import run_market_benchmark
 from sportslab.evaluation.qb_features_experiment import run_qb_features_experiment
 from sportslab.evaluation.residual_diagnostics import run_residual_diagnostics
 from sportslab.evaluation.rolling_origin_elo_validation import (
@@ -112,6 +113,12 @@ def expressive_models_cmd():
 def market_baseline_cmd():
     """Run market baseline comparison against incumbent."""
     run_market_baseline()
+
+
+@cli.command()
+def market_benchmark_cmd():
+    """Run comprehensive market benchmark and Elo-vs-market diagnostics."""
+    run_market_benchmark()
 
 
 @cli.command()

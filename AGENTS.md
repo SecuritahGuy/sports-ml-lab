@@ -659,8 +659,91 @@ Systematically identify where the MOV Elo+Platt incumbent fails — by team, wea
 - `reports/experiments/residual_diagnostics.md` — full report (270 lines)
 - `tests/test_residual_diagnostics.py` — 3 tests
 
+---
+
+## Session Summary: Market Benchmark Diagnostics + Benchmark Registry
+
+### Goal
+Compare MOV Elo+Platt incumbent against market-implied probabilities (closing moneyline, spread→prob, blends), create durable benchmark registry with leaderboard, incumbent file, and history.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/market.py` | Rewritten — `compute_market_features()`: moneyline→prob, no-vig, spread buckets, favorite/underdog flags, spread→prob logistic fitting |
+| `src/sportslab/evaluation/market_benchmark.py` | **New file** — rolling-origin market benchmark with 6 models, residual diagnostics (Elo edge, residual correlation), subset analysis (QB-change deep dive, favorite/underdog, spread buckets, calibration deciles, season breakdown) |
+| `src/sportslab/cli.py` | Added `market-benchmark` command |
+| `Makefile` | Added `market-benchmark` target |
+| `tests/test_market_benchmark.py` | **New file** — 28 tests for moneyline/novig/spread/benchmark/importability |
+| `reports/benchmarks/nfl_research_incumbent.md` | **New file** — current champion, runner-up, defeated challengers, promotion rules |
+| `reports/benchmarks/benchmark_history.md` | **New file** — all 13 experiments in chronological order with decisions and metrics |
+| `reports/benchmarks/leaderboard.csv` | **New file** — machine-readable CSV with all experiment metadata |
+| `reports/experiments/market_benchmark.md` | **New file** — full 242-line experiment report |
+
+### Experiment Results
+
+**Rolling-Origin Average Validation Log Loss:**
+| Model | Avg Val LL | Fold1 | Fold2 | Fold3 |
+|-------|-----------|-------|-------|-------|
+| Raw Elo | 0.6345 | 0.6347 | 0.6670 | 0.6019 |
+| Platt (incumbent) | 0.6363 | 0.6438 | 0.6564 | 0.6088 |
+| Market (no-vig) | **0.6052** | 0.6042 | 0.6258 | 0.5858 |
+| Market + Platt | 0.6088 | 0.6147 | 0.6268 | 0.5848 |
+| Elo + Market (logit) | 0.6189 | 0.6359 | 0.6234 | 0.5975 |
+| Elo + Market (avg) | 0.6127 | 0.6130 | 0.6398 | 0.5853 |
+| Spread→prob | 0.6076 | 0.6134 | 0.6224 | 0.5870 |
+
+**2025 Holdout:**
+| Model | Holdout LL | Brier | AUC |
+|-------|-----------|-------|-----|
+| Platt (incumbent) | **0.6373** | 0.2230 | 0.6907 |
+| Market (no-vig) | **0.6090** | 0.2119 | 0.7199 |
+| Elo + Market (logit) | 0.6119 | 0.2128 | 0.7204 |
+| Spread→prob | 0.6092 | 0.2122 | 0.7173 |
+
+**Market Data Audit:**
+| Column | Coverage | Type |
+|--------|----------|------|
+| `home_moneyline` | 100% | int32 |
+| `away_moneyline` | 100% | int32 |
+| `spread_line` | 100% | float64 |
+| `home_spread_odds` | 100% | int32 |
+| `away_spread_odds` | 100% | int32 |
+| `total_line` | 100% | float64 |
+| `over_odds` | 100% | int32 |
+| `under_odds` | 100% | int32 |
+| Opening lines | 0% | — |
+
+**Key Diagnostic Findings:**
+1. **Market beats incumbent by 0.028 holdout LL** (0.6090 vs 0.6373)
+2. **Elo does NOT add independent info beyond market** — Elo+Market (0.6119) no better than Market alone (0.6090)
+3. **No favorite-longshot bias** — Platt does not improve market
+4. **QB-change gap confirmed**: Elo LL=0.8309 vs Market LL=0.6662 (gap of 0.1647)
+5. **High residual correlation**: Elo vs market residuals r=0.9768 — errors are nearly identical
+6. **No subset where Elo beats market**
+7. **Spread→prob nearly matches moneyline** — spread contains most market information
+
+### Key Decisions
+- **MOV Elo + Platt remains the research incumbent** (independent, market-free modeling)
+- Market data is a diagnostic benchmark, not a production champion candidate (timing mismatch: closing lines are near-kickoff, Elo is purely pregame)
+- Benchmark registry created: `reports/benchmarks/` with incumbent, history, and leaderboard
+- QB-change market-delta recommended as next feature to investigate
+
+### Current Test State
+- 299 tests passing
+- Lint clean
+
+### Relevant Files
+- `src/sportslab/features/market.py` — moneyline→prob, no-vig, spread→prob, bucket/favorite flags
+- `src/sportslab/evaluation/market_benchmark.py` — rolling-origin benchmark, residual diagnostics, subset analysis
+- `reports/experiments/market_benchmark.md` — full experiment report (242 lines)
+- `reports/benchmarks/nfl_research_incumbent.md` — current champion with promotion rules
+- `reports/benchmarks/benchmark_history.md` — all 13 experiments in order
+- `reports/benchmarks/leaderboard.csv` — machine-readable leaderboard
+- `tests/test_market_benchmark.py` — 28 tests
+
 ### Next Steps
-1. **DVOA/EPA features** — check if nflreadpy provides advanced metrics
-2. Expand Elo K > 48 if needed
-3. Investigate QB-change failure mode more closely
+1. **QB-change market-delta feature**: `market_prob − elo_prob` at QB-change games
+2. Stacked model: Elo predicts residual of market-only model
+3. Expand Elo K > 48 if needed
 4. Any model must beat MOV Elo + Platt (holdout LL 0.6373) to become the new incumbent

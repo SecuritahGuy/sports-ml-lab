@@ -25,47 +25,47 @@ unchanged, preserving feature safety.
 
 | Parameter | Candidates |
 |-----------|------------|
-| K-factor | [36, 40, 48] |
+| K-factor | [16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80] |
 | HFA | [30, 40] |
 | Regression | [0.0, 0.2] |
 | MOV types | ['none', 'log', 'sqrt', 'capped_log', 'capped_linear'] |
 | MOV scale | [0.05, 0.1, 0.2] (for non-none) |
 | MOV cap | [2.0, 3.0] (for capped) |
 
-Total combinations searched: 228
+Total combinations searched: 1292
 
 ## Top 8 Configurations (by average validation log loss)
 
 | Rank | K | HFA | Reg | MOV | Scale | Cap | Avg Val LL | Fold1 | Fold2 | Fold3 |
 |------|---|-----|-----|-----|-------|-----|-----------|-------|-------|-------|
-| 1 | 36 | 40 | 0.2 | capped_linear | 0.05 | 2.0 | 0.63452 | 0.63466 | 0.66698 | 0.60193 |
-| 2 | 36 | 40 | 0.2 | sqrt | 0.1 | — | 0.63512 | 0.63675 | 0.66557 | 0.60305 |
-| 3 | 36 | 30 | 0.2 | capped_linear | 0.05 | 2.0 | 0.63517 | 0.63608 | 0.6681 | 0.60132 |
-| 4 | 36 | 40 | 0.2 | capped_linear | 0.05 | 3.0 | 0.6352 | 0.63518 | 0.66717 | 0.60324 |
-| 5 | 36 | 40 | 0.2 | sqrt | 0.05 | — | 0.63541 | 0.63828 | 0.6635 | 0.60443 |
-| 6 | 36 | 40 | 0.2 | log | 0.1 | — | 0.63547 | 0.63775 | 0.66485 | 0.6038 |
-| 7 | 36 | 40 | 0.2 | capped_log | 0.1 | 2.0 | 0.63547 | 0.63775 | 0.66485 | 0.6038 |
-| 8 | 36 | 40 | 0.2 | capped_log | 0.1 | 3.0 | 0.63547 | 0.63775 | 0.66485 | 0.6038 |
+| 1 | 20 | 40 | 0.2 | capped_linear | 0.1 | 3.0 | 0.63238 | 0.63453 | 0.65784 | 0.60477 |
+| 2 | 20 | 30 | 0.2 | capped_linear | 0.1 | 3.0 | 0.63298 | 0.63591 | 0.65895 | 0.60409 |
+| 3 | 28 | 40 | 0.2 | capped_linear | 0.05 | 2.0 | 0.63298 | 0.63523 | 0.66022 | 0.60347 |
+| 4 | 16 | 40 | 0.2 | capped_linear | 0.1 | 3.0 | 0.63302 | 0.63644 | 0.65453 | 0.60807 |
+| 5 | 24 | 40 | 0.2 | capped_linear | 0.05 | 3.0 | 0.63302 | 0.63611 | 0.65712 | 0.60583 |
+| 6 | 24 | 40 | 0.2 | capped_linear | 0.1 | 3.0 | 0.63308 | 0.63393 | 0.66202 | 0.60329 |
+| 7 | 28 | 40 | 0.2 | capped_linear | 0.05 | 3.0 | 0.63312 | 0.63518 | 0.66008 | 0.6041 |
+| 8 | 24 | 40 | 0.2 | capped_linear | 0.05 | 2.0 | 0.63315 | 0.63646 | 0.65745 | 0.60554 |
 
 ## Best Per MOV Type
 
 | MOV | Best K | Best HFA | Best Reg | Scale | Cap | Avg Val LL |
 |-----|--------|----------|----------|-------|-----|-----------|
 | none | 40 | 40 | 0.2 | 0.0 | — | 0.6365 |
-| log | 36 | 40 | 0.2 | 0.1 | — | 0.63547 |
-| sqrt | 36 | 40 | 0.2 | 0.1 | — | 0.63512 |
-| capped_log | 36 | 40 | 0.2 | 0.1 | 2.0 | 0.63547 |
-| capped_linear | 36 | 40 | 0.2 | 0.05 | 2.0 | 0.63452 |
+| log | 28 | 40 | 0.2 | 0.2 | — | 0.63464 |
+| sqrt | 24 | 40 | 0.2 | 0.2 | — | 0.6339 |
+| capped_log | 28 | 40 | 0.2 | 0.2 | 2.0 | 0.63464 |
+| capped_linear | 20 | 40 | 0.2 | 0.1 | 3.0 | 0.63238 |
 
 ## Best Configuration (selected by avg val LL across folds)
 
-- **K=36, HFA=40, reg=0.2**
-- **MOV**: type=capped_linear, scale=0.05, cap=2.0
-- Average validation log loss: 0.63452
-  - Fold 1 (val 2022): 0.63466
-  - Fold 2 (val 2023): 0.66698
-  - Fold 3 (val 2024): 0.60193
-- Holdout (2025) log loss: 0.6464
+- **K=20, HFA=40, reg=0.2**
+- **MOV**: type=capped_linear, scale=0.1, cap=3.0
+- Average validation log loss: 0.63238
+  - Fold 1 (val 2022): 0.63453
+  - Fold 2 (val 2023): 0.65784
+  - Fold 3 (val 2024): 0.60477
+- Holdout (2025) log loss: 0.6490
 
 ## Best Non-MOV Configuration (for comparison)
 
@@ -84,11 +84,11 @@ Total combinations searched: 228
 
 | Model | Avg Val LL | Fold1 | Fold2 | Fold3 |
 |-------|------------|-------|-------|-------|
-| Incumbent (K=40) | 0.6363 | 0.6394 | 0.6636 | 0.6060 |
-| MOV-best raw Elo | 0.6345 | 0.6347 | 0.6670 | 0.6019 |
-| MOV-best + Platt | 0.6363 | 0.6438 | 0.6564 | 0.6088 |
-| MOV-best + Isotonic | 0.7560 | 0.6368 | 0.9090 | 0.7222 |
-| MOV-best Minimal Logistic | 0.6357 | 0.6424 | 0.6561 | 0.6085 |
+| Incumbent (K=36) | 0.6345 | 0.6347 | 0.6670 | 0.6019 |
+| MOV-best raw Elo | 0.6324 | 0.6345 | 0.6578 | 0.6048 |
+| MOV-best + Platt | 0.6357 | 0.6439 | 0.6543 | 0.6090 |
+| MOV-best + Isotonic | 0.7558 | 0.6405 | 0.9022 | 0.7246 |
+| MOV-best Minimal Logistic | 0.6350 | 0.6422 | 0.6539 | 0.6089 |
 
 ## Full Comparison (2025 Holdout)
 
@@ -96,45 +96,46 @@ Total combinations searched: 228
 |-------|---------|------------|----------|----------|
 | Random | 0.6931 | 0.2500 | 0.5000 | 0.5000 |
 | Home prior (0.548) | 0.6908 | — | — | 0.5000 |
-| Incumbent (Platt, K=40) | 0.6395 | 0.2240 | 0.6522 | 0.6861 |
-| MOV-best raw Elo | 0.6464 | 0.2258 | 0.6522 | 0.6907 |
-| MOV-best + Platt | 0.6373 | 0.2230 | 0.6522 | 0.6907 |
-| MOV-best + Isotonic | 0.6412 | 0.2252 | 0.6413 | 0.6886 |
-| MOV-best Minimal Logistic | 0.6422 | 0.2254 | 0.6341 | 0.6804 |
+| Incumbent (Platt, K=40) | 0.6373 | 0.2230 | 0.6522 | 0.6907 |
+| MOV-best raw Elo | 0.6490 | 0.2276 | 0.6413 | 0.6812 |
+| MOV-best + Platt | 0.6438 | 0.2258 | 0.6377 | 0.6812 |
+| MOV-best + Isotonic | 0.7676 | 0.2283 | 0.6341 | 0.6794 |
+| MOV-best Minimal Logistic | 0.6483 | 0.2279 | 0.6522 | 0.6748 |
 
 ## MOV-Best Raw Elo (Holdout)
 
 | Bucket | Count | Mean Pred | Mean Actual | Cal Error |
 |--------|-------|-----------|-------------|-----------|
-| [0.0, 0.1) | 2 | 0.0932 | 0.5 | 0.4068 |
-| [0.1, 0.2) | 18 | 0.1712 | 0.4444 | 0.2733 |
-| [0.2, 0.3) | 20 | 0.2426 | 0.15 | 0.0926 |
-| [0.3, 0.4) | 28 | 0.364 | 0.3571 | 0.0069 |
-| [0.4, 0.5) | 44 | 0.4437 | 0.4091 | 0.0346 |
-| [0.5, 0.6) | 50 | 0.5545 | 0.58 | 0.0255 |
-| [0.6, 0.7) | 35 | 0.6452 | 0.6571 | 0.0119 |
-| [0.7, 0.8) | 41 | 0.7484 | 0.6341 | 0.1143 |
-| [0.8, 0.9) | 29 | 0.8511 | 0.7586 | 0.0925 |
-| [0.9, 1.0) | 9 | 0.9144 | 0.8889 | 0.0256 |
+| [0.1, 0.2) | 10 | 0.1574 | 0.4 | 0.2426 |
+| [0.2, 0.3) | 23 | 0.2332 | 0.3478 | 0.1146 |
+| [0.3, 0.4) | 28 | 0.3536 | 0.3571 | 0.0035 |
+| [0.4, 0.5) | 50 | 0.4465 | 0.38 | 0.0665 |
+| [0.5, 0.6) | 45 | 0.5468 | 0.5556 | 0.0087 |
+| [0.6, 0.7) | 48 | 0.645 | 0.625 | 0.02 |
+| [0.7, 0.8) | 44 | 0.75 | 0.6591 | 0.0909 |
+| [0.8, 0.9) | 25 | 0.8561 | 0.8 | 0.0561 |
+| [0.9, 1.0) | 3 | 0.9115 | 1.0 | 0.0885 |
 
 ## MOV-Best + Platt (Holdout)
 
 | Bucket | Count | Mean Pred | Mean Actual | Cal Error |
 |--------|-------|-----------|-------------|-----------|
-| [0.1, 0.2) | 3 | 0.1928 | 0.3333 | 0.1406 |
-| [0.2, 0.3) | 30 | 0.2529 | 0.3667 | 0.1138 |
-| [0.3, 0.4) | 26 | 0.3567 | 0.2692 | 0.0875 |
-| [0.4, 0.5) | 53 | 0.4446 | 0.3962 | 0.0484 |
-| [0.5, 0.6) | 53 | 0.5532 | 0.6038 | 0.0505 |
-| [0.6, 0.7) | 48 | 0.6502 | 0.5833 | 0.0669 |
-| [0.7, 0.8) | 47 | 0.7473 | 0.7021 | 0.0452 |
-| [0.8, 0.9) | 16 | 0.8111 | 0.9375 | 0.1264 |
+| [0.1, 0.2) | 5 | 0.1828 | 0.4 | 0.2172 |
+| [0.2, 0.3) | 28 | 0.2464 | 0.3571 | 0.1107 |
+| [0.3, 0.4) | 29 | 0.3554 | 0.3448 | 0.0106 |
+| [0.4, 0.5) | 52 | 0.4464 | 0.4038 | 0.0426 |
+| [0.5, 0.6) | 46 | 0.55 | 0.5435 | 0.0065 |
+| [0.6, 0.7) | 48 | 0.6447 | 0.6042 | 0.0405 |
+| [0.7, 0.8) | 49 | 0.74 | 0.7143 | 0.0257 |
+| [0.8, 0.9) | 19 | 0.8185 | 0.8421 | 0.0236 |
 
 ## Recommendation
 
-✅ **MOV-best + Platt is the new research incumbent.**
+⚠️ **Incumbent (Platt-calibrated rolling-origin Elo) remains the research incumbent.**
 
-Holdout log loss 0.6373 beats the incumbent (0.6395). Average validation log loss 0.6363 also beats the incumbent. Margin-aware Elo improved rating accuracy.
+No margin-aware configuration beat the incumbent on holdout.  Closest: MOV-best + Platt (val LL=0.6357, hold LL=0.6438) vs incumbent hold LL=0.6373.
+
+MOV multipliers did not meaningfully improve the Elo rating signal on this NFL dataset (2021–2025).
 
 ### Next Recommended Experiment
 

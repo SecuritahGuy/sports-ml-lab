@@ -37,7 +37,7 @@ ROLLING_FOLDS = [
     ([2021, 2022, 2023], 2024),
 ]
 
-K_CANDIDATES = [36, 40, 48]
+K_CANDIDATES = list(range(16, 84, 4))
 HFA_CANDIDATES = [30, 40]
 REG_CANDIDATES = [0.0, 0.20]
 MOV_TYPES = [MOV_NONE, MOV_LOG, MOV_SQRT, MOV_CAPPED_LOG, MOV_CAPPED_LINEAR]
@@ -45,9 +45,12 @@ MOV_SCALES = [0.05, 0.10, 0.20]
 MOV_CAPS = [2.0, 3.0]
 
 # Incumbent comparison params
-INCUMBENT_K = 40
+INCUMBENT_K = 36
 INCUMBENT_HFA = 40
-INCUMBENT_REG = 0.25
+INCUMBENT_REG = 0.20
+INCUMBENT_MOV_TYPE = MOV_CAPPED_LINEAR
+INCUMBENT_MOV_SCALE = 0.05
+INCUMBENT_MOV_CAP = 2.0
 
 
 def _filter_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -331,6 +334,9 @@ def run_margin_aware_experiment(
         k_factor=INCUMBENT_K,
         home_advantage=INCUMBENT_HFA,
         preseason_regression=INCUMBENT_REG,
+        mov_type=INCUMBENT_MOV_TYPE,
+        mov_scale=INCUMBENT_MOV_SCALE,
+        mov_cap=INCUMBENT_MOV_CAP,
     )
     inc_elo = _filter_df(inc_elo)
     is_train_full_inc = inc_elo["season"].isin([2021, 2022, 2023, 2024]).values

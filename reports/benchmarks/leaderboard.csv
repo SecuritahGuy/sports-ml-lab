@@ -1,0 +1,14 @@
+experiment,model_features,selection_method,val_ll,holdout_ll,holdout_auc,holdout_brier,holdout_accuracy,decision,report_path,date
+identity_logistic,identity_team_indicators,single_split_2024,0.68,0.69,,,0.5,rejected,,2026-06-23
+team_strength_logistic,simple_team_strength_ratings,single_split_2024,0.67,0.67,,,0.55,rejected,,2026-06-23
+tuned_elo,point_differential_elo_K32_HFA25,single_val_2024,0.65,0.6616,0.68,,0.62,superseded,reports/experiments/elo_tuning.md,2026-06-23
+rolling_origin_elo,mov_elo_K40_HFA40_reg0.25,rolling_origin_3fold,0.6363,0.6395,0.69,,0.65,superseded,reports/experiments/rolling_origin_elo_validation.md,2026-06-23
+scheduling_rest,incumbent_plus_scheduling_flags,rolling_origin_3fold,0.6599,0.6401,,,0.64,rejected,reports/experiments/schedule_rest_features.md,2026-06-23
+margin_aware_elo,mov_elo_K36_HFA40_reg0.20_capped_linear_0.05_2.0,rolling_origin_3fold,0.6363,0.6373,0.6907,0.2230,0.6522,promoted,reports/experiments/margin_aware_elo.md,2026-06-23
+qb_features,incumbent_plus_qb_flags,rolling_origin_3fold,0.6436,0.6459,,,0.64,rejected,reports/experiments/qb_features.md,2026-06-23
+weather_features,incumbent_plus_weather_flags,rolling_origin_3fold,0.6445,0.6439,,,0.65,rejected,reports/experiments/weather_features.md,2026-06-23
+epa_features,incumbent_plus_epa_rolling_avg,rolling_origin_3fold,0.6654,0.6495,0.68,,0.63,rejected,reports/experiments/epa_features.md,2026-06-23
+confidence_calibration,temperature_T1.50_platt_isotonic_shrinkage,rolling_origin_3fold,0.6374,0.6373,0.6907,0.2230,0.6522,rejected,reports/experiments/confidence_calibration.md,2026-06-23
+expressive_models,histgradientboosting_on_27_features,rolling_origin_3fold,0.6361,0.6638,0.68,,0.64,rejected,reports/experiments/expressive_models.md,2026-06-23
+market_benchmark,closing_moneyline_no_vig,rolling_origin_3fold,0.6052,0.6090,0.7199,0.2119,0.6558,diagnostic,reports/experiments/market_benchmark.md,2026-06-23
+residual_diagnostics,incumbent_failure_mode_analysis,none,,0.6373,0.6907,0.2230,0.6522,diagnostic,reports/experiments/residual_diagnostics.md,2026-06-23

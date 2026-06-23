@@ -421,7 +421,7 @@ def run_confidence_calibration_experiment(
 
     # ═══ One-time 2025 holdout ═══
     print("\n=== 2025 Holdout ===")
-    is_hold = (seasons == HOLDOUT_SEASON)
+    is_hold = seasons == HOLDOUT_SEASON
     is_train_full = np.isin(seasons, [2021, 2022, 2023, 2024])
 
     hold_y = y[is_hold]
