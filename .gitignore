@@ -1,0 +1,26 @@
+# Sports ML Lab Agent Rules
+
+## System Configuration
+- OpenCode runs on MacBook
+- LLM models are hosted remotely on System76 laptop via internal LAN Ollama API
+- Do not modify Ollama, OpenCode, provider, network, SSH, API or model configuration
+
+## Research Practices
+- Run lightweight tests locally
+- Do not run long full training jobs locally unless asked
+- Do not modify raw historical data
+- Do not use future data in features
+- Every feature must be explainable and pregame-safe
+- Every experiment must report: log loss, Brier score, accuracy, calibration notes and leakage risk
+- Never promote a model based on ROI alone
+
+## Data Usage
+- No modification of raw historical data
+- All datasets are read-only for research purposes
+- Features are always created from available pregame information only
+- Strict adherence to causality principles in feature engineering
+
+## Model Development
+- Models are developed with reproducible ML practices
+- Prioritize explainability over predictive power where feasible
+- Focus on building a foundation before implementing full features
