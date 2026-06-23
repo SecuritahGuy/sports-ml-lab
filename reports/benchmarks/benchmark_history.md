@@ -282,11 +282,28 @@ Each entry includes:
 | **Report** | `reports/experiments/od_elo.md` |
 | **Date** | 2026-06-23 |
 
+### 20. AutoGluon AutoML
+
+| Field | Value |
+|-------|-------|
+| **Model** | AutoGluon TabularPredictor (medium_quality presets) with 47 pregame features — RandomForest, ExtraTrees, sklearn ensembles only (LightGBM/XGBoost/CatBoost/NeuralNet unavailable) |
+| **Selection** | Rolling-origin 3-fold |
+| **Validation Platt** | **0.6376** |
+| **Validation AG (full)** | 0.6595 |
+| **Validation AG (Elo only)** | 0.6849 |
+| **Holdout Platt** | **0.6362** |
+| **Holdout AG (full)** | 0.6439 |
+| **Holdout AG (Elo only)** | 0.6748 |
+| **Holdout AG + Platt** | 0.7488–0.7599 |
+| **Decision** | **Rejected** — AutoGluon underperforms Platt on both validation and holdout. Consistent with prior finding: tree models add noise on this small dataset. AutoGluon with only sklearn models (no LightGBM/XGBoost/CatBoost) is essentially RandomForest — which was already tested and rejected. |
+| **Report** | `reports/experiments/autogluon.md` |
+| **Date** | 2026-06-23 |
+
 ---
 
 ## Summary Statistics
 
-| Total experiments | 19 |
+| Total experiments | 20 |
 |------------------|-----|
 | Promoted | 6 |
 | Rejected | 11 |

@@ -18,3 +18,4 @@ season_regression,decayed_elo_K36_HFA40_reg0.1_decay32_qb_bonus0.2_capped_linear
 residual_blending,logistic_on_elo_prob_plus_week_rest_early,rolling_origin_3fold,0.6368,0.6303,0.66,0.225,0.65,rejected,reports/experiments/residual_blending.md,2026-06-23
 coach_season_regression,decayed_elo_K36_HFA40_reg0.1_decay32_qb_bonus0.3_coach_bonus0.1,rolling_origin_3fold,0.6309,0.6286,0.7010,0.2191,0.6703,rejected,reports/experiments/coach_season_regression.md,2026-06-23
 od_elo,od_elo_ko52_kd20_HFA40_reg0.1_decay32_qb_bonus0.2_capped_linear_0.05_2.0,rolling_origin_3fold,0.6376,0.6258,0.7066,0.2179,0.6703,promoted,reports/experiments/od_elo.md,2026-06-23
+autogluon,autogluon_medium_quality_47_features_sklearn_only,rolling_origin_3fold,0.6595,0.6439,0.6839,0.2251,0.6449,rejected,reports/experiments/autogluon.md,2026-06-23

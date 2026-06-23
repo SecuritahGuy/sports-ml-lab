@@ -1,6 +1,7 @@
 import click
 
 from sportslab.data.ingest_nfl import ingest_nfl
+from sportslab.evaluation.autogluon_experiment import run_autogluon_experiment
 from sportslab.evaluation.coach_season_regression_experiment import (
     run_coach_season_regression_experiment,
 )
@@ -174,3 +175,9 @@ def residual_blending_cmd():
 def coach_season_regression_cmd():
     """Run coach+QB season regression experiment."""
     run_coach_season_regression_experiment()
+
+
+@cli.command()
+def autogluon_cmd():
+    """Run AutoGluon AutoML experiment against O/D Elo+Platt incumbent."""
+    run_autogluon_experiment()

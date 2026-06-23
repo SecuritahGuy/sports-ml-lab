@@ -915,5 +915,62 @@ Test whether independent offensive/defensive Elo ratings with different k_off/k_
 
 ### Next Steps
 1. Any model must beat **O/D Elo (k_off=52, k_def=20) + Platt (holdout LL 0.6258)** to become the new incumbent
-2. Run residual diagnostics with new incumbent
-3. Consider wider O/D grid (k_off > 52) or new feature types
+2. Consider AutoGluon with full model backends (install lightgbm, xgboost, catboost) or systematic feature selection
+3. Explore injury/depth chart features from nflreadpy — QB-change gap remains largest failure mode
+
+---
+
+## Session Summary: AutoGluon AutoML
+
+### Goal
+Test whether AutoGluon TabularPredictor (with all 47 pregame features) beats O/D Elo+Platt incumbent.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/autogluon_experiment.py` | **New file** — rolling-origin AutoGluon experiment with 47 features, 3 model variants, Platt calibration on top |
+| `src/sportslab/cli.py` | Added `autogluon` command |
+| `Makefile` | Added `autogluon` target |
+| `tests/test_autogluon.py` | **New file** — 7 tests |
+| `reports/experiments/autogluon.md` | **New file** — full experiment report (55 lines) |
+
+### Experiment Results
+
+**Rolling-Origin Average Validation Log Loss:**
+| Model | Avg Val LL | Fold1 | Fold2 | Fold3 |
+|-------|-----------|-------|-------|-------|
+| Platt (incumbent) | **0.6376** | 0.6430 | 0.6567 | 0.6132 |
+| AutoGluon (full, 47 features) | 0.6595 | 0.6513 | 0.6901 | 0.6371 |
+| AutoGluon (Elo only) | 0.6849 | 0.7387 | 0.6741 | 0.6418 |
+
+**2025 Holdout:**
+| Model | Holdout LL |
+|-------|-----------|
+| Platt (incumbent) | **0.6362** |
+| AutoGluon (full) | 0.6439 |
+| AutoGluon (Elo only) | 0.6748 |
+| AG (full) + Platt | 0.7488 |
+| AG (Elo) + Platt | 0.7599 |
+
+**Conclusion: AutoGluon rejected.** Platt-calibrated Elo beats AutoGluon on both validation and holdout. AutoGluon had only sklearn ensemble models available (LightGBM, XGBoost, CatBoost, NeuralNet all missing). Platt calibration on tree outputs made holdout worse (0.7488).
+
+### Current Test State
+- 354 tests passing (7 new)
+- Lint clean
+
+### Key Decisions
+- AutoGluon rejected — same result as all previous tree-based experiments: more complexity ≠ better predictions on this dataset
+- AutoGluon with only sklearn models (RF, ExtraTrees) = already-tested RandomForest from expressive_models experiment
+- Full AutoGluon with LightGBM/XGBoost/CatBoost could be tried if installed, but unlikely to change outcome given consistent pattern
+
+### Relevant Files
+- `src/sportslab/evaluation/autogluon_experiment.py` — rolling-origin AutoGluon experiment
+- `reports/experiments/autogluon.md` — full experiment report
+- `reports/benchmarks/leaderboard.csv` — row 21
+- `reports/benchmarks/benchmark_history.md` — entry 20
+
+### Next Steps
+1. Any model must beat **O/D Elo (k_off=52, k_def=20) + Platt (holdout LL 0.6258)** to become the new incumbent
+2. Consider injury/depth chart features from nflreadpy — QB-change gap remains the largest failure mode
+3. Could try full AutoGluon with all backends installed (lightgbm, xgboost, catboost, torch), but unlikely to change outcome
