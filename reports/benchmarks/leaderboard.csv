@@ -13,3 +13,8 @@ expressive_models,histgradientboosting_on_27_features,rolling_origin_3fold,0.636
 market_benchmark,closing_moneyline_no_vig,rolling_origin_3fold,0.6052,0.6090,0.7199,0.2119,0.6558,diagnostic,reports/experiments/market_benchmark.md,2026-06-23
 residual_diagnostics,incumbent_failure_mode_analysis,none,,0.6373,0.6907,0.2230,0.6522,diagnostic,reports/experiments/residual_diagnostics.md,2026-06-23
 decayed_elo,decayed_elo_K36_HFA40_reg0.20_decay32_capped_linear_0.05_2.0,rolling_origin_3fold,0.6321,0.6298,0.7024,0.2197,0.6558,promoted,reports/experiments/decayed_elo.md,2026-06-23
+team_hfa,decayed_elo_K36_HFA40_decay32_capped_linear_plus_team_hfa_offsets,rolling_origin_3fold,0.6355,0.6263,0.7063,0.2180,0.6812,rejected,reports/experiments/team_hfa.md,2026-06-23
+season_regression,decayed_elo_K36_HFA40_reg0.1_decay32_qb_bonus0.2_capped_linear_0.05_2.0,rolling_origin_3fold,0.6315,0.6285,0.7024,0.2191,0.6667,promoted,reports/experiments/season_regression.md,2026-06-23
+residual_blending,logistic_on_elo_prob_plus_week_rest_early,rolling_origin_3fold,0.6368,0.6303,0.66,0.225,0.65,rejected,reports/experiments/residual_blending.md,2026-06-23
+coach_season_regression,decayed_elo_K36_HFA40_reg0.1_decay32_qb_bonus0.3_coach_bonus0.1,rolling_origin_3fold,0.6309,0.6286,0.7010,0.2191,0.6703,rejected,reports/experiments/coach_season_regression.md,2026-06-23
+od_elo,od_elo_ko52_kd20_HFA40_reg0.1_decay32_qb_bonus0.2_capped_linear_0.05_2.0,rolling_origin_3fold,0.6376,0.6258,0.7066,0.2179,0.6703,promoted,reports/experiments/od_elo.md,2026-06-23

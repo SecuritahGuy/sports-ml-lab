@@ -747,3 +747,173 @@ Compare MOV Elo+Platt incumbent against market-implied probabilities (closing mo
 2. **Season-specific regression** — vary regression by team stability (new coach/QB → more regression)
 3. **Residual-informed blending** — tiny model to predict residual of incumbent
 4. Any model must beat **Decayed Elo + Platt (holdout LL 0.6298)** to become the new incumbent
+
+---
+
+## Session Summary: Team HFA + Season Regression + Residual Blending
+
+### Goal
+Complete 3 remaining priority experiments: team-specific HFA, season-specific QB-change regression, and residual-informed blending. Update benchmark registry throughout.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/ratings.py` | Added `team_regression_overrides` param to `compute_elo_features()` |
+| `src/sportslab/evaluation/team_hfa_experiment.py` | **New file** — rolling-origin team HFA experiment |
+| `src/sportslab/evaluation/season_regression_experiment.py` | **New file** — QB-change season regression grid search (192 combos) |
+| `src/sportslab/evaluation/residual_blending_experiment.py` | **New file** — logistic blend on elo_prob + week/rest/early features |
+| `src/sportslab/features/hfa.py` | **New file** — `compute_team_hfa()`, `margin_to_elo_hfa()` |
+| `src/sportslab/cli.py` | Added `team-hfa`, `season-regression`, `residual-blending` commands |
+| `Makefile` | Added targets for all 3 experiments |
+| `tests/test_team_hfa.py` | **New file** — 11 tests |
+| `tests/test_season_regression.py` | **New file** — 12 tests |
+| `tests/test_residual_blending.py` | **New file** — 3 tests |
+
+### Experiment Results
+
+**Priority 3 — Team-Specific HFA:**
+- Team HFA worse on validation (0.6355 vs 0.6321) → **rejected**
+- Notable: holdout was better (0.6263 vs 0.6298) but rule is select by validation
+
+**Priority 4 — Season-Specific (QB Change) Regression:**
+- Best: K=36, HFA=40, reg=0.1, decay=32, qb_bonus=0.2
+- Avg val LL: **0.6315** (beats incumbent 0.6321)
+- Holdout: **0.6285** (beats incumbent 0.6298)
+- **PROMOTED as new incumbent**
+
+**Priority 5 — Residual Blending:**
+| Setup | Holdout LL | Result |
+|-------|-----------|--------|
+| Platt (incumbent) | 0.6285 | Baseline |
+| Elo + week | 0.6355 | Worse |
+| Elo + week + rest_diff | 0.6355 | Worse |
+| Elo + early_season | 0.6330 | Worse |
+| Elo + week (no Platt) | 0.6355 | Worse |
+
+→ **All rejected**
+
+### Current Test State
+- 347 tests passing
+- Lint clean
+
+### Key Decisions
+- **Season-specific QB-change regression promoted as new incumbent** (holdout 0.6285)
+- Team HFA rejected (worse validation despite better holdout)
+- Residual blending rejected (all variants worse than Platt alone)
+
+### Next Steps
+1. Any model must beat **Season-Regression Elo + Platt (holdout LL 0.6285)** to become the new incumbent
+2. Consider coach-change regression (similar to QB-change but for coaching staff)
+3. Investigate expanding to more seasons (pre-2021) if data leakage can be avoided
+
+---
+
+## Session Summary: Coach+QB Season Regression
+
+### Goal
+Test whether adding coach-change preseason regression (on top of QB-change regression) improves the incumbent.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/coach_season_regression_experiment.py` | **New file** — combined QB+coach season regression grid search (48 combos), coach change count per season |
+| `src/sportslab/cli.py` | Added `coach-season-regression` command |
+| `Makefile` | Added `coach-season-regression` target |
+| `tests/test_coach_season_regression.py` | **New file** — 11 tests |
+| `reports/experiments/coach_season_regression.md` | **New file** — full experiment report (93 lines) |
+
+### Experiment Results
+
+**Coach change counts:** 33 total across 2021-2025 (12 in 2022, 7 in 2023, 7 in 2024, 7 in 2025).
+
+**Grid search (48 combos):**
+- Best: reg=0.1, qb_bonus=0.3, coach_bonus=0.1
+- Avg val LL: **0.63093** (vs incumbent 0.63148)
+
+| Model | Avg Val LL | Holdout LL |
+|-------|-----------|-----------|
+| QB-reg only (incumbent) | 0.6315 | **0.6285** |
+| Coach+QB best raw | **0.6309** | 0.6290 |
+| Coach+QB best + Platt | — | 0.6286 |
+
+**Conclusion:** Coach bonus adds negligible value. Validation improvement (0.0006) doesn't hold on holdout (-0.0001). **Rejected.**
+
+### Current Test State
+- 346 tests passing
+- Lint clean
+
+### Key Decisions
+- Coach+QB regression rejected — coach signal too weak to justify complexity
+- QB-change regression remains the research incumbent (holdout 0.6285)
+- The coach signal partially overlaps with QB-change signal (coach-only best 0.63145 at coach=0.3 nearly matches QB-only 0.63148 at qb=0.2)
+
+### Next Steps
+1. Any model must beat **Season-Regression Elo + Platt (holdout LL 0.6285)** to become the new incumbent
+2. Investigate expanding to more seasons (pre-2021) if data leakage can be avoided
+
+---
+
+## Session Summary: Separate O/D Elo Ratings
+
+### Goal
+Test whether independent offensive/defensive Elo ratings with different k_off/k_def can improve on standard Elo by allowing offense and defense to update at different rates.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/ratings.py` | Added `compute_od_elo_features()` — separate off_elo/def_elo with k_off/k_def params, combined for prediction, point-share-weighted updates |
+| `src/sportslab/evaluation/od_elo_experiment.py` | **New file** — rolling-origin O/D Elo grid search (15 combos), calibration, report writer |
+| `src/sportslab/cli.py` | Added `od-elo` command |
+| `Makefile` | Added `od-elo` target |
+| `tests/test_od_elo.py` | **New file** — 11 tests |
+| `reports/experiments/od_elo.md` | **New file** — full experiment report (63 lines) |
+| `reports/experiments/epa_features.md` | Updated with reduced-EPA (4 net diffs) results |
+| `reports/experiments/team_stats.md` | **New file** — team stats experiment report (rejected) |
+| `src/sportslab/evaluation/experiment_config.py` | Updated to 3 folds (2021-2024) |
+
+### Experiment Results
+
+| Model | Avg Val LL | Fold1 | Fold2 | Fold3 | Holdout LL |
+|-------|-----------|-------|-------|-------|-----------|
+| Standard Elo + Platt (incumbent) | 0.6368 | 0.6425 | 0.6576 | 0.6103 | 0.6285 |
+| O/D ko52_kd20 | 0.6376 | 0.6430 | 0.6567 | 0.6132 | **0.6258** |
+| O/D ko44_kd20 | 0.6371 | 0.6428 | 0.6563 | 0.6123 | 0.6271 |
+| O/D ko52_kd28 | 0.6377 | 0.6429 | 0.6574 | 0.6126 | 0.6259 |
+
+**2025 Holdout:**
+| Model | Hold LL | Brier | AUC | Acc |
+|-------|---------|-------|-----|-----|
+| Standard + Platt (incumbent) | 0.6285 | 0.2191 | 0.7024 | 0.6667 |
+| **O/D ko52_kd20 + Platt** | **0.6258** | **0.2179** | **0.7066** | **0.6703** |
+| O/D ko44_kd20 + Platt | 0.6271 | 0.2185 | 0.7051 | 0.6630 |
+| O/D ko52_kd28 + Platt | 0.6259 | 0.2179 | 0.7056 | 0.6667 |
+
+**Conclusion:** O/D Elo (k_off=52, k_def=20) beats standard Elo on holdout (0.6258 vs 0.6285) — the largest single improvement seen across all 19 experiments. Clear monotonic pattern: higher k_off improves holdout; higher k_def slightly hurts it. **Promoted as new incumbent.**
+
+### Current Test State
+- 347 tests passing
+- Lint clean
+
+### Key Decisions
+- **O/D Elo (ko52_kd20) promoted as new research incumbent** — holdout LL **0.6258** (vs previous 0.6285)
+- k_off=52 (effectively no offensive regression) produces best results; k_def=20 (medium defensive regression) wins
+- User override applied: ko52_kd20 selected despite marginally worse val LL (0.6376 vs standard 0.6368) because of the consistent monotonic holdout improvement across 15 combos
+- Season expansion (pre-2021) fully reverted; `NFL_MIN_SEASON` and `SPORTSLAB_MIN_SEASON` back to 2021; feature table rebuilt
+
+### Relevant Files
+- `src/sportslab/features/ratings.py` — `compute_od_elo_features()` with k_off/k_def
+- `src/sportslab/evaluation/od_elo_experiment.py` — rolling-origin grid, calibration, report
+- `reports/experiments/od_elo.md` — full experiment report
+- `reports/experiments/epa_features.md` — updated with reduced-EPA results
+- `reports/experiments/team_stats.md` — team stats experiment report (rejected)
+- `reports/benchmarks/leaderboard.csv` — row 20 (O/D Elo)
+- `reports/benchmarks/benchmark_history.md` — entry 19
+- `reports/benchmarks/nfl_research_incumbent.md` — updated champion
+
+### Next Steps
+1. Any model must beat **O/D Elo (k_off=52, k_def=20) + Platt (holdout LL 0.6258)** to become the new incumbent
+2. Run residual diagnostics with new incumbent
+3. Consider wider O/D grid (k_off > 52) or new feature types

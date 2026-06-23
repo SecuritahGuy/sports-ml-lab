@@ -198,7 +198,7 @@ def _validate_seasons(df: pd.DataFrame) -> None:
     if not bad.empty:
         raise ValueError(
             f"Found {len(bad)} rows with season < {SPORTSLAB_MIN_SEASON}. "
-            "This project only supports 2021–current NFL seasons."
+            f"This project only supports {SPORTSLAB_MIN_SEASON}–current NFL seasons."
         )
 
 
@@ -301,9 +301,9 @@ def build_feature_table(
     # Optional: weather enrichment
     if fetch_weather:
         print("  Fetching weather data via meteostat...")
-        from sportslab.features.weather import build_weather_features
+        from sportslab.features.weather import compute_weather_features
 
-        weather_df = build_weather_features(
+        weather_df = compute_weather_features(
             features["stadium_id"],
             pd.to_datetime(features["gameday"]),
         )

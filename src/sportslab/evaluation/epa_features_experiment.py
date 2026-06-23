@@ -14,7 +14,11 @@ from sklearn.metrics import log_loss
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from sportslab.evaluation.experiment_config import HOLDOUT_SEASON, ROLLING_FOLDS
 from sportslab.evaluation.metrics import compute_classification_metrics
+from sportslab.evaluation.season_regression_experiment import (
+    build_team_regression_overrides,
+)
 from sportslab.features.build_features import (
     MODEL_ELIGIBLE_COLUMN,
     NEUTRAL_COLUMN,
@@ -27,18 +31,12 @@ from sportslab.features.epa import (
 from sportslab.features.qb import compute_qb_features
 from sportslab.features.ratings import compute_elo_features
 
-HOLDOUT_SEASON = 2025
-
-ROLLING_FOLDS = [
-    ([2021], 2022),
-    ([2021, 2022], 2023),
-    ([2021, 2022, 2023], 2024),
-]
-
-# Frozen incumbent MOV Elo params
+# Frozen incumbent season-regression Elo params
 BEST_K = 36
 BEST_HFA = 40
-BEST_REG = 0.20
+BEST_REG = 0.1
+BEST_DECAY = 32
+BEST_QB_BONUS = 0.2
 BEST_MOV_TYPE = "capped_linear"
 BEST_MOV_SCALE = 0.05
 BEST_MOV_CAP = 2.0
@@ -89,8 +87,13 @@ def run_epa_features_experiment(
 
     df_raw = pd.read_parquet(fp)
 
+    # ── Build team regression overrides from QB change data ──
+    team_overrides = build_team_regression_overrides(
+        df_raw, preseason_regression=BEST_REG, qb_change_bonus=BEST_QB_BONUS
+    )
+
     # ── Compute MOV Elo with frozen incumbent params ──
-    print("\n=== Computing MOV Elo features (incumbent params) ===")
+    print("\n=== Computing MOV Elo features (season-regression incumbent params) ===")
     df_elo = compute_elo_features(
         df_raw,
         k_factor=BEST_K,
@@ -99,8 +102,11 @@ def run_epa_features_experiment(
         mov_type=BEST_MOV_TYPE,
         mov_scale=BEST_MOV_SCALE,
         mov_cap=BEST_MOV_CAP,
+        decay_half_life=BEST_DECAY,
+        team_regression_overrides=team_overrides,
     )
-    print(f"  K={BEST_K}, HFA={BEST_HFA}, reg={BEST_REG}")
+    print(f"  K={BEST_K}, HFA={BEST_HFA}, reg={BEST_REG},"
+          f" decay={BEST_DECAY}, qb_bonus={BEST_QB_BONUS}")
     print(f"  MOV: {BEST_MOV_TYPE}, scale={BEST_MOV_SCALE}, cap={BEST_MOV_CAP}")
 
     # ── Compute EPA features ──
@@ -126,6 +132,16 @@ def run_epa_features_experiment(
     epa_available = [c for c in EPA_FEATURE_COLUMNS if c in df_all.columns]
     print(f"  EPA features ({len(epa_available)}): {epa_available[:6]}...")
 
+    # Reduced EPA: just 4 net differentials (not all 56 features)
+    REDUCED_EPA_COLS = [
+        "epa_net_per_play_3",
+        "epa_net_per_play_5",
+        "success_rate_net_3",
+        "success_rate_net_5",
+    ]
+    epa_net_available = [c for c in REDUCED_EPA_COLS if c in df_all.columns]
+    print(f"  Reduced EPA (net diffs only): {epa_net_available}")
+
     elo_prob = df_all["elo_prob"].values
     y = df_all[TARGET_COLUMN].astype(float).values
 
@@ -136,6 +152,7 @@ def run_epa_features_experiment(
     epa_only_results: list[dict] = []
     mov_elo_epa_results: list[dict] = []
     elo_epa_results: list[dict] = []
+    mov_elo_epa_net_results: list[dict] = []
 
     for train_seasons, val_season in ROLLING_FOLDS:
         is_train = df_all["season"].isin(train_seasons).values
@@ -212,12 +229,32 @@ def run_epa_features_experiment(
             }
         )
 
+        # 5. MOV Elo + EPA net differentials only (reduced)
+        epa_net_train = df_all.loc[is_train, epa_net_available]
+        epa_net_val = df_all.loc[is_val, epa_net_available]
+        mov_elo_epa_net_train = np.column_stack([train_elo, epa_net_train.values])
+        mov_elo_epa_net_val = np.column_stack([val_elo, epa_net_val.values])
+        mov_elo_epa_net_pipe = _logistic_model()
+        mov_elo_epa_net_pipe.fit(mov_elo_epa_net_train, train_y_)
+        mov_elo_epa_net_val_proba = mov_elo_epa_net_pipe.predict_proba(mov_elo_epa_net_val)[:, 1]
+        mov_elo_epa_net_m = compute_classification_metrics(val_y_, mov_elo_epa_net_val_proba)
+        mov_elo_epa_net_results.append(
+            {
+                "train_seasons": train_seasons,
+                "val_season": val_season,
+                "log_loss": mov_elo_epa_net_m["log_loss"],
+                "metrics": mov_elo_epa_net_m,
+                "model": mov_elo_epa_net_pipe,
+            }
+        )
+
         print(
             f"  Fold train={train_seasons} val={val_season}:"
             f" platt={platt_m['log_loss']:.4f}"
             f" epa_only={epa_only_m['log_loss']:.4f}"
             f" mov+epa={mov_elo_epa_m['log_loss']:.4f}"
             f" elo+epa={elo_epa_m['log_loss']:.4f}"
+            f" mov+epa_net={mov_elo_epa_net_m['log_loss']:.4f}"
         )
 
     # ── Average validation metrics ──
@@ -228,12 +265,14 @@ def run_epa_features_experiment(
     avg_epa_only = _avg_ll(epa_only_results)
     avg_mov_epa = _avg_ll(mov_elo_epa_results)
     avg_elo_epa = _avg_ll(elo_epa_results)
+    avg_mov_epa_net = _avg_ll(mov_elo_epa_net_results)
 
     print("\n=== Average Validation Log Loss ===")
     print(f"  Platt (incumbent):        {avg_platt:.4f}")
     print(f"  EPA only:                 {avg_epa_only:.4f}")
-    print(f"  MOV Elo + EPA:            {avg_mov_epa:.4f}")
+    print(f"  MOV Elo + EPA (all 56):   {avg_mov_epa:.4f}")
     print(f"  Raw Elo + EPA:            {avg_elo_epa:.4f}")
+    print(f"  MOV Elo + EPA net (4):    {avg_mov_epa_net:.4f}")
 
     # ═══ One-time 2025 holdout ═══
     print("\n=== 2025 Holdout ===")
@@ -277,6 +316,17 @@ def run_epa_features_experiment(
     elo_epa_hold_proba = elo_epa_final.predict_proba(elo_epa_hold)[:, 1]
     hold_elo_epa_m = compute_classification_metrics(hold_y, elo_epa_hold_proba)
     print(f"  Raw Elo + EPA:     {hold_elo_epa_m['log_loss']:.4f}")
+
+    # 5. MOV Elo + EPA net differentials only
+    epa_net_full = df_all.loc[is_train_full, epa_net_available]
+    epa_net_hold = df_all.loc[is_hold, epa_net_available]
+    mov_elo_epa_net_full = np.column_stack([train_elo_full, epa_net_full.values])
+    mov_elo_epa_net_hold = np.column_stack([hold_elo, epa_net_hold.values])
+    mov_elo_epa_net_final = _logistic_model()
+    mov_elo_epa_net_final.fit(mov_elo_epa_net_full, train_y_full)
+    mov_elo_epa_net_hold_proba = mov_elo_epa_net_final.predict_proba(mov_elo_epa_net_hold)[:, 1]
+    hold_mov_elo_epa_net_m = compute_classification_metrics(hold_y, mov_elo_epa_net_hold_proba)
+    print(f"  MOV Elo + EPA net:{hold_mov_elo_epa_net_m['log_loss']:.4f}")
 
     # ── Subset analyses ──
     print("\n=== Subset Analysis ===")

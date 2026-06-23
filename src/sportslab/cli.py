@@ -1,6 +1,9 @@
 import click
 
 from sportslab.data.ingest_nfl import ingest_nfl
+from sportslab.evaluation.coach_season_regression_experiment import (
+    run_coach_season_regression_experiment,
+)
 from sportslab.evaluation.confidence_calibration_experiment import (
     run_confidence_calibration_experiment,
 )
@@ -12,11 +15,14 @@ from sportslab.evaluation.margin_aware_elo import run_margin_aware_experiment
 from sportslab.evaluation.market_baseline import run_market_baseline
 from sportslab.evaluation.market_benchmark import run_market_benchmark
 from sportslab.evaluation.qb_features_experiment import run_qb_features_experiment
+from sportslab.evaluation.residual_blending_experiment import run_residual_blending_experiment
 from sportslab.evaluation.residual_diagnostics import run_residual_diagnostics
 from sportslab.evaluation.rolling_origin_elo_validation import (
     run_rolling_origin_validation,
 )
 from sportslab.evaluation.schedule_rest_experiment import run_schedule_rest_experiment
+from sportslab.evaluation.season_regression_experiment import run_season_regression_experiment
+from sportslab.evaluation.team_hfa_experiment import run_team_hfa_experiment
 from sportslab.evaluation.train_baseline import train_baseline
 from sportslab.evaluation.weather_features_experiment import run_weather_features_experiment
 from sportslab.features.build_features import build_feature_table
@@ -144,3 +150,27 @@ def confidence_calibration_cmd():
 def decayed_elo_cmd():
     """Run decayed Elo (exponential momentum) experiment."""
     run_decayed_elo_experiment()
+
+
+@cli.command()
+def team_hfa_cmd():
+    """Run team-specific HFA experiment."""
+    run_team_hfa_experiment()
+
+
+@cli.command()
+def season_regression_cmd():
+    """Run season-specific regression experiment."""
+    run_season_regression_experiment()
+
+
+@cli.command()
+def residual_blending_cmd():
+    """Run residual blending experiment."""
+    run_residual_blending_experiment()
+
+
+@cli.command()
+def coach_season_regression_cmd():
+    """Run coach+QB season regression experiment."""
+    run_coach_season_regression_experiment()

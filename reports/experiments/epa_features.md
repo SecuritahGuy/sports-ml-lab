@@ -36,7 +36,7 @@ All features are pregame-safe (chronological rolling windows, shifted).
 |-----------|-------|
 | K-factor | 36 |
 | Home-field advantage | 40 |
-| Preseason regression | 0.2 |
+| Preseason regression | 0.1 |
 | MOV type | capped_linear |
 | MOV scale | 0.05 |
 | MOV cap | 2.0 |
@@ -64,10 +64,10 @@ All features are pregame-safe (chronological rolling windows, shifted).
 
 | Model | Avg Val LL | Fold1 | Fold2 | Fold3 |
 |-------|------------|-------|-------|-------|
-| Platt (incumbent) | 0.6363 | 0.6438 | 0.6564 | 0.6088 |
+| Platt (incumbent) | 0.6368 | 0.6425 | 0.6576 | 0.6103 |
 | EPA only | 0.6898 | 0.6853 | 0.7336 | 0.6505 |
-| MOV Elo + EPA | 0.6593 | 0.6683 | 0.7085 | 0.6013 |
-| Raw Elo + EPA | 0.6593 | 0.6683 | 0.7085 | 0.6013 |
+| MOV Elo + EPA | 0.6600 | 0.6674 | 0.7110 | 0.6015 |
+| Raw Elo + EPA | 0.6600 | 0.6674 | 0.7110 | 0.6015 |
 
 ## Full Comparison (2025 Holdout)
 
@@ -75,31 +75,31 @@ All features are pregame-safe (chronological rolling windows, shifted).
 |-------|---------|------------|----------|----------|
 | Random | 0.6931 | 0.2500 | 0.5000 | 0.5000 |
 | Home prior (0.548) | 0.6908 | — | — | 0.5000 |
-| Platt (incumbent) | 0.6373 | 0.2230 | 0.6522 | 0.6907 |
+| Platt (incumbent) | 0.6285 | 0.2191 | 0.6667 | 0.7024 |
 | EPA only | 0.6704 | 0.2390 | 0.5797 | 0.6229 |
-| MOV Elo + EPA | 0.6662 | 0.2353 | 0.6522 | 0.6555 |
-| Raw Elo + EPA | 0.6662 | 0.2353 | 0.6522 | 0.6555 |
+| MOV Elo + EPA | 0.6590 | 0.2322 | 0.6449 | 0.6638 |
+| Raw Elo + EPA | 0.6590 | 0.2322 | 0.6449 | 0.6638 |
 
 ## Subset Analysis (2025 Holdout)
 
 | Subset | N | Platt | EPA only | MOV+EPA |
 |--------|---|-------|----------|--------|
-| All games | 276 | 0.6373 | 0.6704 | 0.6662 |
-| QB changed (home) | 24 | 0.7836 | 0.8509 | 0.9093 |
-| QB stable (home) | 252 | 0.6234 | 0.6533 | 0.6431 |
+| All games | 276 | 0.6285 | 0.6704 | 0.6590 |
+| QB changed (home) | 24 | 0.7722 | 0.8509 | 0.9062 |
+| QB stable (home) | 252 | 0.6149 | 0.6533 | 0.6354 |
 | High confidence (>0.9) | 0 | insufficient | insufficient | insufficient |
-| Low confidence (<=0.6) | 165 | 0.6602 | 0.6993 | 0.6899 |
+| Low confidence (<=0.6) | 170 | 0.6532 | 0.7023 | 0.6802 |
 
 ## Recommendation
 
 ⚠️ **Incumbent (MOV Elo + Platt) remains the research incumbent.**
 
-No EPA-augmented model beat the incumbent on holdout. Closest: MOV Elo + EPA (val LL=0.6593, hold LL=0.6662) vs incumbent hold LL=0.6373.
+No EPA-augmented model beat the incumbent on holdout. Closest: MOV Elo + EPA (val LL=0.6600, hold LL=0.6590) vs incumbent hold LL=0.6285.
 
 
 ### QB-Change Failure Mode Assessment
 
-Platt incumbent on QB-changed games: 0.7836 | QB-stable: 0.6234 | QB-change gap: 0.1601
+Platt incumbent on QB-changed games: 0.7722 | QB-stable: 0.6149 | QB-change gap: 0.1574
 EPA features did not close the QB-change gap on holdout.
 
 ### Next Recommended Experiment

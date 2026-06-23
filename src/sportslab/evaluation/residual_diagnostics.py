@@ -23,18 +23,19 @@ from sportslab.features.build_features import (
 from sportslab.features.qb import compute_qb_features
 from sportslab.features.ratings import compute_elo_features
 from sportslab.features.scheduling import compute_scheduling_features
-from sportslab.features.weather import compute_weather_features
 
 HOLDOUT_SEASON = 2025
 
 BEST_K = 36
 BEST_HFA = 40
-BEST_REG = 0.20
+BEST_REG = 0.10
+BEST_DECAY = 32
 BEST_MOV_TYPE = "capped_linear"
 BEST_MOV_SCALE = 0.05
 BEST_MOV_CAP = 2.0
+BEST_QB_BONUS = 0.2
 
-INCUMBENT_HOLDOUT_LL = 0.6373
+INCUMBENT_HOLDOUT_LL = 0.6285
 
 
 def _filter_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -55,10 +56,9 @@ def _fit_platt(train_prob: np.ndarray, train_y: np.ndarray) -> Pipeline:
 
 
 def _gather_dimension_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Attach scheduling, QB, and weather features for diagnostic dimensions."""
+    """Attach scheduling, QB features for diagnostic dimensions."""
     out = compute_scheduling_features(df)
     out = compute_qb_features(out)
-    out = compute_weather_features(out)
     return out
 
 
@@ -75,6 +75,15 @@ def run_residual_diagnostics(
 
     # ── Build features ──
     print("=== Building feature stack ===")
+    from sportslab.evaluation.season_regression_experiment import (
+        build_team_regression_overrides,
+    )
+
+    overrides = build_team_regression_overrides(
+        df_raw,
+        preseason_regression=BEST_REG,
+        qb_change_bonus=BEST_QB_BONUS,
+    )
     df = compute_elo_features(
         df_raw,
         k_factor=BEST_K,
@@ -83,6 +92,8 @@ def run_residual_diagnostics(
         mov_type=BEST_MOV_TYPE,
         mov_scale=BEST_MOV_SCALE,
         mov_cap=BEST_MOV_CAP,
+        decay_half_life=BEST_DECAY,
+        team_regression_overrides=overrides,
     )
     df = _gather_dimension_data(df)
     df = _filter_df(df)

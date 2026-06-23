@@ -217,16 +217,81 @@ Each entry includes:
 | **Report** | `reports/experiments/decayed_elo.md` |
 | **Date** | 2026-06-23 |
 
+### 16. Season-Specific (QB Change) Regression
+
+| Field | Value |
+|-------|-------|
+| **Model** | Decayed MOV Elo + extra preseason regression for teams with QB change (bonus=0.2 on base reg=0.1) |
+| **Selection** | Rolling-origin 3-fold grid (192 combos) |
+| **Best params** | K=36, HFA=40, reg=0.1, decay=32, qb_bonus=0.2, capped_linear scale=0.05 cap=2.0 |
+| **Validation LL** | **0.6315** (beats incumbent 0.6321) |
+| **Holdout LL (raw)** | 0.6290 |
+| **Holdout LL (+Platt)** | **0.6285** |
+| **Holdout Brier** | 0.2191 |
+| **Holdout AUC** | 0.7024 |
+| **Holdout Accuracy** | 0.6667 |
+| **Decision** | **Promoted as new incumbent** — beats previous 0.6298 by 0.0013 |
+| **Report** | `reports/experiments/season_regression.md` |
+| **Date** | 2026-06-23 |
+
+### 17. Residual Blending
+
+| Field | Value |
+|-------|-------|
+| **Model** | Logistic regression on elo_prob + week/rest_diff/early-season features |
+| **Selection** | Rolling-origin 3-fold |
+| **Best setup** | Platt (incumbent) alone — all blends worse on both validation and holdout |
+| **Validation Platt** | 0.6368 |
+| **Validation blend** | 0.6422–0.6446 (all worse) |
+| **Holdout Platt** | 0.6285 |
+| **Holdout blend** | 0.6303–0.6355 (all worse) |
+| **Decision** | **Rejected** |
+| **Report** | `reports/experiments/residual_blending.md` |
+| **Date** | 2026-06-23 |
+
+### 18. Coach+QB Season Regression
+
+| Field | Value |
+|-------|-------|
+| **Model** | Decayed MOV Elo + QB + coach preseason regression bonuses |
+| **Selection** | Rolling-origin 3-fold grid (48 combos) |
+| **Best params** | K=36, HFA=40, reg=0.1, decay=32, qb_bonus=0.3, coach_bonus=0.1 |
+| **Validation LL** | 0.6309 (beats incumbent 0.6315) |
+| **Holdout LL (raw)** | 0.6290 |
+| **Holdout LL (+Platt)** | 0.6286 |
+| **Incumbent** | 0.6285 (QB-reg + Platt) |
+| **Decision** | **Rejected** — validation improvement (0.0006) doesn't hold on holdout (-0.0001); coach signal too weak |
+| **Report** | `reports/experiments/coach_season_regression.md` |
+| **Date** | 2026-06-23 |
+
+### 19. Separate O/D Elo Ratings
+
+| Field | Value |
+|-------|-------|
+| **Model** | Separate offensive/defensive Elo with k_off=52, k_def=20 + QB-change regression + Platt |
+| **Selection** | Rolling-origin 3-fold grid (15 combos); user override for holdout-leading split |
+| **Best params** | k_off=52, k_def=20, K=36, HFA=40, reg=0.1, decay=32, qb_bonus=0.2, capped_linear 0.05/2.0 |
+| **Validation LL** | 0.6376 (vs standard 0.6368) |
+| **Holdout LL (raw)** | — |
+| **Holdout LL (+Platt)** | **0.6258** |
+| **Holdout Brier** | 0.2179 |
+| **Holdout AUC** | 0.7066 |
+| **Holdout Accuracy** | 0.6703 |
+| **Incumbent** | 0.6285 (standard Elo + Platt) |
+| **Decision** | **Promoted as new incumbent** — beats previous 0.6285 by 0.0027 on holdout; clear monotonic pattern across 15 k_off/k_def combos |
+| **Report** | `reports/experiments/od_elo.md` |
+| **Date** | 2026-06-23 |
+
 ---
 
 ## Summary Statistics
 
-| Total experiments | 14 |
+| Total experiments | 19 |
 |------------------|-----|
-| Promoted | 4 (Tuned Elo → Rolling-Origin Elo → MOV Elo → Decayed Elo) |
-| Rejected | 7 (Identity, Team-strength, Scheduling, QB, Weather, EPA, Calibration, Expressive) |
-| Diagnostic | 2 (Residual Diagnostics, Market Benchmark) |
-| Current incumbent | Decayed Elo (K=36, HFA=40, reg=0.20, decay_half_life=32, MOV capped_linear) + Platt |
-| Incumbent holdout LL | **0.6298** |
+| Promoted | 6 |
+| Rejected | 11 |
+| Diagnostic | 2 |
+| Current incumbent | O/D Elo (k_off=52, k_def=20, HFA=40, reg=0.1, decay=32, qb_bonus=0.2, MOV capped_linear) + Platt |
+| Incumbent holdout LL | **0.6258** |
 | Best challenger (pregame) | None |
 | Best overall (diagnostic) | Market no-vig (0.6090 holdout) |

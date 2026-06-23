@@ -18,14 +18,14 @@ from sportslab.features.build_features import (
 
 
 class TestValidateSeasons:
-    def test_valid_seasons_pass(self):
-        df = pd.DataFrame({"season": [2021, 2022, 2023]})
-        _validate_seasons(df)  # should not raise
-
     def test_invalid_seasons_raise(self):
-        df = pd.DataFrame({"season": [2020, 2021]})
-        with pytest.raises(ValueError, match="only supports 2021"):
+        df = pd.DataFrame({"season": [2010, 2021]})
+        with pytest.raises(ValueError, match="season < 2021"):
             _validate_seasons(df)
+
+    def test_valid_seasons_pass(self):
+        df = pd.DataFrame({"season": [2021, 2022, 2025]})
+        _validate_seasons(df)  # should not raise
 
 
 class TestIsDome:

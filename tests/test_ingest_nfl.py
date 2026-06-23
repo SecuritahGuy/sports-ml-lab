@@ -115,7 +115,7 @@ class TestValidateSeasons:
     """Test _validate_seasons with various inputs."""
 
     def test_valid_seasons_2021_2022(self):
-        """Seasons 2021 and later are accepted."""
+        """Seasons 2021 and later are accepted by ingestion."""
         _validate_seasons([2021, 2022])
 
     def test_valid_seasons_2025(self):
@@ -123,24 +123,29 @@ class TestValidateSeasons:
         _validate_seasons([2025])
 
     def test_season_2020_rejected(self):
-        """Season 2020 raises ValueError."""
+        """Season 2020 (pre-2021) raises ValueError."""
         with pytest.raises(ValueError, match="2021"):
             _validate_seasons([2020])
 
     def test_mixed_seasons_rejected(self):
         """Mixed seasons with a pre-2021 entry raise ValueError."""
         with pytest.raises(ValueError, match="2021"):
-            _validate_seasons([2020, 2021])
+            _validate_seasons([2020, 2025])
 
     def test_all_bad_seasons_rejected(self):
         """Multiple pre-2021 seasons all raise ValueError."""
         with pytest.raises(ValueError, match="2021"):
-            _validate_seasons([2018, 2019, 2020])
+            _validate_seasons([2000, 2005, 2009])
+
+    def test_season_2010_rejected(self):
+        """Season 2010 (pre-2021) raises ValueError."""
+        with pytest.raises(ValueError, match="2021"):
+            _validate_seasons([2010])
 
     def test_error_message_contains_project_scope(self):
-        """Error message explicitly mentions 2021-current."""
+        """Error message explicitly mentions the min season."""
         with pytest.raises(ValueError) as exc:
-            _validate_seasons([2020])
+            _validate_seasons([2000])
         msg = str(exc.value)
         assert "2021" in msg
         assert "current" in msg or "only" in msg
