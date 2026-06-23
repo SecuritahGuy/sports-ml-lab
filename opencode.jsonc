@@ -1,0 +1,49 @@
+// opencode.jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "default_agent": "build",
+
+  "permission": {
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.env.example": "allow"
+    },
+
+    "glob": "allow",
+    "grep": "allow",
+    "lsp": "allow",
+    "edit": "allow",
+    "task": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+
+    "external_directory": "ask",
+    "doom_loop": "ask",
+
+    "bash": {
+      "*": "allow",
+
+      "sudo *": "ask",
+      "su *": "deny",
+      "rm *": "ask",
+      "rm -rf *": "ask",
+      "git push *": "ask",
+      "git commit *": "ask",
+      "git reset *": "ask",
+      "git clean *": "ask",
+      "chmod *": "ask",
+      "chown *": "ask",
+      "kill *": "ask",
+      "pkill *": "ask",
+      "docker system prune*": "ask",
+      "brew *": "ask",
+      "curl * | sh*": "deny",
+      "wget * | sh*": "deny"
+    }
+  },
+
+  "snapshot": true
+}
