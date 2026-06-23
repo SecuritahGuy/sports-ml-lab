@@ -200,14 +200,33 @@ Each entry includes:
 
 ---
 
+### 14. Decayed Elo (Exponential Momentum)
+
+| Field | Value |
+|-------|-------|
+| **Model** | MOV Elo with exponential decay toward mean after each game (decay_half_life=32) |
+| **Selection** | Rolling-origin 3-fold grid (160 combos) |
+| **Best params** | K=36, HFA=40, reg=0.20, decay_half_life=32, capped_linear scale=0.05 cap=2.0 |
+| **Validation LL** | 0.6321 |
+| **Holdout LL (raw)** | 0.6301 |
+| **Holdout LL (+Platt)** | **0.6298** |
+| **Holdout Brier** | 0.2197 |
+| **Holdout AUC** | 0.7024 |
+| **Holdout Accuracy** | 0.6558 |
+| **Decision** | **Promoted as new incumbent (current)** — beats previous 0.6373 by 0.0075 |
+| **Report** | `reports/experiments/decayed_elo.md` |
+| **Date** | 2026-06-23 |
+
+---
+
 ## Summary Statistics
 
-| Total experiments | 13 |
+| Total experiments | 14 |
 |------------------|-----|
-| Promoted | 3 (Tuned Elo → Rolling-Origin Elo → MOV Elo) |
+| Promoted | 4 (Tuned Elo → Rolling-Origin Elo → MOV Elo → Decayed Elo) |
 | Rejected | 7 (Identity, Team-strength, Scheduling, QB, Weather, EPA, Calibration, Expressive) |
 | Diagnostic | 2 (Residual Diagnostics, Market Benchmark) |
-| Current incumbent | MOV Elo (K=36, HFA=40, reg=0.20, MOV capped_linear) + Platt |
-| Incumbent holdout LL | 0.6373 |
+| Current incumbent | Decayed Elo (K=36, HFA=40, reg=0.20, decay_half_life=32, MOV capped_linear) + Platt |
+| Incumbent holdout LL | **0.6298** |
 | Best challenger (pregame) | None |
 | Best overall (diagnostic) | Market no-vig (0.6090 holdout) |

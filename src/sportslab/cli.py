@@ -4,6 +4,7 @@ from sportslab.data.ingest_nfl import ingest_nfl
 from sportslab.evaluation.confidence_calibration_experiment import (
     run_confidence_calibration_experiment,
 )
+from sportslab.evaluation.decayed_elo_experiment import run_decayed_elo_experiment
 from sportslab.evaluation.elo_tuning import run_elo_tuning
 from sportslab.evaluation.epa_features_experiment import run_epa_features_experiment
 from sportslab.evaluation.expressive_models_experiment import run_expressive_models_experiment
@@ -137,3 +138,9 @@ def epa_features_cmd():
 def confidence_calibration_cmd():
     """Run confidence calibration and probability shrinkage experiment."""
     run_confidence_calibration_experiment()
+
+
+@cli.command()
+def decayed_elo_cmd():
+    """Run decayed Elo (exponential momentum) experiment."""
+    run_decayed_elo_experiment()

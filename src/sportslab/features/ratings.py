@@ -85,6 +85,7 @@ def compute_elo_features(
     mov_type: str = MOV_NONE,
     mov_scale: float = 0.0,
     mov_cap: float | None = None,
+    decay_half_life: float | None = None,
 ) -> pd.DataFrame:
     """Add pregame Elo features to a game-level DataFrame.
 
@@ -102,6 +103,8 @@ def compute_elo_features(
         mov_type: Margin-of-victory multiplier type.
         mov_scale: Scaling factor for MOV multiplier.
         mov_cap: Maximum multiplier value (None = no cap).
+        decay_half_life: Number of games to halve rating deviation from mean.
+            None = no decay. Lower = faster decay toward mean.
 
     Returns:
         DataFrame with additional columns: home_elo_pre, away_elo_pre, elo_diff,
@@ -111,6 +114,11 @@ def compute_elo_features(
 
     ratings: dict[str, float] = {}
     prev_season: int | None = None
+
+    if decay_half_life is not None and decay_half_life > 0:
+        decay_factor = 2.0 ** (-1.0 / decay_half_life)
+    else:
+        decay_factor = None
 
     home_elo = []
     away_elo = []
@@ -155,6 +163,11 @@ def compute_elo_features(
         update = k_factor * (actual_home - expected_home) * mov_mult
         ratings[home_team] = h_elo + update
         ratings[away_team] = a_elo - update
+
+        # Exponential decay toward mean after each game
+        if decay_factor is not None:
+            ratings[home_team] = default_elo + (ratings[home_team] - default_elo) * decay_factor
+            ratings[away_team] = default_elo + (ratings[away_team] - default_elo) * decay_factor
 
     out["home_elo_pre"] = home_elo
     out["away_elo_pre"] = away_elo

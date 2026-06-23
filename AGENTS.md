@@ -743,7 +743,7 @@ Compare MOV Elo+Platt incumbent against market-implied probabilities (closing mo
 - `tests/test_market_benchmark.py` — 28 tests
 
 ### Next Steps
-1. **QB-change market-delta feature**: `market_prob − elo_prob` at QB-change games
-2. Stacked model: Elo predicts residual of market-only model
-3. Expand Elo K > 48 if needed
-4. Any model must beat MOV Elo + Platt (holdout LL 0.6373) to become the new incumbent
+1. **Team-specific HFA** — per-team home field advantages from historical data
+2. **Season-specific regression** — vary regression by team stability (new coach/QB → more regression)
+3. **Residual-informed blending** — tiny model to predict residual of incumbent
+4. Any model must beat **Decayed Elo + Platt (holdout LL 0.6298)** to become the new incumbent
