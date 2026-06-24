@@ -186,8 +186,11 @@ def compute_od_elo_features(
             actual_home = float(home_won)
 
         mov_mult = _mov_multiplier(
-            row.get("home_score", 0), row.get("away_score", 0),
-            mov_type=mov_type, mov_scale=mov_scale, mov_cap=mov_cap,
+            row.get("home_score", 0),
+            row.get("away_score", 0),
+            mov_type=mov_type,
+            mov_scale=mov_scale,
+            mov_cap=mov_cap,
         )
 
         # Points-scored share for offensive weighting

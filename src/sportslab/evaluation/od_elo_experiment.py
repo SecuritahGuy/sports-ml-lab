@@ -38,10 +38,12 @@ def _filter_df(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _fit_platt(train_prob: np.ndarray, train_y: np.ndarray) -> Pipeline:
-    platt = Pipeline([
-        ("scaler", StandardScaler()),
-        ("lr", LogisticRegression(max_iter=1000, random_state=42)),
-    ])
+    platt = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("lr", LogisticRegression(max_iter=1000, random_state=42)),
+        ]
+    )
     platt.fit(train_prob.reshape(-1, 1), train_y)
     return platt
 
@@ -62,16 +64,22 @@ def run_od_elo_experiment(
 
     print("\n=== Computing Standard Elo (incumbent baseline) ===")
     df_std = compute_elo_features(
-        df_raw, k_factor=BEST_K, home_advantage=BEST_HFA,
+        df_raw,
+        k_factor=BEST_K,
+        home_advantage=BEST_HFA,
         preseason_regression=BEST_REG,
-        mov_type=BEST_MOV_TYPE, mov_scale=BEST_MOV_SCALE, mov_cap=BEST_MOV_CAP,
+        mov_type=BEST_MOV_TYPE,
+        mov_scale=BEST_MOV_SCALE,
+        mov_cap=BEST_MOV_CAP,
         decay_half_life=BEST_DECAY,
         team_regression_overrides=team_overrides,
     )
 
     # Compute O/D Elo for each (k_off, k_def) combo
     grid_combos = [
-        (ko, kd) for ko in K_OFF_GRID for kd in K_DEF_GRID
+        (ko, kd)
+        for ko in K_OFF_GRID
+        for kd in K_DEF_GRID
         if abs(ko + kd - 72) <= 8  # keep effective K ≈ 36
     ]
     grid_combos = sorted(set(grid_combos))  # deduplicate
@@ -85,11 +93,16 @@ def run_od_elo_experiment(
         label = f"ko{ko}_kd{kd}"
         print(f"\n=== O/D Elo (k_off={ko}, k_def={kd}) ===")
         od_results[label] = compute_od_elo_features(
-            df_raw, k_factor=BEST_K, home_advantage=BEST_HFA,
+            df_raw,
+            k_factor=BEST_K,
+            home_advantage=BEST_HFA,
             preseason_regression=BEST_REG,
-            mov_type=BEST_MOV_TYPE, mov_scale=BEST_MOV_SCALE, mov_cap=BEST_MOV_CAP,
+            mov_type=BEST_MOV_TYPE,
+            mov_scale=BEST_MOV_SCALE,
+            mov_cap=BEST_MOV_CAP,
             decay_half_life=BEST_DECAY,
-            k_off=ko, k_def=kd,
+            k_off=ko,
+            k_def=kd,
             team_regression_overrides=team_overrides,
         )
 
@@ -179,18 +192,23 @@ def run_od_elo_experiment(
 
     with open(rp, "w") as f:
         f.write("# Separate Offensive/Defensive Elo Experiment\n\n")
-        f.write("*Testing whether independent O/D Elo with different k_off/k_def"
-                  " improves on standard Elo.*\n\n")
+        f.write(
+            "*Testing whether independent O/D Elo with different k_off/k_def"
+            " improves on standard Elo.*\n\n"
+        )
         f.write("## Method\n\n")
         f.write("Each team maintains independent off_elo and def_elo (both start at 1500).\n")
         f.write("For prediction, ratings are combined: total = off + def (same as standard).\n")
         f.write("For updates, k_off and k_def can differ. A lopsided win with k_off > k_def\n")
-        f.write("produces a larger total rating update"
-                  " (offense gets extra credit for the blowout).\n\n")
+        f.write(
+            "produces a larger total rating update (offense gets extra credit for the blowout).\n\n"
+        )
 
         f.write("## Grid\n\n")
-        f.write(f"k_off ∈ {K_OFF_GRID}, k_def ∈ {K_DEF_GRID}"
-                  f" (9 combos, excluding k_off=k_def=36 as duplicate)\n\n")
+        f.write(
+            f"k_off ∈ {K_OFF_GRID}, k_def ∈ {K_DEF_GRID}"
+            f" (9 combos, excluding k_off=k_def=36 as duplicate)\n\n"
+        )
         f.write(f"Other params: K={BEST_K}, HFA={BEST_HFA}, reg={BEST_REG}, ")
         f.write(f"decay={BEST_DECAY}, qb_bonus={BEST_QB_BONUS}\n")
         f.write(f"MOV: {BEST_MOV_TYPE}, scale={BEST_MOV_SCALE}, cap={BEST_MOV_CAP}\n\n")
@@ -221,16 +239,20 @@ def run_od_elo_experiment(
             else:
                 hm = hold_od[lbl]
                 name = f"O/D {lbl}"
-            f.write(f"| {name} | {hm['log_loss']:.4f}"
-                     f" | {hm['brier_score']:.4f} | {hm['accuracy']:.4f}"
-                     f" | {hm['roc_auc']:.4f} |\n")
+            f.write(
+                f"| {name} | {hm['log_loss']:.4f}"
+                f" | {hm['brier_score']:.4f} | {hm['accuracy']:.4f}"
+                f" | {hm['roc_auc']:.4f} |\n"
+            )
         f.write("\n")
 
         if winner_key != "standard":
             f.write(f"**O/D Elo ({winner_key}) beats the incumbent!** New research champion.\n")
         else:
-            f.write("**Standard Elo remains the research incumbent.**"
-                     " No O/D Elo variant beat it on both val and holdout.\n")
+            f.write(
+                "**Standard Elo remains the research incumbent.**"
+                " No O/D Elo variant beat it on both val and holdout.\n"
+            )
 
     print(f"\nReport written to: {rp}")
     return str(rp)

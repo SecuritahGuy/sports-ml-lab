@@ -47,37 +47,78 @@ BEST_K_DEF = 20
 AG_TIME_LIMIT_PER_FOLD = 1800  # 30 minutes per fold
 
 ELO_ONLY_FEATURES = [
-    "home_off_elo", "away_off_elo", "home_def_elo", "away_def_elo",
-    "elo_diff", "elo_prob",
+    "home_off_elo",
+    "away_off_elo",
+    "home_def_elo",
+    "away_def_elo",
+    "elo_diff",
+    "elo_prob",
 ]
 
 SCHEDULING_FEATURES = [
-    "home_short_week", "away_short_week", "home_off_bye", "away_off_bye",
-    "thursday_flag", "monday_flag", "is_international",
-    "home_consecutive_road", "away_consecutive_road",
+    "home_short_week",
+    "away_short_week",
+    "home_off_bye",
+    "away_off_bye",
+    "thursday_flag",
+    "monday_flag",
+    "is_international",
+    "home_consecutive_road",
+    "away_consecutive_road",
 ]
 
 QB_FLAG_FEATURES = [
-    "home_qb_changed", "away_qb_changed", "qb_change_diff",
-    "home_qb_starts_this_season_pre", "away_qb_starts_this_season_pre",
-    "qb_starts_diff", "home_qb_team_starts_pre", "away_qb_team_starts_pre",
-    "home_qb_win_pct_pre", "away_qb_win_pct_pre", "qb_win_pct_diff",
-    "home_games_since_qb_change", "away_games_since_qb_change",
-    "games_since_qb_change_diff", "home_new_qb_flag", "away_new_qb_flag",
-    "new_qb_diff", "home_qb_missing_flag", "away_qb_missing_flag",
+    "home_qb_changed",
+    "away_qb_changed",
+    "qb_change_diff",
+    "home_qb_starts_this_season_pre",
+    "away_qb_starts_this_season_pre",
+    "qb_starts_diff",
+    "home_qb_team_starts_pre",
+    "away_qb_team_starts_pre",
+    "home_qb_win_pct_pre",
+    "away_qb_win_pct_pre",
+    "qb_win_pct_diff",
+    "home_games_since_qb_change",
+    "away_games_since_qb_change",
+    "games_since_qb_change_diff",
+    "home_new_qb_flag",
+    "away_new_qb_flag",
+    "new_qb_diff",
+    "home_qb_missing_flag",
+    "away_qb_missing_flag",
 ]
 
 WEATHER_FEATURES = [
-    "temperature_f", "wind_mph", "precipitation_flag",
-    "cold_flag", "very_cold_flag", "hot_flag", "windy_flag",
-    "very_windy_flag", "bad_weather_flag", "outdoor_game_flag",
-    "weather_missing_flag", "temp_missing_flag", "wind_missing_flag",
+    "temperature_f",
+    "wind_mph",
+    "precipitation_flag",
+    "cold_flag",
+    "very_cold_flag",
+    "hot_flag",
+    "windy_flag",
+    "very_windy_flag",
+    "bad_weather_flag",
+    "outdoor_game_flag",
+    "weather_missing_flag",
+    "temp_missing_flag",
+    "wind_missing_flag",
 ]
 
 BASIC_FEATURES = [
-    "week", "rest_diff", "div_game", "is_dome", "is_neutral",
-    "game_type_enc", "roof_enc", "surface_enc", "weekday_enc",
-    "home_team_enc", "away_team_enc", "home_coach_enc", "away_coach_enc",
+    "week",
+    "rest_diff",
+    "div_game",
+    "is_dome",
+    "is_neutral",
+    "game_type_enc",
+    "roof_enc",
+    "surface_enc",
+    "weekday_enc",
+    "home_team_enc",
+    "away_team_enc",
+    "home_coach_enc",
+    "away_coach_enc",
 ]
 
 
@@ -88,10 +129,12 @@ def _filter_df(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _fit_platt(train_prob: np.ndarray, train_y: np.ndarray) -> Pipeline:
-    platt = Pipeline([
-        ("scaler", StandardScaler()),
-        ("lr", LogisticRegression(max_iter=1000, random_state=42)),
-    ])
+    platt = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("lr", LogisticRegression(max_iter=1000, random_state=42)),
+        ]
+    )
     platt.fit(train_prob.reshape(-1, 1), train_y)
     return platt
 
@@ -108,11 +151,16 @@ def _compute_all_features(
 
     # 1. O/D Elo features
     elo_df = compute_od_elo_features(
-        out, k_factor=BEST_K, home_advantage=BEST_HFA,
+        out,
+        k_factor=BEST_K,
+        home_advantage=BEST_HFA,
         preseason_regression=BEST_REG,
-        mov_type=BEST_MOV_TYPE, mov_scale=BEST_MOV_SCALE, mov_cap=BEST_MOV_CAP,
+        mov_type=BEST_MOV_TYPE,
+        mov_scale=BEST_MOV_SCALE,
+        mov_cap=BEST_MOV_CAP,
         decay_half_life=BEST_DECAY,
-        k_off=BEST_K_OFF, k_def=BEST_K_DEF,
+        k_off=BEST_K_OFF,
+        k_def=BEST_K_DEF,
         team_regression_overrides=team_overrides,
     )
     for c in ELO_ONLY_FEATURES:
@@ -144,10 +192,7 @@ def _compute_all_features(
 def _available_features(df: pd.DataFrame) -> list[str]:
     """Return list of actually-available feature columns in df."""
     all_feature_candidates = (
-        ELO_ONLY_FEATURES
-        + SCHEDULING_FEATURES
-        + QB_FLAG_FEATURES
-        + BASIC_FEATURES
+        ELO_ONLY_FEATURES + SCHEDULING_FEATURES + QB_FLAG_FEATURES + BASIC_FEATURES
     )
 
     # Check for weather columns
@@ -179,7 +224,9 @@ def run_autogluon_experiment(
 
     # Build team regression overrides from all data (no holdout leak)
     team_overrides = build_team_regression_overrides(
-        df_raw, preseason_regression=BEST_REG, qb_change_bonus=BEST_QB_BONUS,
+        df_raw,
+        preseason_regression=BEST_REG,
+        qb_change_bonus=BEST_QB_BONUS,
     )
 
     # Compute all features on the full dataset
@@ -213,9 +260,9 @@ def run_autogluon_experiment(
     }
 
     for fold_idx, (train_seasons, val_season) in enumerate(ROLLING_FOLDS):
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Fold {fold_idx + 1}: train {train_seasons} → val {val_season}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         train_mask = df_train_val["season"].isin(train_seasons)
         val_mask = df_train_val["season"] == val_season
@@ -281,18 +328,17 @@ def run_autogluon_experiment(
         print(f"  AutoGluon (Elo only) val LL: {ag_elo_val_ll:.4f}")
 
     # === Average validation results ===
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Rolling-Origin Validation Summary")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for label in ["platt", "ag_full", "ag_elo"]:
         avg = np.mean(fold_results[label])
-        print(f"  {label}: avg val LL = {avg:.4f}"
-                  f"  folds={fold_results[label]}")
+        print(f"  {label}: avg val LL = {avg:.4f}  folds={fold_results[label]}")
 
     # === One-shot 2025 holdout ===
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("2025 Holdout Evaluation")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     hold_features = df_hold[feature_cols].copy()
     hold_elo_features = df_hold[ELO_ONLY_FEATURES].copy()
@@ -344,14 +390,14 @@ def run_autogluon_experiment(
 
     # Also try Platt calibration on top of AutoGluon outputs
     for variant in ["ag_full", "ag_elo"]:
-        ag_train_prob = np.asarray(fold_models[variant][-1].predict_proba(
-            x_all if variant == "ag_full" else x_all_elo
-        )[1])
+        ag_train_prob = np.asarray(
+            fold_models[variant][-1].predict_proba(x_all if variant == "ag_full" else x_all_elo)[1]
+        )
         ag_platt = _fit_platt(ag_train_prob, y_all)
         ag_platt_hold = ag_platt.predict_proba(
-            np.asarray(
-                ag_full_hold_prob if variant == "ag_full" else ag_elo_hold_prob
-            ).reshape(-1, 1)
+            np.asarray(ag_full_hold_prob if variant == "ag_full" else ag_elo_hold_prob).reshape(
+                -1, 1
+            )
         )[:, 1]
         key = f"{variant}_platt"
         hold_metrics[key] = compute_classification_metrics(y_hold, ag_platt_hold)
@@ -369,8 +415,10 @@ def run_autogluon_experiment(
 
     with open(rp, "w") as f:
         f.write("# AutoGluon AutoML Experiment\n\n")
-        f.write("*Testing whether AutoGluon (with all pregame features)"
-                " beats O/D Elo+Platt incumbent.*\n\n")
+        f.write(
+            "*Testing whether AutoGluon (with all pregame features)"
+            " beats O/D Elo+Platt incumbent.*\n\n"
+        )
         f.write("## Method\n\n")
         f.write("Rolling-origin 3-fold validation, one-shot 2025 holdout.\n\n")
 
@@ -410,9 +458,11 @@ def run_autogluon_experiment(
         f.write("## Rolling-Origin Validation\n\n")
         f.write("| Model | Avg Val LL | Fold1 | Fold2 | Fold3 |\n")
         f.write("|-------|-----------|-------|-------|-------|\n")
-        for label, name in [("platt", "Platt (incumbent)"),
-                            ("ag_full", "AutoGluon (full)"),
-                            ("ag_elo", "AutoGluon (Elo only)")]:
+        for label, name in [
+            ("platt", "Platt (incumbent)"),
+            ("ag_full", "AutoGluon (full)"),
+            ("ag_elo", "AutoGluon (Elo only)"),
+        ]:
             avg = np.mean(fold_results[label])
             f.write(f"| {name} | {avg:.4f}")
             for v in fold_results[label]:

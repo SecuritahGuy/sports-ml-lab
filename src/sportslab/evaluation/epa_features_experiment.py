@@ -105,8 +105,10 @@ def run_epa_features_experiment(
         decay_half_life=BEST_DECAY,
         team_regression_overrides=team_overrides,
     )
-    print(f"  K={BEST_K}, HFA={BEST_HFA}, reg={BEST_REG},"
-          f" decay={BEST_DECAY}, qb_bonus={BEST_QB_BONUS}")
+    print(
+        f"  K={BEST_K}, HFA={BEST_HFA}, reg={BEST_REG},"
+        f" decay={BEST_DECAY}, qb_bonus={BEST_QB_BONUS}"
+    )
     print(f"  MOV: {BEST_MOV_TYPE}, scale={BEST_MOV_SCALE}, cap={BEST_MOV_CAP}")
 
     # ── Compute EPA features ──

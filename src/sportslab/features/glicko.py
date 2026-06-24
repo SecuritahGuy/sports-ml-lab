@@ -130,12 +130,12 @@ def compute_glicko_features(
         # Season boundary: increase RD for all existing teams
         if prev_season is not None and season > prev_season:
             for team in rds:
-                rds[team] = np.sqrt(rds[team] ** 2 + system_constant_c ** 2)
+                rds[team] = np.sqrt(rds[team] ** 2 + system_constant_c**2)
                 # Additional RD boost for QB change
                 if qb_rd_bonus > 0 and qb_change_map is not None:
                     changes = qb_change_map.get(team, [])
                     if season in changes:
-                        rds[team] = np.sqrt(rds[team] ** 2 + qb_rd_bonus ** 2)
+                        rds[team] = np.sqrt(rds[team] ** 2 + qb_rd_bonus**2)
         prev_season = season
 
         h_rating = ratings.get(home, initial_rating)
@@ -178,19 +178,33 @@ def compute_glicko_features(
                         mov_mult = base
                 else:
                     from sportslab.features.ratings import _mov_multiplier
+
                     mov_mult = _mov_multiplier(
-                        row.get("home_score", 0), row.get("away_score", 0),
-                        mov_type=mov_type, mov_scale=mov_scale, mov_cap=mov_cap,
+                        row.get("home_score", 0),
+                        row.get("away_score", 0),
+                        mov_type=mov_type,
+                        mov_scale=mov_scale,
+                        mov_cap=mov_cap,
                     )
 
         # Home update uses away's g(RD), away update uses home's g(RD)
         if not pd.isna(row.get("home_win")):
             new_h_rating, new_h_rd = _glicko_update(
-                h_rating, h_rd_val, g_away, exp_home, actual_home, mov_mult,
+                h_rating,
+                h_rd_val,
+                g_away,
+                exp_home,
+                actual_home,
+                mov_mult,
             )
             exp_away = 1.0 - exp_home
             new_a_rating, new_a_rd = _glicko_update(
-                a_rating, a_rd_val, g_home, exp_away, actual_away, mov_mult,
+                a_rating,
+                a_rd_val,
+                g_home,
+                exp_away,
+                actual_away,
+                mov_mult,
             )
         else:
             new_h_rating, new_h_rd = h_rating, h_rd_val

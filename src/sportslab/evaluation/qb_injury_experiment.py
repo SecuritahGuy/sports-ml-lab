@@ -49,10 +49,12 @@ def _filter_df(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _fit_platt(train_prob: np.ndarray, train_y: np.ndarray) -> Pipeline:
-    platt = Pipeline([
-        ("scaler", StandardScaler()),
-        ("lr", LogisticRegression(max_iter=1000, random_state=42)),
-    ])
+    platt = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("lr", LogisticRegression(max_iter=1000, random_state=42)),
+        ]
+    )
     platt.fit(train_prob.reshape(-1, 1), train_y)
     return platt
 
@@ -75,17 +77,24 @@ def run_qb_injury_experiment(
 
     # Build team regression overrides
     team_overrides = build_team_regression_overrides(
-        df_raw, preseason_regression=BEST_REG, qb_change_bonus=BEST_QB_BONUS,
+        df_raw,
+        preseason_regression=BEST_REG,
+        qb_change_bonus=BEST_QB_BONUS,
     )
 
     # Compute O/D Elo
     print("\n=== Computing O/D Elo ===")
     df_elo = compute_od_elo_features(
-        df_raw, k_factor=BEST_K, home_advantage=BEST_HFA,
+        df_raw,
+        k_factor=BEST_K,
+        home_advantage=BEST_HFA,
         preseason_regression=BEST_REG,
-        mov_type=BEST_MOV_TYPE, mov_scale=BEST_MOV_SCALE, mov_cap=BEST_MOV_CAP,
+        mov_type=BEST_MOV_TYPE,
+        mov_scale=BEST_MOV_SCALE,
+        mov_cap=BEST_MOV_CAP,
         decay_half_life=BEST_DECAY,
-        k_off=BEST_K_OFF, k_def=BEST_K_DEF,
+        k_off=BEST_K_OFF,
+        k_def=BEST_K_DEF,
         team_regression_overrides=team_overrides,
     )
 
@@ -100,7 +109,7 @@ def run_qb_injury_experiment(
     qb_out = df_all[QB_OUT_FEATURE].values.astype(float)
 
     n_qb_out = int(qb_out.sum())
-    print(f"  Home QB OUT games: {n_qb_out}/{len(df_all)} ({n_qb_out/len(df_all)*100:.1f}%)")
+    print(f"  Home QB OUT games: {n_qb_out}/{len(df_all)} ({n_qb_out / len(df_all) * 100:.1f}%)")
 
     # Separate holdout
     hold_mask = df_all["season"] == HOLDOUT_SEASON
@@ -123,9 +132,9 @@ def run_qb_injury_experiment(
     }
 
     for fold_idx, (train_seasons, val_season) in enumerate(ROLLING_FOLDS):
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Fold {fold_idx + 1}: train {train_seasons} → val {val_season}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         train_mask = df_train_val["season"].isin(train_seasons).values
         val_mask = (df_train_val["season"] == val_season).values
@@ -169,9 +178,9 @@ def run_qb_injury_experiment(
         print(f"  QB OUT only val LL: {qb_only_ll:.4f}")
 
     # === Average validation ===
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Rolling-Origin Validation Summary")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     avgs = {}
     for label in ["platt", "platt_qb_out", "qb_out_only"]:
         avg = np.mean(fold_results[label])
@@ -179,25 +188,25 @@ def run_qb_injury_experiment(
         print(f"  {label}: avg val LL = {avg:.4f}")
 
     # === One-shot 2025 holdout ===
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("2025 Holdout Evaluation")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     hold_metrics: dict[str, dict] = {}
 
     # Retrain Platt + QB OUT on full 2021-2024
-    x_all = np.column_stack([
-        df_train_val["elo_prob"].values.astype(float),
-        df_train_val[QB_OUT_FEATURE].values.astype(float),
-    ])
+    x_all = np.column_stack(
+        [
+            df_train_val["elo_prob"].values.astype(float),
+            df_train_val[QB_OUT_FEATURE].values.astype(float),
+        ]
+    )
     y_all = df_train_val[TARGET_COLUMN].astype(float).values
     final_model = _logistic_model()
     final_model.fit(x_all, y_all)
     x_hold = np.column_stack([elo_prob_hold, qb_out_hold])
     final_hold_prob = final_model.predict_proba(x_hold)[:, 1]
-    hold_metrics["platt_qb_out"] = compute_classification_metrics(
-        y_hold, final_hold_prob
-    )
+    hold_metrics["platt_qb_out"] = compute_classification_metrics(y_hold, final_hold_prob)
     print(f"  Platt + QB OUT: holdout LL = {hold_metrics['platt_qb_out']['log_loss']:.4f}")
 
     # Platt incumbent (re-fit on train only — all non-holdout)
@@ -205,18 +214,14 @@ def run_qb_injury_experiment(
     train_y_all = y[~hold_mask]
     platt_final = _fit_platt(train_elo_all, train_y_all)
     platt_hold_final = platt_final.predict_proba(elo_prob_hold.reshape(-1, 1))[:, 1]
-    hold_metrics["platt"] = compute_classification_metrics(
-        y_hold, platt_hold_final
-    )
+    hold_metrics["platt"] = compute_classification_metrics(y_hold, platt_hold_final)
     print(f"  Platt (incumbent): holdout LL = {hold_metrics['platt']['log_loss']:.4f}")
 
     # QB OUT only
     qb_final = _logistic_model()
     qb_final.fit(qb_out[~hold_mask].reshape(-1, 1), y[~hold_mask])
     qb_hold_prob = qb_final.predict_proba(qb_out_hold.reshape(-1, 1))[:, 1]
-    hold_metrics["qb_out_only"] = compute_classification_metrics(
-        y_hold, qb_hold_prob
-    )
+    hold_metrics["qb_out_only"] = compute_classification_metrics(y_hold, qb_hold_prob)
     print(f"  QB OUT only: holdout LL = {hold_metrics['qb_out_only']['log_loss']:.4f}")
 
     # QB-out subset analysis
@@ -229,8 +234,9 @@ def run_qb_injury_experiment(
             y_hold[~qb_out_mask], final_hold_prob[~qb_out_mask]
         )["log_loss"]
         print(f"\n  QB OUT subset (n={n_qb_out_hold}): LL = {qb_out_sub_ll:.4f}")
-        print(f"  QB healthy subset "
-              f"(n={len(df_hold) - n_qb_out_hold}): LL = {qb_healthy_sub_ll:.4f}")
+        print(
+            f"  QB healthy subset (n={len(df_hold) - n_qb_out_hold}): LL = {qb_healthy_sub_ll:.4f}"
+        )
 
     # === Write report ===
     rp = Path(report_path)
@@ -260,9 +266,11 @@ def run_qb_injury_experiment(
         f.write("## Rolling-Origin Validation\n\n")
         f.write("| Model | Avg Val LL | Fold1 | Fold2 | Fold3 |\n")
         f.write("|-------|-----------|-------|-------|-------|\n")
-        for label, name in [("platt", "Platt (incumbent)"),
-                            ("platt_qb_out", "Platt + QB OUT"),
-                            ("qb_out_only", "QB OUT only")]:
+        for label, name in [
+            ("platt", "Platt (incumbent)"),
+            ("platt_qb_out", "Platt + QB OUT"),
+            ("qb_out_only", "QB OUT only"),
+        ]:
             f.write(f"| {name} | {avgs[label]:.4f}")
             for v in fold_results[label]:
                 f.write(f" | {v:.4f}")
@@ -272,9 +280,11 @@ def run_qb_injury_experiment(
         f.write("## 2025 Holdout\n\n")
         f.write("| Model | Hold LL | Brier | AUC | Acc |\n")
         f.write("|-------|---------|-------|-----|-----|\n")
-        for label, name in [("platt", "Platt (incumbent)"),
-                            ("platt_qb_out", "Platt + QB OUT"),
-                            ("qb_out_only", "QB OUT only")]:
+        for label, name in [
+            ("platt", "Platt (incumbent)"),
+            ("platt_qb_out", "Platt + QB OUT"),
+            ("qb_out_only", "QB OUT only"),
+        ]:
             hm = hold_metrics[label]
             f.write(f"| {name} | {hm['log_loss']:.4f}")
             f.write(f" | {hm['brier_score']:.4f}")

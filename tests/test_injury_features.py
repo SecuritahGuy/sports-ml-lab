@@ -32,6 +32,7 @@ class TestInjuryFeatures:
         """load_injury_data returns a polars DataFrame with expected columns."""
         data = load_injury_data(seasons=[2024], cache_dir="data/interim/nfl")
         import polars as pl
+
         assert isinstance(data, pl.DataFrame)
         assert "season" in data.columns
         assert "week" in data.columns
@@ -54,9 +55,13 @@ class TestInjuryFeatures:
     def test_compute_diff_columns(self, sample_ft):
         """Diff columns should be home minus away."""
         result = compute_injury_features(sample_ft)
-        for prefix in ["injuries_out", "injuries_qb_out",
-                        "injuries_skill_out", "injuries_ol_out",
-                        "injuries_def_out"]:
+        for prefix in [
+            "injuries_out",
+            "injuries_qb_out",
+            "injuries_skill_out",
+            "injuries_ol_out",
+            "injuries_def_out",
+        ]:
             diff_col = f"{prefix}_diff"
             if diff_col in result.columns:
                 home_col = f"home_{prefix}"
@@ -80,6 +85,7 @@ class TestExperiment:
     def test_importable(self):
         """Module imports without error."""
         from sportslab.evaluation import injury_features_experiment
+
         assert hasattr(injury_features_experiment, "run_injury_features_experiment")
 
     def test_experiment_runs(self, tmp_path):
@@ -95,22 +101,19 @@ class TestExperiment:
     def test_fold_holdout_safety(self):
         """Experiment config should exclude holdout from folds."""
         from sportslab.evaluation.experiment_config import HOLDOUT_SEASON, ROLLING_FOLDS
+
         for _, val_season in ROLLING_FOLDS:
             assert val_season != HOLDOUT_SEASON
 
     def test_cli_importable(self):
         """CLI injury-features command group is registered."""
         from sportslab.cli import cli
+
         found = any(
-            c.name == "injury-features_cmd"
-            or "injury" in c.name
-            for c in cli.commands.values()
+            c.name == "injury-features_cmd" or "injury" in c.name for c in cli.commands.values()
         )
         if not found:
-            found = any(
-                "injury" in c.callback.__name__
-                for c in cli.commands.values()
-            )
+            found = any("injury" in c.callback.__name__ for c in cli.commands.values())
         assert found, "injury-features command not found in CLI"
 
 

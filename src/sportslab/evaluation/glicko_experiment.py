@@ -50,10 +50,12 @@ def _filter_df(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _fit_platt(train_prob: np.ndarray, train_y: np.ndarray) -> Pipeline:
-    platt = Pipeline([
-        ("scaler", StandardScaler()),
-        ("lr", LogisticRegression(max_iter=1000, random_state=42)),
-    ])
+    platt = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("lr", LogisticRegression(max_iter=1000, random_state=42)),
+        ]
+    )
     platt.fit(train_prob.reshape(-1, 1), train_y)
     return platt
 
@@ -81,15 +83,22 @@ def run_glicko_experiment(
 
     # --- Compute incumbent baseline ---
     team_overrides = build_team_regression_overrides(
-        df_raw, preseason_regression=BEST_REG, qb_change_bonus=BEST_QB_BONUS,
+        df_raw,
+        preseason_regression=BEST_REG,
+        qb_change_bonus=BEST_QB_BONUS,
     )
     print("\n=== Computing Incumbent (O/D Elo) ===")
     df_inc = compute_od_elo_features(
-        df_raw, k_factor=BEST_K, home_advantage=BEST_HFA,
+        df_raw,
+        k_factor=BEST_K,
+        home_advantage=BEST_HFA,
         preseason_regression=BEST_REG,
-        mov_type=BEST_MOV_TYPE, mov_scale=BEST_MOV_SCALE, mov_cap=BEST_MOV_CAP,
+        mov_type=BEST_MOV_TYPE,
+        mov_scale=BEST_MOV_SCALE,
+        mov_cap=BEST_MOV_CAP,
         decay_half_life=BEST_DECAY,
-        k_off=BEST_K_OFF, k_def=BEST_K_DEF,
+        k_off=BEST_K_OFF,
+        k_def=BEST_K_DEF,
         team_regression_overrides=team_overrides,
     )
 
@@ -160,7 +169,7 @@ def run_glicko_experiment(
 
     sorted_keys = sorted(avgs, key=avgs.get)
     print(f"  {'Model':<35s} {'Avg Val LL':>10s}")
-    print(f"  {'-'*35} {'-'*10}")
+    print(f"  {'-' * 35} {'-' * 10}")
     for key in sorted_keys:
         marker = " <<<" if key == "incumbent" else ""
         if key == "incumbent":
@@ -175,7 +184,7 @@ def run_glicko_experiment(
     glicko_keys = [k for k in sorted_keys if k != "incumbent"]
     print("=== Top 10 Glicko Configurations (avg val LL) ===")
     print(f"  {'Config':<35s} {'Avg Val LL':>10s}")
-    print(f"  {'-'*35} {'-'*10}")
+    print(f"  {'-' * 35} {'-' * 10}")
     for key in glicko_keys[:10]:
         print(f"  {key:<35s} {avgs[key]:>10.4f}")
 
@@ -219,19 +228,23 @@ def run_glicko_experiment(
 
     with open(rp, "w") as f:
         f.write("# Glicko Rating System Experiment\n\n")
-        f.write("*Testing whether the Glicko-1 rating system (with uncertainty"
-                  " tracking via RD) improves on O/D Elo + Platt.*\n\n")
+        f.write(
+            "*Testing whether the Glicko-1 rating system (with uncertainty"
+            " tracking via RD) improves on O/D Elo + Platt.*\n\n"
+        )
 
         f.write("## Method\n\n")
         f.write("Glicko-1 extends Elo with a Rating Deviation (RD) per team.\n")
-        f.write("- **g(RD)** = 1 / sqrt(1 + 3q²RD²/π²) — scales prediction"
-                  " toward 0.5 when opponent RD is high\n")
-        f.write("- High RD → conservative predictions (early season, QB change,"
-                  " new team)\n")
-        f.write("- Between seasons: RD ← sqrt(RD² + c²) — uncertainty grows"
-                  " during offseason\n")
-        f.write(f"- MOV: {BEST_MOV_TYPE}, scale={BEST_MOV_SCALE}, cap={BEST_MOV_CAP}"
-                  f" (same as incumbent)\n\n")
+        f.write(
+            "- **g(RD)** = 1 / sqrt(1 + 3q²RD²/π²) — scales prediction"
+            " toward 0.5 when opponent RD is high\n"
+        )
+        f.write("- High RD → conservative predictions (early season, QB change, new team)\n")
+        f.write("- Between seasons: RD ← sqrt(RD² + c²) — uncertainty grows during offseason\n")
+        f.write(
+            f"- MOV: {BEST_MOV_TYPE}, scale={BEST_MOV_SCALE}, cap={BEST_MOV_CAP}"
+            f" (same as incumbent)\n\n"
+        )
 
         f.write("## Grid\n\n")
         f.write("| Parameter | Values |\n")
@@ -241,8 +254,7 @@ def run_glicko_experiment(
         f.write(f"| System constant c | {SYSTEM_C_GRID} |\n")
         f.write(f"| QB RD bonus | {QB_RD_BONUS_GRID} |\n")
         total_configs = (
-            len(HFA_GRID) * len(INITIAL_RD_GRID)
-            * len(SYSTEM_C_GRID) * len(QB_RD_BONUS_GRID)
+            len(HFA_GRID) * len(INITIAL_RD_GRID) * len(SYSTEM_C_GRID) * len(QB_RD_BONUS_GRID)
         )
         f.write(f"\nTotal: {total_configs} configurations\n\n")
 
@@ -251,7 +263,7 @@ def run_glicko_experiment(
             f"| {'Config':<35s} | {'Avg Val LL':>10s}"
             f" | {'Fold1':>7s} | {'Fold2':>7s} | {'Fold3':>7s} |\n"
         )
-        f.write(f"| {'-'*35} | {'-'*10} | {'-'*7} | {'-'*7} | {'-'*7} |\n")
+        f.write(f"| {'-' * 35} | {'-' * 10} | {'-' * 7} | {'-' * 7} | {'-' * 7} |\n")
         for key in sorted_keys:
             if key == "incumbent":
                 name = "Incumbent (O/D Elo + Platt)"
@@ -268,19 +280,23 @@ def run_glicko_experiment(
         f.write("|--------|---------|-------|-----|-----|\n")
         f.write(f"| Random | {random_hold_ll:.4f} | 0.2500 | 0.5000 | 0.5000 |\n")
         f.write(f"| Home prior ({prior_rate:.3f}) | {prior_hold_ll:.4f} | — | — | 0.5000 |\n")
-        f.write(f"| Incumbent (O/D Elo + Platt) | {hold_inc['log_loss']:.4f}"
-                 f" | {hold_inc['brier_score']:.4f}"
-                 f" | {hold_inc['roc_auc']:.4f}"
-                 f" | {hold_inc['accuracy']:.4f} |\n")
+        f.write(
+            f"| Incumbent (O/D Elo + Platt) | {hold_inc['log_loss']:.4f}"
+            f" | {hold_inc['brier_score']:.4f}"
+            f" | {hold_inc['roc_auc']:.4f}"
+            f" | {hold_inc['accuracy']:.4f} |\n"
+        )
 
         # Top 30 Glicko configs on holdout
         hold_sorted = sorted(hold_glicko, key=lambda k: hold_glicko[k]["log_loss"])
         for key in hold_sorted[:30]:
             hm = hold_glicko[key]
-            f.write(f"| Glicko {key} | {hm['log_loss']:.4f}"
-                     f" | {hm['brier_score']:.4f}"
-                     f" | {hm['roc_auc']:.4f}"
-                     f" | {hm['accuracy']:.4f} |\n")
+            f.write(
+                f"| Glicko {key} | {hm['log_loss']:.4f}"
+                f" | {hm['brier_score']:.4f}"
+                f" | {hm['roc_auc']:.4f}"
+                f" | {hm['accuracy']:.4f} |\n"
+            )
         f.write("\n")
 
         # Decision
@@ -289,13 +305,18 @@ def run_glicko_experiment(
         best_val_key = min(hold_glicko, key=lambda k: avgs[k]) if best_glicko_key else None
 
         if best_g_hold < inc_hold_ll and best_val_key and avgs[best_val_key] < avgs["incumbent"]:
-            f.write(f"**Glicko ({best_hold_key}) beats the incumbent on both"
-                     f" validation and holdout!**\n")
+            f.write(
+                f"**Glicko ({best_hold_key}) beats the incumbent on both"
+                f" validation and holdout!**\n"
+            )
         elif best_g_hold < inc_hold_ll:
-            f.write(f"**Glicko ({best_hold_key}) beats the incumbent on holdout"
-                     f" but not on validation.** (*Diagnostic only — not promoted.*)\n")
-            f.write(f"Best Glicko val: {avgs[best_val_key]:.4f} vs incumbent"
-                     f" {avgs['incumbent']:.4f}\n")
+            f.write(
+                f"**Glicko ({best_hold_key}) beats the incumbent on holdout"
+                f" but not on validation.** (*Diagnostic only — not promoted.*)\n"
+            )
+            f.write(
+                f"Best Glicko val: {avgs[best_val_key]:.4f} vs incumbent {avgs['incumbent']:.4f}\n"
+            )
         else:
             f.write("**Glicko does not beat the incumbent.**\n")
 

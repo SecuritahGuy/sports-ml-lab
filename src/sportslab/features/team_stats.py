@@ -188,8 +188,12 @@ def compute_team_stats_features(
         home = row["home_team"]
         away = row["away_team"]
 
-        h_match = (tg_roll["team"] == home) & (tg_roll["season"] == season) & (tg_roll["week"] == week)
-        a_match = (tg_roll["team"] == away) & (tg_roll["season"] == season) & (tg_roll["week"] == week)
+        h_match = (
+            (tg_roll["team"] == home) & (tg_roll["season"] == season) & (tg_roll["week"] == week)
+        )
+        a_match = (
+            (tg_roll["team"] == away) & (tg_roll["season"] == season) & (tg_roll["week"] == week)
+        )
         h_row = tg_roll[h_match]
         a_row = tg_roll[a_match]
 
@@ -222,12 +226,8 @@ def compute_team_stats_features(
     out["away_off_yds_rolling_5"] = away_off_5
     out["home_def_yds_allowed_rolling_5"] = home_def_5
     out["away_def_yds_allowed_rolling_5"] = away_def_5
-    out["off_yds_net_3"] = (
-        pd.Series(home_off_3) - pd.Series(away_def_3)
-    )
-    out["off_yds_net_5"] = (
-        pd.Series(home_off_5) - pd.Series(away_def_5)
-    )
+    out["off_yds_net_3"] = pd.Series(home_off_3) - pd.Series(away_def_3)
+    out["off_yds_net_5"] = pd.Series(home_off_5) - pd.Series(away_def_5)
     out["home_fantasy_pts_rolling_3"] = home_fp_3
     out["away_fantasy_pts_rolling_3"] = away_fp_3
     out["home_def_sacks_rolling_3"] = home_sacks_3

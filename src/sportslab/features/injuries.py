@@ -16,8 +16,20 @@ SPORTSLAB_MIN_SEASON = 2021
 SKILL_POSITIONS = {"WR", "RB", "TE"}
 OL_POSITIONS = {"T", "G", "C"}
 DEF_POSITIONS = {
-    "DE", "DT", "LB", "CB", "S", "NT", "OLB", "ILB", "MLB",
-    "DB", "DL", "EDGE", "SS", "FS",
+    "DE",
+    "DT",
+    "LB",
+    "CB",
+    "S",
+    "NT",
+    "OLB",
+    "ILB",
+    "MLB",
+    "DB",
+    "DL",
+    "EDGE",
+    "SS",
+    "FS",
 }
 
 INJURY_FEATURE_COLUMNS = [
@@ -135,11 +147,13 @@ def compute_injury_features(
     injury_lookup: dict[tuple[int, int, str], dict[str, int]] = {}
 
     # Process in polars then convert to dict
-    grouped = raw.group_by(["season", "week", "team"]).agg([
-        pl.col("report_status").alias("statuses"),
-        pl.col("position").alias("positions"),
-        pl.col("gsis_id").alias("player_ids"),
-    ])
+    grouped = raw.group_by(["season", "week", "team"]).agg(
+        [
+            pl.col("report_status").alias("statuses"),
+            pl.col("position").alias("positions"),
+            pl.col("gsis_id").alias("player_ids"),
+        ]
+    )
 
     for row in grouped.iter_rows(named=True):
         season = row["season"]
@@ -195,14 +209,30 @@ def compute_injury_features(
         home_key = (season, week, home_team)
         away_key = (season, week, away_team)
 
-        home_c = injury_lookup.get(home_key, {
-            "out": 0, "qb_out": 0, "skill_out": 0, "ol_out": 0,
-            "def_out": 0, "questionable": 0, "doubtful": 0,
-        })
-        away_c = injury_lookup.get(away_key, {
-            "out": 0, "qb_out": 0, "skill_out": 0, "ol_out": 0,
-            "def_out": 0, "questionable": 0, "doubtful": 0,
-        })
+        home_c = injury_lookup.get(
+            home_key,
+            {
+                "out": 0,
+                "qb_out": 0,
+                "skill_out": 0,
+                "ol_out": 0,
+                "def_out": 0,
+                "questionable": 0,
+                "doubtful": 0,
+            },
+        )
+        away_c = injury_lookup.get(
+            away_key,
+            {
+                "out": 0,
+                "qb_out": 0,
+                "skill_out": 0,
+                "ol_out": 0,
+                "def_out": 0,
+                "questionable": 0,
+                "doubtful": 0,
+            },
+        )
 
         home_counts_list.append(home_c)
         away_counts_list.append(away_c)
