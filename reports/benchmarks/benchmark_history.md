@@ -301,12 +301,77 @@ Each entry includes:
 
 ---
 
+### 21. Injury Report Features
+
+| Field | Value |
+|-------|-------|
+| **Model** | O/D Elo (k_off=52, k_def=20) + 19 injury report features (total OUT, QB OUT, skill OUT, OL OUT, def OUT, questionable, doubtful per team + differentials) + logistic regression |
+| **Selection** | Rolling-origin 3-fold |
+| **Validation Platt** | **0.6376** |
+| **Validation Elo+Injury** | 0.6433 |
+| **Validation Injury only** | 0.6894 |
+| **Holdout Platt** | **0.6276** |
+| **Holdout Elo+Injury** | 0.6352 |
+| **Holdout Injury only** | 0.6922 |
+| **Decision** | **Rejected** — Elo+Injury underperforms on both validation (−0.006) and holdout (−0.008). Notable: QB-out subset (n=28) shows very strong signal at 0.5506 LL vs QB-healthy 0.6448, but 19 additional features add too much noise on this small dataset. |
+| **Report** | `reports/experiments/injury_features.md` |
+| **Date** | 2026-06-23 |
+
+---
+
+### 22. Optuna Joint Elo Parameter Search
+
+| Field | Value |
+|-------|-------|
+| **Model** | Optuna TPESampler joint optimization of K, HFA, reg, decay, qb_bonus, k_off, k_def, MOV type/scale/cap (10 params) + Platt calibration |
+| **Selection** | Avg validation LL across 3 rolling-origin folds (200 trials) |
+| **Best params** | K=44, HFA=16, reg=0.158, decay=56, qb_bonus=0.01, k_off=24, k_def=34, MOV=capped_linear scale=0.096 cap=4.12 |
+| **Validation LL** | **0.6342** (beats incumbent 0.6376) |
+| **Holdout LL** | **0.6318** (worse than incumbent 0.6258) |
+| **Decision** | **Rejected** — classic validation-overfit pattern. Optuna found params 0.0034 better on validation but 0.0060 worse on holdout. Incumbent's k_off=52, k_def=20 split was selected by user override for its strong holdout generalization — pure validation optimization cannot replicate this. |
+| **Report** | `reports/experiments/optuna_elo_search.md` |
+| **Date** | 2026-06-23 |
+
+---
+
+### 23. QB Injury Flag (Single Binary Feature)
+
+| Field | Value |
+|-------|-------|
+| **Model** | O/D Elo (incumbent) + single binary `home_injuries_qb_out` flag via logistic regression |
+| **Selection** | Rolling-origin 3-fold |
+| **Best params** | Single binary flag (logistic on [elo_prob, qb_out]) |
+| **Validation Platt** | **0.6376** |
+| **Validation Platt+QB_OUT** | 0.6464 |
+| **Holdout Platt** | **0.6258** |
+| **Holdout Platt+QB_OUT** | **0.6255** |
+| **Decision** | **Rejected** — 0.0003 holdout improvement (noise-level; validation was 0.0088 worse). QB-out subset (n=28) improved from 0.5881 → 0.5746 with the flag, but QB-healthy subset (n=248) degraded from 0.6301 → 0.6312. Net effect zero. Incumbent already handles QB-out games well via Elo. |
+| **Report** | `reports/experiments/qb_injury_flag.md` |
+| **Date** | 2026-06-23 |
+
+---
+
+### 24. Glicko Rating System (432 configurations)
+
+| Field | Value |
+|-------|-------|
+| **Model** | Glicko-1 rating system with per-team RD, g(RD) scaling, season-boundary RD growth, QB RD bonus |
+| **Selection** | Rolling-origin 3-fold grid search (4 HFA × 6 init_RD × 6 sys_c × 3 qb_bonus = 432) |
+| **Best val params** | HFA=50, init_RD=350, c=250, QB bonus=0 |
+| **Validation LL** | **0.6513** (worse than incumbent 0.6376) |
+| **Holdout LL** | **0.7013** (worse than incumbent 0.6258) |
+| **Decision** | **Rejected** — All 432 Glicko configs worse than O/D Elo+Platt on both validation and holdout. The g(RD) uncertainty factor systematically pulls predictions toward 0.5, reducing model confidence across the board. Even the best Glicko config (highest HFA=50, lowest uncertainty parameters) couldn't match standard Elo's predictive accuracy. |
+| **Report** | `reports/experiments/glicko_rating.md` |
+| **Date** | 2026-06-23 |
+
+---
+
 ## Summary Statistics
 
-| Total experiments | 20 |
+| Total experiments | 24 |
 |------------------|-----|
 | Promoted | 6 |
-| Rejected | 11 |
+| Rejected | 15 |
 | Diagnostic | 2 |
 | Current incumbent | O/D Elo (k_off=52, k_def=20, HFA=40, reg=0.1, decay=32, qb_bonus=0.2, MOV capped_linear) + Platt |
 | Incumbent holdout LL | **0.6258** |

@@ -49,6 +49,11 @@
 | Coach+QB regression | Rejected | 0.6286 | `reports/experiments/coach_season_regression.md` |
 | Residual blending | Rejected | 0.6303–0.6355 | `reports/experiments/residual_blending.md` |
 | Team stats (yards/fantasy/sacks) | Rejected | 0.6415 | `reports/experiments/team_stats.md` |
+| AutoGluon AutoML | Rejected | 0.6439 | `reports/experiments/autogluon.md` |
+| Injury report features | Rejected | 0.6352 | `reports/experiments/injury_features.md` |
+| Optuna joint Elo search | Rejected | 0.6318 (val better, holdout worse) | `reports/experiments/optuna_elo_search.md` |
+| QB injury flag | Rejected | 0.6255 (noise-level improvement) | `reports/experiments/qb_injury_flag.md` |
+| Glicko rating system | Rejected | 0.7013 (all 432 configs worse) | `reports/experiments/glicko_rating.md` |
 
 ## Market Benchmark
 

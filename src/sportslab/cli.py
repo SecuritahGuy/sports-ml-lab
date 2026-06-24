@@ -11,7 +11,13 @@ from sportslab.evaluation.confidence_calibration_experiment import (
 from sportslab.evaluation.decayed_elo_experiment import run_decayed_elo_experiment
 from sportslab.evaluation.elo_tuning import run_elo_tuning
 from sportslab.evaluation.epa_features_experiment import run_epa_features_experiment
+from sportslab.evaluation.glicko_experiment import run_glicko_experiment
 from sportslab.evaluation.expressive_models_experiment import run_expressive_models_experiment
+from sportslab.evaluation.injury_features_experiment import (
+    run_injury_features_experiment,
+)
+from sportslab.evaluation.optuna_elo_search import run_optuna_search
+from sportslab.evaluation.qb_injury_experiment import run_qb_injury_experiment
 from sportslab.evaluation.margin_aware_elo import run_margin_aware_experiment
 from sportslab.evaluation.market_baseline import run_market_baseline
 from sportslab.evaluation.market_benchmark import run_market_benchmark
@@ -181,3 +187,27 @@ def coach_season_regression_cmd():
 def autogluon_cmd():
     """Run AutoGluon AutoML experiment against O/D Elo+Platt incumbent."""
     run_autogluon_experiment()
+
+
+@cli.command()
+def injury_features_cmd():
+    """Run injury report feature experiment against O/D Elo+Platt incumbent."""
+    run_injury_features_experiment()
+
+
+@cli.command()
+def optuna_search_cmd():
+    """Run Optuna joint parameter search for all Elo parameters."""
+    run_optuna_search()
+
+
+@cli.command()
+def qb_injury_cmd():
+    """Run single-feature QB injury flag experiment."""
+    run_qb_injury_experiment()
+
+
+@cli.command()
+def glicko_cmd():
+    """Run Glicko rating system experiment against O/D Elo+Platt incumbent."""
+    run_glicko_experiment()

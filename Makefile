@@ -4,7 +4,7 @@ SPORTSLAB = $(VENV)/bin/sportslab
 RUFF = $(VENV)/bin/ruff
 PIP = $(VENV)/bin/pip
 
-.PHONY: install install-dev test lint format clean mlflow ingest-nfl build-features train-baseline train-baseline-team-strength elo-tuning rolling-origin-elo schedule-features margin-aware-elo qb-features weather-features expressive-models market-baseline residual-diagnostics epa-features confidence-calibration market-benchmark decayed-elo team-hfa season-regression residual-blending coach-season-regression autogluon venv
+.PHONY: install install-dev test lint format clean mlflow ingest-nfl build-features train-baseline train-baseline-team-strength elo-tuning rolling-origin-elo schedule-features margin-aware-elo qb-features weather-features expressive-models market-baseline residual-diagnostics epa-features confidence-calibration market-benchmark decayed-elo team-hfa season-regression residual-blending coach-season-regression autogluon injury-features optuna-elo-search qb-injury-flag glicko venv
 
 venv:
 	python3 -m venv $(VENV)
@@ -99,3 +99,15 @@ coach-season-regression:
 
 autogluon:
 	$(SPORTSLAB) autogluon
+
+injury-features:
+	$(SPORTSLAB) injury-features
+
+optuna-elo-search:
+	$(SPORTSLAB) optuna-search
+
+qb-injury-flag:
+	$(SPORTSLAB) qb-injury
+
+glicko:
+	$(SPORTSLAB) glicko

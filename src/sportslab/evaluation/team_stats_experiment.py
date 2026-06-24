@@ -224,7 +224,7 @@ def run_team_stats_experiment(
         if hold_qb_changed.sum() >= 5:
             qb_changed_ll = compute_classification_metrics(hold_y[hold_qb_changed], platt_hold_proba[hold_qb_changed])["log_loss"]
             qb_stable_ll = compute_classification_metrics(hold_y[hold_qb_stable], platt_hold_proba[hold_qb_stable])["log_loss"]
-            f.write(f"### QB-Change Subset (Platt)\n\n")
+            f.write("### QB-Change Subset (Platt)\n\n")
             f.write(f"QB changed (n={int(hold_qb_changed.sum())}): {qb_changed_ll:.4f} | QB stable (n={int(hold_qb_stable.sum())}): {qb_stable_ll:.4f}\n\n")
 
         if winner:

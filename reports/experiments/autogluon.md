@@ -37,19 +37,19 @@ Rolling-origin 3-fold validation, one-shot 2025 holdout.
 | Model | Avg Val LL | Fold1 | Fold2 | Fold3 |
 |-------|-----------|-------|-------|-------|
 | Platt (incumbent) | 0.6376 | 0.6430 | 0.6567 | 0.6132 |
-| AutoGluon (full) | 0.6595 | 0.6513 | 0.6901 | 0.6371 |
-| AutoGluon (Elo only) | 0.6849 | 0.7387 | 0.6741 | 0.6418 |
+| AutoGluon (full) | 0.6956 | 0.7292 | 0.7312 | 0.6265 |
+| AutoGluon (Elo only) | 0.6523 | 0.6758 | 0.6612 | 0.6201 |
 
 ## 2025 Holdout
 
 | Model | Hold LL | Brier | AUC | Acc |
 |-------|---------|-------|-----|-----|
 | Platt (incumbent) | 0.6362 | 0.2226 | 0.6904 | 0.6667 |
-| AutoGluon (full) | 0.6439 | 0.2251 | 0.6839 | 0.6449 |
-| AutoGluon (Elo only) | 0.6748 | 0.2376 | 0.6478 | 0.6268 |
-| AutoGluon (full) + Platt | 0.7488 | 0.2499 | 0.6839 | 0.6413 |
-| AutoGluon (Elo only) + Platt | 0.7599 | 0.2599 | 0.6478 | 0.6232 |
+| AutoGluon (full) | 0.6404 | 0.2240 | 0.6848 | 0.6594 |
+| AutoGluon (Elo only) | 0.6467 | 0.2266 | 0.6727 | 0.6377 |
+| AutoGluon (full) + Platt | 0.7603 | 0.2521 | 0.6848 | 0.6594 |
+| AutoGluon (Elo only) + Platt | 0.6663 | 0.2333 | 0.6727 | 0.6304 |
 
-**Incumbent retains champion.** Best challenger platt holdout LL 0.6362 vs incumbent 0.6362
+**Incumbent retains champion.** Best challenger ag_full holdout LL 0.6404 vs incumbent 0.6362
 
 AutoGluon did not improve on simple Platt calibration on this dataset.

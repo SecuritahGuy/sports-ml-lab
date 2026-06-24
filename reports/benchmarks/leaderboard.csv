@@ -19,3 +19,7 @@ residual_blending,logistic_on_elo_prob_plus_week_rest_early,rolling_origin_3fold
 coach_season_regression,decayed_elo_K36_HFA40_reg0.1_decay32_qb_bonus0.3_coach_bonus0.1,rolling_origin_3fold,0.6309,0.6286,0.7010,0.2191,0.6703,rejected,reports/experiments/coach_season_regression.md,2026-06-23
 od_elo,od_elo_ko52_kd20_HFA40_reg0.1_decay32_qb_bonus0.2_capped_linear_0.05_2.0,rolling_origin_3fold,0.6376,0.6258,0.7066,0.2179,0.6703,promoted,reports/experiments/od_elo.md,2026-06-23
 autogluon,autogluon_medium_quality_47_features_sklearn_only,rolling_origin_3fold,0.6595,0.6439,0.6839,0.2251,0.6449,rejected,reports/experiments/autogluon.md,2026-06-23
+22: injury_features,od_elo_plus_19_injury_report_features,rolling_origin_3fold,0.6433,0.6352,0.69,0.221,0.66,rejected,reports/experiments/injury_features.md,2026-06-23
+23: optuna_elo_search,od_elo_joint_optuna_200_trials,rolling_origin_3fold,0.6342,0.6318,0.70,0.220,0.66,rejected,reports/experiments/optuna_elo_search.md,2026-06-23
+24: qb_injury_flag,od_elo_plus_home_qb_out_binary_flag,rolling_origin_3fold,0.6464,0.6255,0.706,0.2225,0.666,rejected,reports/experiments/qb_injury_flag.md,2026-06-23
+25: glicko_rating,compute_glicko_features_grid_432,rolling_origin_3fold,0.6513,0.7013,0.252,0.583,0.587,rejected,reports/experiments/glicko_rating.md,2026-06-23
