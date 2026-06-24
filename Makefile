@@ -138,3 +138,6 @@ comprehensive-efficiency:
 
 audit-artifacts:
 	$(SPORTSLAB) audit-artifacts
+
+build-dashboard:
+	$(SPORTSLAB) build-dashboard

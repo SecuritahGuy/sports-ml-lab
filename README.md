@@ -36,3 +36,41 @@ Ingestion requires internet access to download from nflverse repositories.
 ## License
 
 MIT License.
+
+## Dashboard (GitHub Pages)
+
+A static project dashboard is available at `docs/` for GitHub Pages:
+
+```bash
+# Build or update the dashboard
+make build-dashboard
+
+# Or
+sportslab build-dashboard
+```
+
+### Pages
+
+- `docs/index.md` — Homepage with incumbent summary and registry stats
+- `docs/benchmarks.md` — Leaderboard by category, promotion rules
+- `docs/predictions.md` — Prediction schema, confidence buckets, caution flags
+- `docs/model-card.md` — Full model documentation
+- `docs/experiments.md` — All experiments grouped by outcome
+
+### Enable GitHub Pages
+
+1. Go to repo Settings → Pages
+2. Source: "Deploy from a branch"
+3. Branch: `main`, folder: `/docs`
+4. Site will build at `https://<username>.github.io/sports-ml-lab/`
+
+No internet access is required to build the dashboard — it reads local benchmark
+registry files and prediction artifacts.
+
+## Research Incumbent
+
+**Model:** Standard Elo + qb_changed + rolling_mov_3 + Platt
+**Holdout log loss:** 0.6262
+**Validation log loss:** 0.6334
+
+See `reports/benchmarks/nfl_research_incumbent.md` for full details.

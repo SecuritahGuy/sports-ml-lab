@@ -3,6 +3,7 @@ import click
 from sportslab.data.ingest_nfl import ingest_nfl
 from sportslab.evaluation.audit_artifacts import run_audit
 from sportslab.evaluation.autogluon_experiment import run_autogluon_experiment
+from sportslab.evaluation.build_dashboard import build_all
 from sportslab.evaluation.coach_season_regression_experiment import (
     run_coach_season_regression_experiment,
 )
@@ -280,3 +281,9 @@ def audit_artifacts_cmd():
     if issues:
         raise SystemExit(f"Audit failed: {len(issues)} issue(s) found")
     click.echo("✅ Artifact audit passed — all checks OK.")
+
+
+@cli.command()
+def build_dashboard_cmd():
+    """Build static GitHub Pages dashboard from benchmark registry and prediction artifacts."""
+    build_all()
