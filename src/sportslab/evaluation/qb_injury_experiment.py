@@ -39,7 +39,7 @@ BEST_K_OFF = 52
 BEST_K_DEF = 20
 
 # Single binary feature we're testing
-QB_OUT_FEATURE = "home_injuries_qb_out"
+QB_OUT_FEATURE = "home_qb_out"
 
 
 def _filter_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -66,7 +66,6 @@ def _logistic_model() -> LogisticRegression:
 def run_qb_injury_experiment(
     feature_table_path: str = "data/features/nfl/feature_table.parquet",
     report_path: str = "reports/experiments/qb_injury_flag.md",
-    cache_dir: str = "data/interim/nfl",
 ) -> str:
     fp = Path(feature_table_path)
     if not fp.exists():
@@ -100,7 +99,7 @@ def run_qb_injury_experiment(
 
     # Compute injury features (we only use the QB out columns)
     print("\n=== Computing injury features ===")
-    df_inj = compute_injury_features(df_elo, cache_dir=cache_dir)
+    df_inj = compute_injury_features(df_elo)
 
     df_all = _filter_df(df_inj)
     print(f"  Total model-eligible rows: {len(df_all)}")

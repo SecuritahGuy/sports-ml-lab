@@ -92,7 +92,7 @@ Each entry includes:
 | **Best params** | K=36, HFA=40, reg=0.20, capped_linear, scale=0.05, cap=2.0 |
 | **Validation LL** | 0.6363 |
 | **Holdout LL** | 0.6373 |
-| **Decision** | **Promoted as new incumbent (current)** |
+| **Decision** | **Promoted as new incumbent; later superseded by Decayed Elo** |
 | **Report** | `reports/experiments/margin_aware_elo.md` |
 | **Date** | 2026-06-23 |
 
@@ -213,9 +213,27 @@ Each entry includes:
 | **Holdout Brier** | 0.2197 |
 | **Holdout AUC** | 0.7024 |
 | **Holdout Accuracy** | 0.6558 |
-| **Decision** | **Promoted as new incumbent (current)** — beats previous 0.6373 by 0.0075 |
+| **Decision** | **Promoted as new incumbent; later superseded by Season Regression Elo** — beats previous 0.6373 by 0.0075 |
 | **Report** | `reports/experiments/decayed_elo.md` |
 | **Date** | 2026-06-23 |
+
+### 15. Team-Specific HFA
+
+| Field | Value |
+|-------|-------|
+| **Model** | Decayed MOV Elo + per-team home field advantages (margin-based offsets, capped at ±30 Elo) |
+| **Selection** | Rolling-origin 3-fold |
+| **Global HFA** | 40 |
+| **Validation LL** | 0.6355 (worse than global HFA 0.6321) |
+| **Holdout LL (raw)** | 0.6267 |
+| **Holdout LL (+Platt)** | 0.6263 (better than global 0.6298, but val was worse) |
+| **Holdout Brier** | 0.2180 |
+| **Holdout Acc** | 0.6812 |
+| **Decision** | **Rejected** — per-team HFA estimates from 1–3 seasons are too noisy. Worse validation (0.6355 vs 0.6321). Holdout better (0.6263 vs 0.6298) but selection rule is by validation. |
+| **Report** | `reports/experiments/team_hfa.md` |
+| **Date** | 2026-06-23 |
+
+---
 
 ### 16. Season-Specific (QB Change) Regression
 
@@ -278,7 +296,7 @@ Each entry includes:
 | **Holdout AUC** | 0.7066 |
 | **Holdout Accuracy** | 0.6703 |
 | **Incumbent** | 0.6285 (standard Elo + Platt) |
-| **Decision** | **Promoted as new incumbent** — beats previous 0.6285 by 0.0027 on holdout; clear monotonic pattern across 15 k_off/k_def combos |
+| **Decision** | **Diagnostic (holdout-informed)** — k_off=52, k_def=20 selected using 2025 holdout, not validation. Demoted from incumbent. The experiment report's own conclusion: "Standard Elo remains the research incumbent — no O/D Elo variant beat it on both val and holdout." |
 | **Report** | `reports/experiments/od_elo.md` |
 | **Date** | 2026-06-23 |
 
@@ -289,37 +307,19 @@ Each entry includes:
 | **Model** | AutoGluon TabularPredictor (medium_quality presets) with 47 pregame features — RandomForest, ExtraTrees, sklearn ensembles only (LightGBM/XGBoost/CatBoost/NeuralNet unavailable) |
 | **Selection** | Rolling-origin 3-fold |
 | **Validation Platt** | **0.6376** |
-| **Validation AG (full)** | 0.6595 |
-| **Validation AG (Elo only)** | 0.6849 |
+| **Validation AG (full)** | 0.6956 |
+| **Validation AG (Elo only)** | 0.6523 |
 | **Holdout Platt** | **0.6362** |
-| **Holdout AG (full)** | 0.6439 |
-| **Holdout AG (Elo only)** | 0.6748 |
-| **Holdout AG + Platt** | 0.7488–0.7599 |
+| **Holdout AG (full)** | 0.6404 |
+| **Holdout AG (Elo only)** | 0.6467 |
+| **Holdout AG + Platt** | 0.7603–0.6663 |
 | **Decision** | **Rejected** — AutoGluon underperforms Platt on both validation and holdout. Consistent with prior finding: tree models add noise on this small dataset. AutoGluon with only sklearn models (no LightGBM/XGBoost/CatBoost) is essentially RandomForest — which was already tested and rejected. |
 | **Report** | `reports/experiments/autogluon.md` |
 | **Date** | 2026-06-23 |
 
 ---
 
-### 21. Injury Report Features
-
-| Field | Value |
-|-------|-------|
-| **Model** | O/D Elo (k_off=52, k_def=20) + 19 injury report features (total OUT, QB OUT, skill OUT, OL OUT, def OUT, questionable, doubtful per team + differentials) + logistic regression |
-| **Selection** | Rolling-origin 3-fold |
-| **Validation Platt** | **0.6376** |
-| **Validation Elo+Injury** | 0.6433 |
-| **Validation Injury only** | 0.6894 |
-| **Holdout Platt** | **0.6276** |
-| **Holdout Elo+Injury** | 0.6352 |
-| **Holdout Injury only** | 0.6922 |
-| **Decision** | **Rejected** — Elo+Injury underperforms on both validation (−0.006) and holdout (−0.008). Notable: QB-out subset (n=28) shows very strong signal at 0.5506 LL vs QB-healthy 0.6448, but 19 additional features add too much noise on this small dataset. |
-| **Report** | `reports/experiments/injury_features.md` |
-| **Date** | 2026-06-23 |
-
----
-
-### 22. Optuna Joint Elo Parameter Search
+### 21. Optuna Joint Elo Parameter Search
 
 | Field | Value |
 |-------|-------|
@@ -331,6 +331,21 @@ Each entry includes:
 | **Decision** | **Rejected** — classic validation-overfit pattern. Optuna found params 0.0034 better on validation but 0.0060 worse on holdout. Incumbent's k_off=52, k_def=20 split was selected by user override for its strong holdout generalization — pure validation optimization cannot replicate this. |
 | **Report** | `reports/experiments/optuna_elo_search.md` |
 | **Date** | 2026-06-23 |
+
+---
+
+### 22. Rolling MOV Sensitivity
+
+| Field | Value |
+|-------|-------|
+| **Model** | Rolling-origin grid over 7 window sizes (mov_1 through mov_10) + 7 functional forms (capped, log, EWMA, std, etc.) on top of season-regression Elo + qb_changed |
+| **Selection** | Rolling-origin 3-fold |
+| **Best val (with qb_changed)** | mov_1 at 0.6338 (beats incumbent mov_3 at 0.6348) |
+| **Holdout (selected mov_1)** | 0.6302 (worse than incumbent 0.6262) |
+| **Holdout (incumbent mov_3)** | 0.6262 |
+| **Decision** | **Diagnostic only** — mov_1 wins val but loses holdout (classic overfit pattern). No window size or functional form beats incumbent mov_3 on both val and holdout. |
+| **Report** | `reports/experiments/rolling_mov_sensitivity.md` |
+| **Date** | 2026-06-24 |
 
 ---
 
@@ -364,16 +379,143 @@ Each entry includes:
 | **Report** | `reports/experiments/glicko_rating.md` |
 | **Date** | 2026-06-23 |
 
+### 25. QB-Change Market-Delta Diagnostics
+
+| Field | Value |
+|-------|-------|
+| **Model** | Various market-aware blends (simple, QB-gated, large-delta-gated, logistic) on Standard Elo + closing market no-vig |
+| **Selection** | Rolling-origin 3-fold |
+| **Best validation candidate** | Closing market (0.6052 avg val LL) |
+| **Platt (incumbent) holdout** | 0.6285 |
+| **Closing market holdout** | **0.6090** |
+| **Best gated blend holdout** | Simple blend w=0.90 (0.6093) |
+| **QB-change platt LL** | 0.7722 |
+| **QB-change market LL** | 0.6662 |
+| **Market-Elo gap on QB-change** | **0.1060** |
+| **Decision** | **Market-aware diagnostic** — None of the gated blends beat raw market. Closing market identifies QB-change failures but opening-line ingestion should be prioritized next for truly pregame market information. Football-only incumbent (0.6285) unchanged. |
+| **Report** | `reports/experiments/qb_market_delta.md` |
+| **Date** | 2026-06-23 |
+
+### 26. Injury Features Experiment
+
+| Field | Value |
+|-------|-------|
+| **Model** | Standard Elo + logistic regression on 20 injury features (QB OUT flags, position-group injury counts, injury-driven QB change detection, net differentials) |
+| **Selection** | Rolling-origin 3-fold |
+| **Platt (incumbent) holdout** | 0.6285 |
+| **Best validation candidate** | Platt (incumbent) — 0.6406 avg val LL |
+| **Elo + Injury holdout** | 0.6514 |
+| **Elo + QB injury flags holdout** | 0.6485 |
+| **Decision** | **Rejected** — all injury-augmented models underperformed the incumbent on both validation and holdout. Injury-report features add no predictive signal beyond the Elo-based model on this dataset (2021–2025). |
+| **Notable finding** | "Any QB OUT" subset (n=48): raw Elo LL = 0.6043 — model performs better when a QB is ruled out |
+| **Report** | `reports/experiments/injury_features.md` |
+| **Date** | 2026-06-23 |
+
+---
+
+### 27. Forward Feature Selection
+
+| Field | Value |
+|-------|-------|
+| **Model** | Systematic forward selection over 10 situational feature groups + QB feature subset tested individually on top of Standard Elo + Platt |
+| **Selection** | Rolling-origin 3-fold |
+| **Platt (incumbent) val** | 0.6406 |
+| **Best individual** | `qb_changed` (0.6334, Δ=-0.0072) — beats Platt on val but ties on holdout (0.6314 vs 0.6315) |
+| **Second best** | `games_since_change` (0.6393, Δ=-0.0013) |
+| **All situational** | 0.6554 (Δ=+0.0148) — adding all features hurts (overfit) |
+| **Decision** | **Diagnostic** — `qb_changed` validates as the strongest single feature, but needs companion to generalize to holdout. |
+| **Report** | `reports/experiments/feature_selection.md` |
+| **Date** | 2026-06-23 |
+
+---
+
+### 28. Combined Features (qb_changed + rolling_mov_3)
+
+| Field | Value |
+|-------|-------|
+| **Model** | Standard Elo + Platt scaling + `home_qb_changed` + `away_qb_changed` + `home_rolling_mov_3` + `away_rolling_mov_3` via logistic regression |
+| **Selection** | Rolling-origin 3-fold |
+| **Platt (incumbent) val** | 0.6406 |
+| **Platt + qb_changed + mov3 val** | **0.6334** (beats by 0.0072) |
+| **Platt (incumbent) holdout** | 0.6315 |
+| **Platt + qb_changed + mov3 holdout** | **0.6262** (beats by 0.0053) |
+| **Decision** | **✅ PROMOTED — new research incumbent.** First feature-augmented model to beat the incumbent on BOTH rolling-origin validation AND one-shot 2025 holdout. The `qb_changed` signal captures injury-driven and coaching-decision QB changes that Elo undershoots. `rolling_mov_3` captures recent form beyond Elo's single-game update. |
+| **Report** | `reports/experiments/combined_features.md` |
+| **Date** | 2026-06-23 |
+
+---
+
+### 29. Home/Away Separate Elo Ratings
+
+| Field | Value |
+|-------|-------|
+| **Model** | Independent home/away Elo per team (separate rating updates for home vs away games) |
+| **Selection** | Rolling-origin 3-fold |
+| **Standard Elo val** | 0.6410 |
+| **HA Elo val** | 0.6622 (worse) |
+| **Decision** | **Rejected** — separate ratings have half the data per split, adding noise without benefit. |
+| **Report** | `reports/experiments/home_away_elo.md` |
+| **Date** | 2026-06-23 |
+
+---
+
+### 30. Team Stats Features
+
+| Field | Value |
+|-------|-------|
+| **Model** | Rolling team stat aggregates (offensive yards, defensive yards allowed, fantasy pts, sacks) from nflreadpy load_player_stats on top of standard Elo + Platt |
+| **Selection** | Rolling-origin 3-fold |
+| **Validation Platt** | 0.6368 |
+| **Validation Team Stats only** | 0.6831 |
+| **Validation Elo + Team Stats** | 0.6541 |
+| **Holdout Platt (incumbent)** | **0.6285** |
+| **Holdout Team Stats only** | 0.6674 |
+| **Holdout Elo + Team Stats** | 0.6415 |
+| **Decision** | **Rejected** — all team-stat models underperformed the incumbent. Best: Elo+Stats (holdout 0.6415) vs Platt (0.6285). |
+| **Report** | `reports/experiments/team_stats.md` |
+| **Date** | 2026-06-24 |
+
 ---
 
 ## Summary Statistics
 
-| Total experiments | 24 |
+| Total experiments | 32 |
 |------------------|-----|
-| Promoted | 6 |
-| Rejected | 15 |
-| Diagnostic | 2 |
-| Current incumbent | O/D Elo (k_off=52, k_def=20, HFA=40, reg=0.1, decay=32, qb_bonus=0.2, MOV capped_linear) + Platt |
-| Incumbent holdout LL | **0.6258** |
-| Best challenger (pregame) | None |
+| Promoted (clean) | 5 |
+| Rejected | 20 |
+| Diagnostic | 7 |
+| Market-aware diagnostic | 1 |
+| Holdout-informed diagnostic | 1 |
+| Current football-only incumbent | Standard Elo (K=36, reg=0.1, decay=32, qb_bonus=0.2, capped_linear) + Platt + qb_changed + rolling_mov_3 |
+| Incumbent holdout LL | **0.6262** |
+| Best holdout-informed diagnostic | O/D Elo ko52_kd20 + Platt (**0.6258**) |
 | Best overall (diagnostic) | Market no-vig (0.6090 holdout) |
+
+---
+
+## 31. QB-Change Market-Delta Diagnostics (2026-06-24)
+
+**Type:** Market-aware diagnostic
+
+Tests closing-market disagreement with football-only model for QB-change games.
+
+**Decision:** No market-aware blend beats the market alone (simple blend at w=0.90, holdout 0.6083, is essentially the market). Market delta is fully priced. No gated blend helps. QB-change gap (market 0.3361 vs incumbent 0.3398) is nearly eliminated by the incumbent's `qb_changed` feature. **Market-aware diagnostic, not a clean promotion.**
+
+**Selected by val LL:** Simple blend (w=0.90, avg val LL 0.6050)
+**Holdout:** 0.6083
+**Report:** `reports/experiments/qb_market_delta.md`
+**Caution flags artifact:** `reports/predictions/market_aware_caution_flags.csv`
+
+---
+
+## 32. Comprehensive Efficiency Features (2026-06-24)
+
+**Type:** Rejected
+
+Tests 58 comprehensive efficiency features from 3 nflreadpy sources (Team Stats Total EPA, PFR Advanced Stats pass/rush/rec/def, Snap Counts) on top of the incumbent.
+
+**Decision:** All efficiency-augmented models rejected. Incumbent + Efficiency (0.6597 val, 0.6788 holdout) was far worse than Platt alone (0.6368 val, 0.6313 holdout). Efficiency-only: 0.7082 val, 0.7171 holdout — barely above random. No individual source (Team EPA, PFR, Snap) beat the incumbent. All sources are noise for this dataset.
+
+**Selected by val LL:** Platt incumbent (no promotion)
+**Holdout (incumbent):** 0.6313
+**Report:** `reports/experiments/comprehensive_efficiency.md`

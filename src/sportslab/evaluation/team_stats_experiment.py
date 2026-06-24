@@ -155,7 +155,10 @@ def run_team_stats_experiment(
         )
 
         print(
-            f"  Fold train={train_seasons} val={val_season}: platt={platt_m['log_loss']:.4f} ts_only={ts_only_m['log_loss']:.4f} elo+ts={elo_ts_m['log_loss']:.4f}"
+            f"  Fold train={train_seasons} val={val_season}:"
+            f" platt={platt_m['log_loss']:.4f}"
+            f" ts_only={ts_only_m['log_loss']:.4f}"
+            f" elo+ts={elo_ts_m['log_loss']:.4f}"
         )
 
     avg_platt = float(np.mean([r["log_loss"] for r in platt_results]))
@@ -224,13 +227,15 @@ def run_team_stats_experiment(
     with open(rp, "w") as f:
         f.write("# Team Stats Features Experiment\n\n")
         f.write(
-            "*Testing whether rolling team stat aggregates (yards, fantasy pts, sacks) improve on the incumbent.*\n\n"
+            "*Testing whether rolling team stat aggregates"
+            " (yards, fantasy pts, sacks) improve on the incumbent.*\n\n"
         )
         f.write("## Data Source\n\n")
         f.write("| Source | Description | Coverage |\n")
         f.write("|--------|-------------|----------|\n")
         f.write(
-            "| nflreadpy.load_player_stats | Weekly player stats aggregated to team level | 2021–2025 |\n\n"
+            "| nflreadpy.load_player_stats | Weekly player stats"
+            " aggregated to team level | 2021–2025 |\n\n"
         )
         f.write("## Features\n\n")
         f.write("| Feature | Windows | Description |\n")
@@ -243,20 +248,26 @@ def run_team_stats_experiment(
         f.write(f"Total feature columns: {len(ts_available)}\n\n")
         f.write("## Incumbent Params\n\n")
         f.write(
-            f"K={BEST_K}, HFA={BEST_HFA}, reg={BEST_REG}, decay={BEST_DECAY}, qb_bonus={BEST_QB_BONUS}\n\n"
+            f"K={BEST_K}, HFA={BEST_HFA}, reg={BEST_REG},"
+            f" decay={BEST_DECAY}, qb_bonus={BEST_QB_BONUS}\n\n"
         )
         f.write("## Results\n\n")
         f.write("### Rolling-Origin Validation\n\n")
         f.write("| Model | Avg Val LL | Fold1 | Fold2 | Fold3 |\n")
         f.write("|-------|------------|-------|-------|-------|\n")
+        p_l0 = platt_results[0]["log_loss"]
+        p_l1 = platt_results[1]["log_loss"]
+        p_l2 = platt_results[2]["log_loss"]
+        t_l0 = ts_only_results[0]["log_loss"]
+        t_l1 = ts_only_results[1]["log_loss"]
+        t_l2 = ts_only_results[2]["log_loss"]
+        e_l0 = elo_ts_results[0]["log_loss"]
+        e_l1 = elo_ts_results[1]["log_loss"]
+        e_l2 = elo_ts_results[2]["log_loss"]
+        f.write(f"| Platt (incumbent) | {avg_platt:.4f} | {p_l0:.4f} | {p_l1:.4f} | {p_l2:.4f} |\n")
+        f.write(f"| Team stats only | {avg_ts_only:.4f} | {t_l0:.4f} | {t_l1:.4f} | {t_l2:.4f} |\n")
         f.write(
-            f"| Platt (incumbent) | {avg_platt:.4f} | {platt_results[0]['log_loss']:.4f} | {platt_results[1]['log_loss']:.4f} | {platt_results[2]['log_loss']:.4f} |\n"
-        )
-        f.write(
-            f"| Team stats only | {avg_ts_only:.4f} | {ts_only_results[0]['log_loss']:.4f} | {ts_only_results[1]['log_loss']:.4f} | {ts_only_results[2]['log_loss']:.4f} |\n"
-        )
-        f.write(
-            f"| Elo + Team Stats | {avg_elo_ts:.4f} | {elo_ts_results[0]['log_loss']:.4f} | {elo_ts_results[1]['log_loss']:.4f} | {elo_ts_results[2]['log_loss']:.4f} |\n\n"
+            f"| Elo + Team Stats | {avg_elo_ts:.4f} | {e_l0:.4f} | {e_l1:.4f} | {e_l2:.4f} |\n\n"
         )
         f.write("### 2025 Holdout\n\n")
         f.write("| Model | Hold LL | Hold Brier | Hold Acc | Hold AUC |\n")
@@ -269,7 +280,9 @@ def run_team_stats_experiment(
             ("Elo + Team Stats", hold_elo_ts_m),
         ]:
             f.write(
-                f"| {name} | {hm['log_loss']:.4f} | {hm['brier_score']:.4f} | {hm['accuracy']:.4f} | {hm['roc_auc']:.4f} |\n"
+                f"| {name} | {hm['log_loss']:.4f}"
+                f" | {hm['brier_score']:.4f} | {hm['accuracy']:.4f}"
+                f" | {hm['roc_auc']:.4f} |\n"
             )
         f.write("\n")
 
@@ -281,8 +294,11 @@ def run_team_stats_experiment(
                 hold_y[hold_qb_stable], platt_hold_proba[hold_qb_stable]
             )["log_loss"]
             f.write("### QB-Change Subset (Platt)\n\n")
+            qb_ch_n = int(hold_qb_changed.sum())
+            qb_st_n = int(hold_qb_stable.sum())
             f.write(
-                f"QB changed (n={int(hold_qb_changed.sum())}): {qb_changed_ll:.4f} | QB stable (n={int(hold_qb_stable.sum())}): {qb_stable_ll:.4f}\n\n"
+                f"QB changed (n={qb_ch_n}): {qb_changed_ll:.4f}"
+                f" | QB stable (n={qb_st_n}): {qb_stable_ll:.4f}\n\n"
             )
 
         if winner:

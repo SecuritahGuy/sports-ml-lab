@@ -135,13 +135,13 @@ def run_epa_features_experiment(
     print(f"  EPA features ({len(epa_available)}): {epa_available[:6]}...")
 
     # Reduced EPA: just 4 net differentials (not all 56 features)
-    REDUCED_EPA_COLS = [
+    reduced_epa_cols = [
         "epa_net_per_play_3",
         "epa_net_per_play_5",
         "success_rate_net_3",
         "success_rate_net_5",
     ]
-    epa_net_available = [c for c in REDUCED_EPA_COLS if c in df_all.columns]
+    epa_net_available = [c for c in reduced_epa_cols if c in df_all.columns]
     print(f"  Reduced EPA (net diffs only): {epa_net_available}")
 
     elo_prob = df_all["elo_prob"].values

@@ -4,7 +4,7 @@ SPORTSLAB = $(VENV)/bin/sportslab
 RUFF = $(VENV)/bin/ruff
 PIP = $(VENV)/bin/pip
 
-.PHONY: install install-dev test lint format clean mlflow ingest-nfl build-features train-baseline train-baseline-team-strength elo-tuning rolling-origin-elo schedule-features margin-aware-elo qb-features weather-features expressive-models market-baseline residual-diagnostics epa-features confidence-calibration market-benchmark decayed-elo team-hfa season-regression residual-blending coach-season-regression autogluon injury-features optuna-elo-search qb-injury-flag glicko venv
+.PHONY: install install-dev test lint format clean mlflow ingest-nfl build-features train-baseline train-baseline-team-strength elo-tuning rolling-origin-elo schedule-features margin-aware-elo qb-features weather-features expressive-models market-baseline residual-diagnostics epa-features confidence-calibration market-benchmark decayed-elo team-hfa season-regression residual-blending coach-season-regression autogluon injury-features optuna-elo-search qb-injury-flag glicko qb-market-delta feature-selection combined-features optuna-feature-selection predict-incumbent rolling-mov-sensitivity weekly-report comprehensive-efficiency audit-artifacts venv
 
 venv:
 	python3 -m venv $(VENV)
@@ -111,3 +111,30 @@ qb-injury-flag:
 
 glicko:
 	$(SPORTSLAB) glicko
+
+qb-market-delta:
+	$(SPORTSLAB) qb-market-delta
+
+feature-selection:
+	$(SPORTSLAB) feature-selection
+
+combined-features:
+	$(SPORTSLAB) combined-features
+
+optuna-feature-selection:
+	$(SPORTSLAB) optuna-feature-selection
+
+predict-incumbent:
+	$(SPORTSLAB) predict-incumbent
+
+rolling-mov-sensitivity:
+	$(SPORTSLAB) rolling-mov-sensitivity
+
+weekly-report:
+	$(SPORTSLAB) weekly-report
+
+comprehensive-efficiency:
+	$(SPORTSLAB) comprehensive-efficiency
+
+audit-artifacts:
+	$(SPORTSLAB) audit-artifacts

@@ -8,7 +8,7 @@ from sportslab.evaluation.qb_injury_experiment import (
 
 class TestConstants:
     def test_qb_out_feature_defined(self):
-        assert QB_OUT_FEATURE == "home_injuries_qb_out"
+        assert QB_OUT_FEATURE == "home_qb_out"
 
 
 class TestExperiment:

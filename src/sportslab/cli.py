@@ -1,9 +1,14 @@
 import click
 
 from sportslab.data.ingest_nfl import ingest_nfl
+from sportslab.evaluation.audit_artifacts import run_audit
 from sportslab.evaluation.autogluon_experiment import run_autogluon_experiment
 from sportslab.evaluation.coach_season_regression_experiment import (
     run_coach_season_regression_experiment,
+)
+from sportslab.evaluation.combined_features_experiment import run_combined_experiment
+from sportslab.evaluation.comprehensive_efficiency_experiment import (
+    run_comprehensive_efficiency_experiment,
 )
 from sportslab.evaluation.confidence_calibration_experiment import (
     run_confidence_calibration_experiment,
@@ -12,6 +17,7 @@ from sportslab.evaluation.decayed_elo_experiment import run_decayed_elo_experime
 from sportslab.evaluation.elo_tuning import run_elo_tuning
 from sportslab.evaluation.epa_features_experiment import run_epa_features_experiment
 from sportslab.evaluation.expressive_models_experiment import run_expressive_models_experiment
+from sportslab.evaluation.feature_selection_experiment import run_feature_selection_experiment
 from sportslab.evaluation.glicko_experiment import run_glicko_experiment
 from sportslab.evaluation.injury_features_experiment import (
     run_injury_features_experiment,
@@ -20,8 +26,11 @@ from sportslab.evaluation.margin_aware_elo import run_margin_aware_experiment
 from sportslab.evaluation.market_baseline import run_market_baseline
 from sportslab.evaluation.market_benchmark import run_market_benchmark
 from sportslab.evaluation.optuna_elo_search import run_optuna_search
+from sportslab.evaluation.optuna_feature_selection_experiment import run_optuna_feature_selection
+from sportslab.evaluation.predict_incumbent import generate_incumbent_predictions
 from sportslab.evaluation.qb_features_experiment import run_qb_features_experiment
 from sportslab.evaluation.qb_injury_experiment import run_qb_injury_experiment
+from sportslab.evaluation.qb_market_delta import run_qb_market_delta_experiment
 from sportslab.evaluation.residual_blending_experiment import run_residual_blending_experiment
 from sportslab.evaluation.residual_diagnostics import run_residual_diagnostics
 from sportslab.evaluation.rolling_origin_elo_validation import (
@@ -32,6 +41,7 @@ from sportslab.evaluation.season_regression_experiment import run_season_regress
 from sportslab.evaluation.team_hfa_experiment import run_team_hfa_experiment
 from sportslab.evaluation.train_baseline import train_baseline
 from sportslab.evaluation.weather_features_experiment import run_weather_features_experiment
+from sportslab.evaluation.weekly_report import generate_weekly_report
 from sportslab.features.build_features import build_feature_table
 
 
@@ -211,3 +221,62 @@ def qb_injury_cmd():
 def glicko_cmd():
     """Run Glicko rating system experiment against O/D Elo+Platt incumbent."""
     run_glicko_experiment()
+
+
+@cli.command()
+def qb_market_delta_cmd():
+    """Run QB-change market-delta diagnostics experiment."""
+    run_qb_market_delta_experiment()
+
+
+@cli.command()
+def combined_features_cmd():
+    """Run combined feature experiment (qb_changed, mov3, coach)."""
+    run_combined_experiment()
+
+
+@cli.command()
+def feature_selection_cmd():
+    """Run forward feature selection experiment."""
+    run_feature_selection_experiment()
+
+
+@cli.command()
+def optuna_feature_selection_cmd():
+    """Run Optuna combinatorial feature selection (500 trials)."""
+    run_optuna_feature_selection()
+
+
+@cli.command()
+def predict_incumbent_cmd():
+    """Generate incumbent prediction artifacts for all eligible games."""
+    generate_incumbent_predictions()
+
+
+@cli.command()
+@click.option("--season", type=int, default=None, help="Season year (default: latest)")
+@click.option("--week", type=int, default=None, help="Week number (default: latest)")
+@click.option(
+    "--output",
+    type=str,
+    default=None,
+    help="Output path (default: reports/predictions/weekly_report.md)",
+)
+def weekly_report_cmd(season, week, output):
+    """Generate weekly report from incumbent predictions."""
+    generate_weekly_report(season=season, week=week, output=output)
+
+
+@cli.command()
+def comprehensive_efficiency_cmd():
+    """Run comprehensive efficiency feature experiment (Team EPA + PFR + Snap)."""
+    run_comprehensive_efficiency_experiment()
+
+
+@cli.command()
+def audit_artifacts_cmd():
+    """Validate benchmark registry, predictions, and report consistency."""
+    issues = run_audit()
+    if issues:
+        raise SystemExit(f"Audit failed: {len(issues)} issue(s) found")
+    click.echo("✅ Artifact audit passed — all checks OK.")

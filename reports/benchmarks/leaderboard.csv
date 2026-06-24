@@ -1,11 +1,11 @@
 experiment,model_features,selection_method,val_ll,holdout_ll,holdout_auc,holdout_brier,holdout_accuracy,decision,report_path,date
 identity_logistic,identity_team_indicators,single_split_2024,0.68,0.69,,,0.5,rejected,,2026-06-23
 team_strength_logistic,simple_team_strength_ratings,single_split_2024,0.67,0.67,,,0.55,rejected,,2026-06-23
-tuned_elo,point_differential_elo_K32_HFA25,single_val_2024,0.65,0.6616,0.68,,0.62,superseded,reports/experiments/elo_tuning.md,2026-06-23
+tuned_elo,point_differential_elo_K32_HFA25,single_val_2024,0.65,0.6616,0.68,,0.62,superseded,reports/experiments/elo_tuning_calibration.md,2026-06-23
 rolling_origin_elo,mov_elo_K40_HFA40_reg0.25,rolling_origin_3fold,0.6363,0.6395,0.69,,0.65,superseded,reports/experiments/rolling_origin_elo_validation.md,2026-06-23
 scheduling_rest,incumbent_plus_scheduling_flags,rolling_origin_3fold,0.6599,0.6401,,,0.64,rejected,reports/experiments/schedule_rest_features.md,2026-06-23
 margin_aware_elo,mov_elo_K36_HFA40_reg0.20_capped_linear_0.05_2.0,rolling_origin_3fold,0.6363,0.6373,0.6907,0.2230,0.6522,superseded,reports/experiments/margin_aware_elo.md,2026-06-23
-qb_features,incumbent_plus_qb_flags,rolling_origin_3fold,0.6436,0.6459,,,0.64,rejected,reports/experiments/qb_features.md,2026-06-23
+qb_features,incumbent_plus_qb_flags,rolling_origin_3fold,0.6436,0.6459,,,0.64,rejected,reports/experiments/qb_starter_change_features.md,2026-06-23
 weather_features,incumbent_plus_weather_flags,rolling_origin_3fold,0.6445,0.6439,,,0.65,rejected,reports/experiments/weather_features.md,2026-06-23
 epa_features,incumbent_plus_epa_rolling_avg,rolling_origin_3fold,0.6654,0.6495,0.68,,0.63,rejected,reports/experiments/epa_features.md,2026-06-23
 confidence_calibration,temperature_T1.50_platt_isotonic_shrinkage,rolling_origin_3fold,0.6374,0.6373,0.6907,0.2230,0.6522,rejected,reports/experiments/confidence_calibration.md,2026-06-23
@@ -17,9 +17,17 @@ team_hfa,decayed_elo_K36_HFA40_decay32_capped_linear_plus_team_hfa_offsets,rolli
 season_regression,decayed_elo_K36_HFA40_reg0.1_decay32_qb_bonus0.2_capped_linear_0.05_2.0,rolling_origin_3fold,0.6315,0.6285,0.7024,0.2191,0.6667,promoted,reports/experiments/season_regression.md,2026-06-23
 residual_blending,logistic_on_elo_prob_plus_week_rest_early,rolling_origin_3fold,0.6368,0.6303,0.66,0.225,0.65,rejected,reports/experiments/residual_blending.md,2026-06-23
 coach_season_regression,decayed_elo_K36_HFA40_reg0.1_decay32_qb_bonus0.3_coach_bonus0.1,rolling_origin_3fold,0.6309,0.6286,0.7010,0.2191,0.6703,rejected,reports/experiments/coach_season_regression.md,2026-06-23
-od_elo,od_elo_ko52_kd20_HFA40_reg0.1_decay32_qb_bonus0.2_capped_linear_0.05_2.0,rolling_origin_3fold,0.6376,0.6258,0.7066,0.2179,0.6703,promoted,reports/experiments/od_elo.md,2026-06-23
-autogluon,autogluon_medium_quality_47_features_sklearn_only,rolling_origin_3fold,0.6595,0.6439,0.6839,0.2251,0.6449,rejected,reports/experiments/autogluon.md,2026-06-23
-22: injury_features,od_elo_plus_19_injury_report_features,rolling_origin_3fold,0.6433,0.6352,0.69,0.221,0.66,rejected,reports/experiments/injury_features.md,2026-06-23
-23: optuna_elo_search,od_elo_joint_optuna_200_trials,rolling_origin_3fold,0.6342,0.6318,0.70,0.220,0.66,rejected,reports/experiments/optuna_elo_search.md,2026-06-23
-24: qb_injury_flag,od_elo_plus_home_qb_out_binary_flag,rolling_origin_3fold,0.6464,0.6255,0.706,0.2225,0.666,rejected,reports/experiments/qb_injury_flag.md,2026-06-23
-25: glicko_rating,compute_glicko_features_grid_432,rolling_origin_3fold,0.6513,0.7013,0.252,0.583,0.587,rejected,reports/experiments/glicko_rating.md,2026-06-23
+od_elo,od_elo_ko52_kd20_HFA40_reg0.1_decay32_qb_bonus0.2_capped_linear_0.05_2.0,rolling_origin_3fold,0.6376,0.6258,0.7066,0.2179,0.6703,diagnostic,reports/experiments/od_elo.md,2026-06-23
+autogluon,autogluon_medium_quality_47_features_sklearn_only,rolling_origin_3fold,0.6956,0.6404,0.6848,0.2240,0.6594,rejected,reports/experiments/autogluon.md,2026-06-23
+injury_features,standard_elo_plus_20_injury_features,rolling_origin_3fold,0.6406,0.6514,,,0.6667,rejected,reports/experiments/injury_features.md,2026-06-23
+optuna_elo_search,od_elo_joint_optuna_200_trials,rolling_origin_3fold,0.6342,0.6318,0.70,0.220,0.66,rejected,reports/experiments/optuna_elo_search.md,2026-06-23
+qb_injury_flag,od_elo_plus_home_qb_out_binary_flag,rolling_origin_3fold,0.6464,0.6255,0.706,0.2225,0.666,rejected,reports/experiments/qb_injury_flag.md,2026-06-23
+glicko_rating,compute_glicko_features_grid_432,rolling_origin_3fold,0.6513,0.7013,0.252,0.583,0.587,rejected,reports/experiments/glicko_rating.md,2026-06-23
+qb_market_delta,standard_elo_plus_market_delta_series,rolling_origin_3fold,0.6052,0.6090,0.7199,0.2119,0.6558,diagnostic,reports/experiments/qb_market_delta.md,2026-06-23
+feature_selection,forward_selection_10_situational_4_qb_groups,rolling_origin_3fold,0.6334,0.6314,,,0.666,diagnostic,reports/experiments/feature_selection.md,2026-06-23
+combined_features,elo_platt_plus_qb_changed_plus_rolling_mov_3,rolling_origin_3fold,0.6334,0.6262,,,,promoted,reports/experiments/combined_features.md,2026-06-23
+home_away_elo,separate_home_away_elo_per_team,rolling_origin_3fold,0.6622,0.6634,,,,rejected,reports/experiments/home_away_elo.md,2026-06-23
+team_stats,rolling_player_stats_aggregate_team_yards_fantasy_sacks,rolling_origin_3fold,0.6541,0.6415,0.6730,0.2260,0.6341,rejected,reports/experiments/team_stats.md,2026-06-24
+optuna_feature_selection,optuna_tpe_500_trials_16_groups,rolling_origin_3fold,0.6334,0.6347,,,,diagnostic,reports/experiments/optuna_feature_selection.md,2026-06-24
+qb_market_delta,incumbent_vs_market_7_blends_qb_change_delta_gating,rolling_origin_3fold,0.6050,0.6083,0.7205,0.2115,0.6667,market-aware diagnostic,reports/experiments/qb_market_delta.md,2026-06-24
+comprehensive_efficiency,team_epa_total_pfr_advanced_snap_counts,rolling_origin_3fold,0.6368,0.6313,0.6895,0.2300,0.6522,rejected,reports/experiments/comprehensive_efficiency.md,2026-06-24

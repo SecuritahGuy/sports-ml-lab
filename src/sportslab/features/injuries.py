@@ -1,269 +1,239 @@
-"""Pregame injury report features from nflreadpy.
+"""Pregame injury report features — no leakage, chronological.
 
-Aggregates player-level injury reports to team-level features
-per game: total players ruled OUT, by position group, and by
-designation severity (questionable, doubtful, out).
+Uses nflreadpy injury data to create pregame team-level injury counts
+and injury-driven QB change detection.
 """
 
-from pathlib import Path
+from typing import Dict, Optional
 
-import nflreadpy
+import numpy as np
 import pandas as pd
-import polars as pl
 
-SPORTSLAB_MIN_SEASON = 2021
+try:
+    import nflreadpy as nfl
+except ImportError:
+    nfl = None
 
-SKILL_POSITIONS = {"WR", "RB", "TE"}
-OL_POSITIONS = {"T", "G", "C"}
-DEF_POSITIONS = {
-    "DE",
-    "DT",
-    "LB",
-    "CB",
-    "S",
-    "NT",
-    "OLB",
-    "ILB",
-    "MLB",
-    "DB",
-    "DL",
-    "EDGE",
-    "SS",
-    "FS",
-}
+# Position groups for team-level injury counts
+OL_POSITIONS = {"C", "G", "T"}
+SKILL_POSITIONS = {"QB", "RB", "WR", "TE", "FB"}
+DEFENSE_POSITIONS = {"DE", "DT", "LB", "S", "CB", "NT", "EDGE", "ILB", "OLB", "MLB", "SS", "FS"}
 
 INJURY_FEATURE_COLUMNS = [
-    "home_injuries_out",
-    "away_injuries_out",
-    "injuries_out_diff",
-    "home_injuries_qb_out",
-    "away_injuries_qb_out",
-    "injuries_qb_out_diff",
-    "home_injuries_skill_out",
-    "away_injuries_skill_out",
-    "injuries_skill_out_diff",
-    "home_injuries_ol_out",
-    "away_injuries_ol_out",
-    "injuries_ol_out_diff",
-    "home_injuries_def_out",
-    "away_injuries_def_out",
-    "injuries_def_out_diff",
-    "home_injuries_questionable",
-    "away_injuries_questionable",
-    "home_injuries_doubtful",
-    "away_injuries_doubtful",
+    "home_qb_out",
+    "away_qb_out",
+    "home_qb_doubtful_or_out",
+    "away_qb_doubtful_or_out",
+    "home_total_out",
+    "away_total_out",
+    "home_total_doubtful_or_out",
+    "away_total_doubtful_or_out",
+    "home_skill_out",
+    "away_skill_out",
+    "home_ol_out",
+    "away_ol_out",
+    "home_def_out",
+    "away_def_out",
+    "any_qb_out",
+    "net_injuries",
+    "net_skill_out",
+    "net_def_out",
+    "home_qb_injury_change",
+    "away_qb_injury_change",
 ]
 
 
-def load_injury_data(
-    seasons: list[int] | None = None,
-    cache_dir: str = "data/interim/nfl",
-) -> pl.DataFrame:
-    """Load nflreadpy injury reports with local caching.
-
-    Args:
-        seasons: Season years to load. Must be >= 2021.
-        cache_dir: Directory for cached parquet files.
-
-    Returns:
-        Polars DataFrame with injury report data.
-    """
-    if seasons is None:
-        seasons = list(range(SPORTSLAB_MIN_SEASON, 2026))
-
-    bad = [s for s in seasons if s < SPORTSLAB_MIN_SEASON]
-    if bad:
-        raise ValueError(f"Seasons before {SPORTSLAB_MIN_SEASON} not allowed: {bad}")
-
-    cache_path = Path(cache_dir)
-    cache_path.mkdir(parents=True, exist_ok=True)
-
-    fragments: list[pl.DataFrame] = []
-    uncached: list[int] = []
-
-    for s in seasons:
-        cp = cache_path / f"injuries_{s}.parquet"
-        if cp.exists():
-            fragments.append(pl.read_parquet(str(cp)))
-        else:
-            uncached.append(s)
-
-    if uncached:
-        # Load each season individually to handle schema differences
-        for s in uncached:
-            season_df = nflreadpy.load_injuries(seasons=[s])
-            if "season_type" in season_df.columns:
-                season_df = season_df.drop("season_type")
-            cp = cache_path / f"injuries_{s}.parquet"
-            season_df.write_parquet(str(cp))
-            fragments.append(season_df)
-
-    # Ensure all fragments have matching columns
-    if len(fragments) > 1:
-        common_cols = set(fragments[0].columns)
-        for f in fragments[1:]:
-            common_cols &= set(f.columns)
-        common_cols = sorted(common_cols)
-        fragments = [f.select(common_cols) for f in fragments]
-
-    if len(fragments) == 1:
-        return fragments[0]
-    return pl.concat(fragments)
-
-
-def _normalize_position(pos: str | None) -> str | None:
-    """Clean position string, handling whitespace issues."""
-    if pos is None:
-        return None
-    pos = pos.strip()
-    if pos == "" or pos == "\n    ":
-        return None
-    return pos
-
-
-def compute_injury_features(
-    df: pd.DataFrame,
-    seasons: list[int] | None = None,
-    cache_dir: str = "data/interim/nfl",
+def _load_injury_data(
+    seasons: Optional[list] = None,
 ) -> pd.DataFrame:
-    """Add team-level injury report features based on nflreadpy data.
+    """Load injury data from nflreadpy and flatten to pregame snapshot.
 
-    For each game in df, looks up the home and away teams' injury reports
-    for that season and week.
-
-    Args:
-        df: Must contain columns: season, week, home_team, away_team.
-        seasons: Season years to load injury data for.
-        cache_dir: Directory for cached injury parquet files.
-
-    Returns:
-        DataFrame with added injury feature columns (zeros if no injury
-        data available for a given game).
+    Returns one row per (season, week, team, player) — the latest
+    report entry for that player-week.
     """
-    raw = load_injury_data(seasons=seasons, cache_dir=cache_dir)
+    if nfl is None:
+        raise ImportError("nflreadpy is required")
 
-    # Build a lookup: (season, week, team) -> dict of injury counts
-    # We'll do this per game by grouping injury data by (season, week, team)
-    injury_lookup: dict[tuple[int, int, str], dict[str, int]] = {}
+    if seasons is None:
+        seasons = [2021, 2022, 2023, 2024, 2025]
 
-    # Process in polars then convert to dict
-    grouped = raw.group_by(["season", "week", "team"]).agg(
-        [
-            pl.col("report_status").alias("statuses"),
-            pl.col("position").alias("positions"),
-            pl.col("gsis_id").alias("player_ids"),
-        ]
+    injuries = nfl.load_injuries(seasons=seasons).to_pandas()
+
+    # Drop rows with empty position strings
+    injuries = injuries[injuries["position"].notna() & (injuries["position"].str.strip() != "")]
+
+    return injuries
+
+
+def _build_injury_summary(injuries: pd.DataFrame) -> pd.DataFrame:
+    """Build team-week injury summary from raw injury data.
+
+    Returns a DataFrame with team-week injury counts by position group.
+    """
+    out_rows = []
+    for (season, week, team), group in injuries.groupby(["season", "week", "team"]):
+        row = {"season": season, "week": week, "team": team}
+        positions = group["position"].values
+        statuses = group["report_status"].values
+
+        def _count(positions_set):
+            mask = np.isin(positions, list(positions_set))
+            out_mask = (statuses == "Out") & mask
+            out_do_mask = (np.isin(statuses, ["Out", "Doubtful"])) & mask
+            return int(out_mask.sum()), int(out_do_mask.sum())
+
+        row["qb_out"], row["qb_doubtful_or_out"] = _count({"QB"})
+        row["total_out"], row["total_doubtful_or_out"] = _count(set(positions))
+        row["skill_out"], _ = _count(SKILL_POSITIONS)
+        row["ol_out"], _ = _count(OL_POSITIONS)
+        row["def_out"], _ = _count(DEFENSE_POSITIONS)
+        out_rows.append(row)
+
+    summary = pd.DataFrame(out_rows)
+    return summary
+
+
+def compute_injury_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add pregame injury features to a game-level DataFrame.
+
+    Requires columns: season, week, home_team, away_team, home_qb_id,
+    away_qb_id, home_qb_name, away_qb_name, gameday.
+
+    Adds INJURY_FEATURE_COLUMNS plus provides week-level injury counts
+    and injury-driven QB change detection.
+    """
+    injuries = _load_injury_data()
+    summary = _build_injury_summary(injuries)
+
+    out = df.copy().sort_values(["season", "week", "gameday"]).reset_index(drop=True)
+
+    # Merge injury summary for home and away teams
+    home_inj = summary.rename(
+        columns={
+            "team": "home_team",
+            "qb_out": "home_qb_out",
+            "qb_doubtful_or_out": "home_qb_doubtful_or_out",
+            "total_out": "home_total_out",
+            "total_doubtful_or_out": "home_total_doubtful_or_out",
+            "skill_out": "home_skill_out",
+            "ol_out": "home_ol_out",
+            "def_out": "home_def_out",
+        }
+    )
+    away_inj = summary.rename(
+        columns={
+            "team": "away_team",
+            "qb_out": "away_qb_out",
+            "qb_doubtful_or_out": "away_qb_doubtful_or_out",
+            "total_out": "away_total_out",
+            "total_doubtful_or_out": "away_total_doubtful_or_out",
+            "skill_out": "away_skill_out",
+            "ol_out": "away_ol_out",
+            "def_out": "away_def_out",
+        }
     )
 
-    for row in grouped.iter_rows(named=True):
+    out = out.merge(home_inj, on=["season", "week", "home_team"], how="left")
+    out = out.merge(away_inj, on=["season", "week", "away_team"], how="left")
+
+    # Fill NaN (teams with no injury report entries that week)
+    fill_cols = [
+        "home_qb_out",
+        "away_qb_out",
+        "home_qb_doubtful_or_out",
+        "away_qb_doubtful_or_out",
+        "home_total_out",
+        "away_total_out",
+        "home_total_doubtful_or_out",
+        "away_total_doubtful_or_out",
+        "home_skill_out",
+        "away_skill_out",
+        "home_ol_out",
+        "away_ol_out",
+        "home_def_out",
+        "away_def_out",
+    ]
+    for col in fill_cols:
+        out[col] = out[col].fillna(0).astype(int)
+
+    # Composite features
+    out["any_qb_out"] = ((out["home_qb_out"] > 0) | (out["away_qb_out"] > 0)).astype(int)
+    out["net_injuries"] = out["home_total_out"] - out["away_total_out"]
+    out["net_skill_out"] = out["home_skill_out"] - out["away_skill_out"]
+    out["net_def_out"] = out["home_def_out"] - out["away_def_out"]
+
+    # Injury-driven QB change detection
+    # Track previous QB per team chronologically
+    _team_state: Dict[str, dict] = {}
+    _season_keys = ["last_qb_id", "last_qb_name"]
+
+    def _ensure_team(team: str, season: int) -> dict:
+        if team not in _team_state:
+            _team_state[team] = {"current_season": season}
+            for k in _season_keys:
+                _team_state[team][k] = None
+        state = _team_state[team]
+        if season != state["current_season"]:
+            for k in _season_keys:
+                state[k] = None
+            state["current_season"] = season
+        return state
+
+    home_injury_changes = []
+    away_injury_changes = []
+
+    for _, row in out.iterrows():
         season = row["season"]
-        week = row["week"]
-        team = row["team"]
-        statuses = row["statuses"]
-        positions = row["positions"]
+        home_team = row["home_team"]
+        away_team = row["away_team"]
+        home_qb = row.get("home_qb_name")
+        away_qb = row.get("away_qb_name")
+        home_qb_id = row.get("home_qb_id")
+        away_qb_id = row.get("away_qb_id")
 
-        counts: dict[str, int] = {
-            "out": 0,
-            "qb_out": 0,
-            "skill_out": 0,
-            "ol_out": 0,
-            "def_out": 0,
-            "questionable": 0,
-            "doubtful": 0,
-        }
+        for side, team, qb_name, qb_id, change_list in [
+            ("home", home_team, home_qb, home_qb_id, home_injury_changes),
+            ("away", away_team, away_qb, away_qb_id, away_injury_changes),
+        ]:
+            state = _ensure_team(team, season)
+            last_qb_id = state.get("last_qb_id")
+            last_qb_name = state.get("last_qb_name")
 
-        for status, pos_raw in zip(statuses, positions):
-            pos = _normalize_position(pos_raw)
-            if pos is None:
-                continue
+            qb_missing = pd.isna(qb_name) or str(qb_name).strip() == ""
+            last_missing = pd.isna(last_qb_name) or str(last_qb_name).strip() == ""
 
-            status_str = str(status) if status is not None else ""
+            if qb_missing or last_missing or last_qb_id is None:
+                change_list.append(0)
+            elif last_qb_id != qb_id:
+                # QB changed — check if old QB was OUT this week
+                _out = injuries
+                if not isinstance(injuries.index, pd.RangeIndex):
+                    pass
+                # Check if old QB was OUT this week for this team
+                old_qb_match = (
+                    (injuries["season"] == season)
+                    & (injuries["week"] == row["week"])
+                    & (injuries["team"] == team)
+                    & (injuries["full_name"] == last_qb_name)
+                    & (injuries["report_status"] == "Out")
+                )
+                was_out = int(old_qb_match.any())
+                change_list.append(was_out)
+            else:
+                change_list.append(0)
 
-            if status_str == "Out":
-                counts["out"] += 1
-                if pos == "QB":
-                    counts["qb_out"] += 1
-                if pos in SKILL_POSITIONS:
-                    counts["skill_out"] += 1
-                if pos in OL_POSITIONS:
-                    counts["ol_out"] += 1
-                if pos in DEF_POSITIONS:
-                    counts["def_out"] += 1
-            elif status_str == "Questionable":
-                counts["questionable"] += 1
-            elif status_str == "Doubtful":
-                counts["doubtful"] += 1
+        # Update state post-game
+        for team, qb_name, qb_id in [
+            (home_team, home_qb, home_qb_id),
+            (away_team, away_qb, away_qb_id),
+        ]:
+            qb_missing = pd.isna(qb_name) or str(qb_name).strip() == ""
+            if not qb_missing:
+                state = _ensure_team(team, season)
+                state["last_qb_id"] = qb_id
+                state["last_qb_name"] = qb_name
 
-        injury_lookup[(season, week, team)] = counts
-
-    out = df.copy()
-    home_counts_list = []
-    away_counts_list = []
-
-    for _, row in df.iterrows():
-        season = int(row["season"])
-        week = int(row["week"])
-        home_team = str(row["home_team"])
-        away_team = str(row["away_team"])
-
-        home_key = (season, week, home_team)
-        away_key = (season, week, away_team)
-
-        home_c = injury_lookup.get(
-            home_key,
-            {
-                "out": 0,
-                "qb_out": 0,
-                "skill_out": 0,
-                "ol_out": 0,
-                "def_out": 0,
-                "questionable": 0,
-                "doubtful": 0,
-            },
-        )
-        away_c = injury_lookup.get(
-            away_key,
-            {
-                "out": 0,
-                "qb_out": 0,
-                "skill_out": 0,
-                "ol_out": 0,
-                "def_out": 0,
-                "questionable": 0,
-                "doubtful": 0,
-            },
-        )
-
-        home_counts_list.append(home_c)
-        away_counts_list.append(away_c)
-
-    home_df = pd.DataFrame(home_counts_list)
-    away_df = pd.DataFrame(away_counts_list)
-
-    out["home_injuries_out"] = home_df["out"]
-    out["away_injuries_out"] = away_df["out"]
-    out["injuries_out_diff"] = home_df["out"] - away_df["out"]
-
-    out["home_injuries_qb_out"] = home_df["qb_out"]
-    out["away_injuries_qb_out"] = away_df["qb_out"]
-    out["injuries_qb_out_diff"] = home_df["qb_out"] - away_df["qb_out"]
-
-    out["home_injuries_skill_out"] = home_df["skill_out"]
-    out["away_injuries_skill_out"] = away_df["skill_out"]
-    out["injuries_skill_out_diff"] = home_df["skill_out"] - away_df["skill_out"]
-
-    out["home_injuries_ol_out"] = home_df["ol_out"]
-    out["away_injuries_ol_out"] = away_df["ol_out"]
-    out["injuries_ol_out_diff"] = home_df["ol_out"] - away_df["ol_out"]
-
-    out["home_injuries_def_out"] = home_df["def_out"]
-    out["away_injuries_def_out"] = away_df["def_out"]
-    out["injuries_def_out_diff"] = home_df["def_out"] - away_df["def_out"]
-
-    out["home_injuries_questionable"] = home_df["questionable"]
-    out["away_injuries_questionable"] = away_df["questionable"]
-
-    out["home_injuries_doubtful"] = home_df["doubtful"]
-    out["away_injuries_doubtful"] = away_df["doubtful"]
+    out["home_qb_injury_change"] = home_injury_changes
+    out["away_qb_injury_change"] = away_injury_changes
 
     return out
