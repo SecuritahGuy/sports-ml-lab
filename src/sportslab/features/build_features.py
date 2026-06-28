@@ -78,6 +78,8 @@ PREGAME_COLUMNS = [
     "referee",
     "stadium_id",
     "stadium",
+    "temp",
+    "wind",
 ]
 
 BASELINE_FEATURE_COLUMNS = [
@@ -157,6 +159,7 @@ WEATHER_FEATURE_COLUMNS = [
     "weather_missing_flag",
     "temp_missing_flag",
     "wind_missing_flag",
+    "weather_source",
 ]
 
 TEAM_STRENGTH_FEATURE_COLUMNS = [
@@ -300,15 +303,19 @@ def build_feature_table(
 
     # Optional: weather enrichment
     if fetch_weather:
-        print("  Fetching weather data via meteostat...")
+        print("  Computing weather features from raw data...")
         from sportslab.features.weather import compute_weather_features
 
-        weather_df = compute_weather_features(
-            features["stadium_id"],
-            pd.to_datetime(features["gameday"]),
-        )
-        features = pd.concat([features, weather_df], axis=1)
-        print(f"  Weather columns added: {list(weather_df.columns)}")
+        weather_df = compute_weather_features(features)
+        weather_cols = [c for c in weather_df.columns if c not in features.columns]
+        for col in weather_cols:
+            features[col] = weather_df[col]
+        print(f"  Weather columns added: {weather_cols}")
+
+        temp_avail = features["temperature_f"].notna().sum()
+        wind_avail = features["wind_mph"].notna().sum()
+        total = len(features)
+        print(f"  Temperature coverage: {temp_avail}/{total}, Wind coverage: {wind_avail}/{total}")
 
     # Encode categoricals
     features = _encode_categorical(features)

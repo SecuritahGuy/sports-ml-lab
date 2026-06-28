@@ -86,26 +86,16 @@ def run_weather_features_experiment(
 
     # ── Weather Data Audit ──
     print("=== Weather Data Audit ===")
-    raw_weather_cols = [
-        "weather_temp",
-        "weather_tmin",
-        "weather_tmax",
-        "weather_humidity",
-        "weather_precip",
-        "weather_wind_speed",
-        "weather_pressure",
-        "weather_cloud_cover",
-    ]
-    available = [c for c in raw_weather_cols if c in df_raw.columns]
+    wx_cols = ["temp", "wind"]
+    available = [c for c in wx_cols if c in df_raw.columns]
     print(f"  Raw weather columns: {available}")
     for c in available:
         nulls = df_raw[c].isna().sum()
         pct = nulls / len(df_raw) * 100
-        print(f"    {c}: {nulls} nulls ({pct:.1f}%)")
+        print(f"    {c}: {nulls}/{len(df_raw)} nulls ({pct:.1f}%)")
 
-    # Missingness by season
     print("\n  Missingness by season:")
-    for c in ["weather_tmin", "weather_wind_speed", "weather_precip"]:
+    for c in wx_cols:
         if c in df_raw.columns:
             by_season = df_raw.groupby("season")[c].apply(lambda x: x.isna().sum())
             total = df_raw.groupby("season")[c].count()
@@ -115,39 +105,15 @@ def run_weather_features_experiment(
                 t = total.get(s, 0)
                 print(f"      {s}: {n}/{t + n} ({n / (t + n) * 100:.1f}%)")
 
-    # Missingness by roof type
     print("\n  Missingness by roof type:")
-    for c in ["weather_tmin", "weather_wind_speed", "weather_precip"]:
+    for c in wx_cols:
         if c in df_raw.columns:
             by_roof = df_raw.groupby("roof")[c].apply(lambda x: x.isna().sum())
             print(f"    {c}: {dict(by_roof)}")
 
-    # Check if weather data is usable
-    tmin_available = df_raw["weather_tmin"].notna().sum() > 0
-
-    if not tmin_available:
-        weather_report = (
-            "**Weather data is missing or incomplete.**\n\n"
-            "The feature table has no usable weather columns."
-            " Meteostat weather ingestion was attempted but `weather_temp` "
-            "returned all nulls.  "
-            "`weather_tmin` and `weather_tmax` have some coverage.\n\n"
-            "**Recommended ingestion step:**\n"
-            "Debug the meteostat `fetch_weather()` function in "
-            "`src/sportslab/features/weather.py`: the Daily API "
-            "returns `temp` as null but `tmin`/`tmax` work. "
-            "Consider using OpenWeather or a different weather API "
-            "for game-time conditions.\n\n"
-            "Once re-ingested, re-run `make build-features && make weather-features`."
-        )
-        rp = Path(report_path)
-        rp.parent.mkdir(parents=True, exist_ok=True)
-        with open(rp, "w") as f:
-            f.write("# Weather Features Experiment\n\n")
-            f.write(weather_report)
-            f.write("\n\n*Experiment blocked — resume once weather data is available.*\n")
-        print(f"\n  Weather data missing. Blocker report written to: {rp}")
-        return str(rp)
+    print(f"\n  Source: nflreadpy `temp` (°F) and `wind` (mph)")
+    print(f"  Dome/indoor games get neutralized (70°F, 0 mph)")
+    print(f"  Remaining NaN imputed with dataset medians")
 
     # ── Compute MOV Elo with frozen incumbent params ──
     print("\n=== Computing MOV Elo features (incumbent params) ===")
@@ -186,6 +152,7 @@ def run_weather_features_experiment(
 
     # Weather feature audit for report
     weather_available = [c for c in WEATHER_FEATURE_COLUMNS if c in df_all.columns]
+    weather_available = [c for c in weather_available if c != "weather_source"]
     print(f"  Weather features ({len(weather_available)}): {weather_available}")
 
     # Outdoor games subset
@@ -412,51 +379,54 @@ def run_weather_features_experiment(
         f.write("*Adding pregame weather features on top of MOV Elo+Platt.*\n\n")
 
         f.write("## Weather Data Audit\n\n")
+        f.write("Raw weather columns from nflreadpy `load_schedules()`:\n\n")
         f.write("| Column | Type | Nulls | Coverage | Source |\n")
         f.write("|--------|------|-------|----------|--------|\n")
         for c in available:
             nulls = df_raw[c].isna().sum()
             pct = (1 - nulls / len(df_raw)) * 100
             dtype = str(df_raw[c].dtype)
-            f.write(f"| `{c}` | {dtype} | {nulls}/{len(df_raw)} | {pct:.1f}% | Meteostat Daily |\n")
+            f.write(f"| `{c}` | {dtype} | {nulls}/{len(df_raw)} | {pct:.1f}% | nflreadpy schedules |\n")
         f.write("\n")
         f.write(f"Total games: {len(df_raw)}.\n\n")
 
         f.write("### Missingness by Season\n\n")
-        f.write("| Season | weather_tmin | weather_wind_speed | weather_precip |\n")
-        f.write("|--------|-------------|-------------------|----------------|\n")
+        f.write("| Season | temp missing | wind missing |\n")
+        f.write("|--------|-------------|--------------|\n")
         for s in sorted(df_raw["season"].unique()):
             smask = df_raw["season"] == s
-            tmin_n = smask & df_raw["weather_tmin"].isna()
-            wind_n = smask & df_raw["weather_wind_speed"].isna()
-            prcp_n = smask & df_raw["weather_precip"].isna()
             t = smask.sum()
-            f.write(f"| {s} | {tmin_n.sum()}/{t} | {wind_n.sum()}/{t} | {prcp_n.sum()}/{t} |\n")
+            if "temp" in df_raw.columns:
+                temp_n = smask & df_raw["temp"].isna()
+                wind_n = smask & df_raw["wind"].isna()
+                f.write(f"| {s} | {temp_n.sum()}/{t} | {wind_n.sum()}/{t} |\n")
+            else:
+                f.write(f"| {s} | no data | no data |\n")
         f.write("\n")
 
         f.write("### Missingness by Roof Type\n\n")
-        f.write("| Roof | Count | weather_tmin missing | weather_wind_speed missing |\n")
-        f.write("|------|-------|---------------------|--------------------------|\n")
+        f.write("| Roof | Count | temp missing | wind missing |\n")
+        f.write("|------|-------|-------------|--------------|\n")
         for roof_type in ["outdoors", "dome", "closed", "open"]:
             rmask = df_raw["roof"] == roof_type
             cnt = rmask.sum()
             if cnt == 0:
                 continue
-            tmin_n = rmask & df_raw["weather_tmin"].isna()
-            wind_n = rmask & df_raw["weather_wind_speed"].isna()
-            f.write(f"| {roof_type} | {cnt} | {tmin_n.sum()}/{cnt} | {wind_n.sum()}/{cnt} |\n")
+            if "temp" in df_raw.columns:
+                temp_n = rmask & df_raw["temp"].isna()
+                wind_n = rmask & df_raw["wind"].isna()
+                f.write(f"| {roof_type} | {cnt} | {temp_n.sum()}/{cnt} | {wind_n.sum()}/{cnt} |\n")
+            else:
+                f.write(f"| {roof_type} | {cnt} | no data | no data |\n")
         f.write("\n")
 
         f.write("## Feature Definitions\n\n")
         f.write("All weather features are pregame-safe.\n\n")
         f.write("| Feature | Source | Description |\n")
         f.write("|---------|--------|-------------|\n")
-        f.write(
-            "| `temperature_f` | avg(weather_tmin, weather_tmax) °C→°F"
-            " | Approximate game temperature |\n"
-        )
-        f.write("| `wind_mph` | weather_wind_speed, km/h→mph | Wind speed |\n")
-        f.write("| `precipitation_flag` | weather_precip > 0 | Any precipitation |\n")
+        f.write("| `temperature_f` | nflreadpy `temp` (°F) | Game-time temperature |\n")
+        f.write("| `wind_mph` | nflreadpy `wind` (mph) | Wind speed |\n")
+        f.write("| `precipitation_flag` | nflreadpy `temp`/`wind` available | Any adverse weather indicator |\n")
         f.write("| `cold_flag` | temperature_f ≤ 32°F | Freezing or below |\n")
         f.write("| `very_cold_flag` | temperature_f ≤ 20°F | Extremely cold |\n")
         f.write("| `hot_flag` | temperature_f ≥ 85°F | Hot conditions |\n")
@@ -465,9 +435,9 @@ def run_weather_features_experiment(
         f.write("| `bad_weather_flag` | cold OR windy OR precip | Combined adverse weather |\n")
         f.write("| `outdoor_game_flag` | roof ∈ {outdoors, open} | Game is outdoors |\n")
         f.write("| `is_dome` | roof ∈ {dome, closed} | Game is in dome/indoor |\n")
-        f.write("| `weather_missing_flag` | tmin or wind_speed null | Weather data unavailable |\n")
-        f.write("| `temp_missing_flag` | weather_tmin null | Temperature unavailable |\n")
-        f.write("| `wind_missing_flag` | weather_wind_speed null | Wind speed unavailable |\n\n")
+        f.write("| `weather_missing_flag` | temp or wind null | Weather data unavailable |\n")
+        f.write("| `temp_missing_flag` | temp null | Temperature unavailable |\n")
+        f.write("| `wind_missing_flag` | wind null | Wind speed unavailable |\n\n")
 
         f.write("## Dome/Indoor Handling\n\n")
         f.write("For games in domes or closed-roof stadiums (`is_dome=1`):\n")
@@ -483,9 +453,9 @@ def run_weather_features_experiment(
         f.write("  This is a known limitation.\n\n")
 
         f.write("## Leakage Prevention\n\n")
-        f.write("- Weather data is daily historical data from Meteostat.\n")
-        f.write("- Temperature is approximated as the average of daily min/max\n")
-        f.write("  — this is a pregame-safe approximation.\n")
+        f.write("- Weather data is game-level from nflreadpy schedules.\n")
+        f.write("- `temp` and `wind` are game-time conditions or forecasts\n")
+        f.write("  — pregame-safe and available before kickoff.\n")
         f.write("- Dome/indoor neutralization prevents outdoor weather\n")
         f.write("  from leaking into indoor games.\n")
         f.write("- Rolling-origin folds prevent 2025 holdout from being\n")

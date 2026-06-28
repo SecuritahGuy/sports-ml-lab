@@ -254,6 +254,8 @@ def compute_elo_features(
     decay_half_life: float | None = None,
     team_hfa: dict[str, float] | None = None,
     team_regression_overrides: dict[str, float] | None = None,
+    adaptive_k_boost: float = 0.0,
+    max_week: int = 18,
 ) -> pd.DataFrame:
     """Add pregame Elo features to a game-level DataFrame.
 
@@ -342,7 +344,10 @@ def compute_elo_features(
             mov_scale=mov_scale,
             mov_cap=mov_cap,
         )
-        update = k_factor * (actual_home - expected_home) * mov_mult
+        week_num = int(row.get("week", 1))
+        week_scale = max(0.0, 1.0 - (week_num - 1) / max_week)
+        effective_k = k_factor * (1.0 + adaptive_k_boost * week_scale)
+        update = effective_k * (actual_home - expected_home) * mov_mult
         ratings[home_team] = h_elo + update
         ratings[away_team] = a_elo - update
 

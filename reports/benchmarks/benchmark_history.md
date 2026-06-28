@@ -113,18 +113,19 @@ Each entry includes:
 
 ---
 
-### 8. Weather Features
+### 8. Weather Features (re-run with backfilled data)
 
 | Field | Value |
 |-------|-------|
-| **Model** | Incumbent + temp/wind/precip/dome flags |
+| **Model** | MOV Elo + Platt + temp/wind/dome flags from nflreadpy |
 | **Selection** | Rolling-origin 3-fold |
-| **Best config** | Incumbent + weather |
-| **Validation LL** | 0.6445 (vs incumbent 0.6363) |
-| **Holdout LL** | 0.6439 (vs incumbent 0.6373) |
-| **Decision** | Rejected — weather harmed both validation and holdout |
+| **Best config** | Incumbent alone |
+| **Validation LL** | 0.6689 (MOV+Weather) vs 0.6363 (Platt) |
+| **Holdout LL** | 0.6485 (MOV+Weather) vs 0.6373 (Platt) |
+| **Decision** | Rejected — weather features still hurt. Weather data now properly backfilled from nflreadpy `temp`/`wind` columns. Cold-game subset (n=19, 2025): raw Elo LL=0.4346 — model already handles cold weather implicitly |
 | **Report** | `reports/experiments/weather_features.md` |
-| **Date** | 2026-06-23 |
+| **Date** | 2026-06-27 |
+| **Weather source** | nflreadpy `temp` (°F) and `wind` (mph) — 58.1% raw coverage, 100% after dome neutralization + median imputation |
 
 ---
 

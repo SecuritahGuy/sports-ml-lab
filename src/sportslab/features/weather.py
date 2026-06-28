@@ -1,5 +1,10 @@
-"""Pregame weather features — no leakage, dome-aware."""
+"""Pregame weather features — no leakage, dome-aware.
 
+Uses raw nflreadpy `temp` (°F) and `wind` (mph) columns when available,
+with meteostat fallback for games that need external weather data.
+"""
+
+import numpy as np
 import pandas as pd
 
 DOME_ROOF_TYPES = {"dome", "closed"}
@@ -16,15 +21,29 @@ def _kmh_to_mph(kmh: float) -> float:
     return kmh * 0.621371
 
 
+def _has_nflreadpy_cols(df: pd.DataFrame) -> bool:
+    return "temp" in df.columns and "wind" in df.columns
+
+
+def _has_meteostat_cols(df: pd.DataFrame) -> bool:
+    needed = ["weather_tmin", "weather_wind_speed", "weather_precip"]
+    return all(c in df.columns for c in needed)
+
+
 def compute_weather_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Add pregame weather features from meteostat weather columns.
+    """Add pregame weather features from available weather data sources.
+
+    Priority:
+    1. nflreadpy `temp` (°F) and `wind` (mph) columns (already in raw schedules)
+    2. Meteostat columns (weather_tmin, weather_tmax, weather_wind_speed,
+       weather_precip) as fallback
 
     Handles dome/indoor games by neutralizing weather signal.
     Creates flags for cold, wind, precipitation, and bad weather.
 
     Args:
-        df: Must contain columns: weather_tmin, weather_tmax,
-            weather_wind_speed, weather_precip, roof.
+        df: Must contain columns: roof, one of (temp, wind) or
+            (weather_tmin, weather_wind_speed, weather_precip).
 
     Returns:
         DataFrame with added weather feature columns.
@@ -36,26 +55,36 @@ def compute_weather_features(df: pd.DataFrame) -> pd.DataFrame:
     out["is_dome"] = roof_str.isin(DOME_ROOF_TYPES).astype(int)
     out["outdoor_game_flag"] = roof_str.isin(OUTDOOR_ROOF_TYPES).astype(int)
 
-    # Temperature: average of tmin/tmax in Fahrenheit
-    temp_c = (out["weather_tmin"] + out["weather_tmax"]) / 2.0
-    out["temperature_f"] = temp_c.apply(lambda v: _c_to_f(v) if pd.notna(v) else None)
+    # ── Source temperature and wind ──
+    if _has_nflreadpy_cols(out):
+        out["temperature_f"] = out["temp"]
+        out["wind_mph"] = out["wind"]
+        out["precipitation_flag"] = 0
+        out["temp_missing_flag"] = out["temp"].isna().astype(int)
+        out["wind_missing_flag"] = out["wind"].isna().astype(int)
+        out["weather_source"] = "nflreadpy"
+    elif _has_meteostat_cols(out):
+        temp_c = (out["weather_tmin"] + out.get("weather_tmax", out["weather_tmin"])) / 2.0
+        out["temperature_f"] = temp_c.apply(lambda v: _c_to_f(v) if pd.notna(v) else None)
+        out["wind_mph"] = out["weather_wind_speed"].apply(
+            lambda v: _kmh_to_mph(v) if pd.notna(v) else None
+        )
+        out["precipitation_flag"] = (
+            out["weather_precip"].notna() & (out["weather_precip"] > 0)
+        ).astype(int)
+        out["temp_missing_flag"] = out["weather_tmin"].isna().astype(int)
+        out["wind_missing_flag"] = out["weather_wind_speed"].isna().astype(int)
+        out["weather_source"] = "meteostat"
+    else:
+        out["temperature_f"] = np.nan
+        out["wind_mph"] = np.nan
+        out["precipitation_flag"] = 0
+        out["temp_missing_flag"] = 1
+        out["wind_missing_flag"] = 1
+        out["weather_source"] = "none"
 
-    out["temp_missing_flag"] = out["weather_tmin"].isna().astype(int)
-
-    # Wind: km/h to mph
-    out["wind_mph"] = out["weather_wind_speed"].apply(
-        lambda v: _kmh_to_mph(v) if pd.notna(v) else None
-    )
-    out["wind_missing_flag"] = out["weather_wind_speed"].isna().astype(int)
-
-    # Precipitation flag
-    out["precipitation_flag"] = (
-        out["weather_precip"].notna() & (out["weather_precip"] > 0)
-    ).astype(int)
-
-    # Full weather missing flag
     out["weather_missing_flag"] = (
-        out["weather_tmin"].isna() | out["weather_wind_speed"].isna()
+        out["temp_missing_flag"] | out["wind_missing_flag"]
     ).astype(int)
 
     # ── Dome/indoor: neutralize weather ──
@@ -63,8 +92,6 @@ def compute_weather_features(df: pd.DataFrame) -> pd.DataFrame:
     out.loc[dome_mask, "temperature_f"] = NEUTRAL_TEMP_F
     out.loc[dome_mask, "wind_mph"] = NEUTRAL_WIND_MPH
     out.loc[dome_mask, "precipitation_flag"] = 0
-    # Missing flags NOT reset — dome doesn't fix missing data, it just
-    # makes weather irrelevant. The model can use is_dome to learn that.
 
     # ── Impute remaining NaN with dataset medians ──
     temp_med = out["temperature_f"].median(skipna=True)
@@ -106,4 +133,5 @@ WEATHER_FEATURE_COLUMNS = [
     "weather_missing_flag",
     "temp_missing_flag",
     "wind_missing_flag",
+    "weather_source",
 ]

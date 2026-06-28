@@ -4,37 +4,33 @@
 
 ## Weather Data Audit
 
+Raw weather columns from nflreadpy `load_schedules()`:
+
 | Column | Type | Nulls | Coverage | Source |
 |--------|------|-------|----------|--------|
-| `weather_temp` | float64 | 1424/1424 | 0.0% | Meteostat Daily |
-| `weather_tmin` | float64 | 59/1424 | 95.9% | Meteostat Daily |
-| `weather_tmax` | float64 | 59/1424 | 95.9% | Meteostat Daily |
-| `weather_humidity` | float64 | 1424/1424 | 0.0% | Meteostat Daily |
-| `weather_precip` | float64 | 267/1424 | 81.2% | Meteostat Daily |
-| `weather_wind_speed` | float64 | 59/1424 | 95.9% | Meteostat Daily |
-| `weather_pressure` | float64 | 67/1424 | 95.3% | Meteostat Daily |
-| `weather_cloud_cover` | float64 | 1424/1424 | 0.0% | Meteostat Daily |
+| `temp` | float64 | 596/1424 | 58.1% | nflreadpy schedules |
+| `wind` | float64 | 596/1424 | 58.1% | nflreadpy schedules |
 
 Total games: 1424.
 
 ### Missingness by Season
 
-| Season | weather_tmin | weather_wind_speed | weather_precip |
-|--------|-------------|-------------------|----------------|
-| 2021 | 33/285 | 33/285 | 92/285 |
-| 2022 | 9/284 | 9/284 | 63/284 |
-| 2023 | 8/285 | 8/285 | 60/285 |
-| 2024 | 8/285 | 8/285 | 46/285 |
-| 2025 | 1/285 | 1/285 | 6/285 |
+| Season | temp missing | wind missing |
+|--------|-------------|--------------|
+| 2021 | 94/285 | 94/285 |
+| 2022 | 177/284 | 177/284 |
+| 2023 | 127/285 | 127/285 |
+| 2024 | 103/285 | 103/285 |
+| 2025 | 95/285 | 95/285 |
 
 ### Missingness by Roof Type
 
-| Roof | Count | weather_tmin missing | weather_wind_speed missing |
-|------|-------|---------------------|--------------------------|
-| outdoors | 947 | 43/947 | 43/947 |
-| dome | 261 | 7/261 | 7/261 |
-| closed | 184 | 8/184 | 8/184 |
-| open | 32 | 1/32 | 1/32 |
+| Roof | Count | temp missing | wind missing |
+|------|-------|-------------|--------------|
+| outdoors | 947 | 120/947 | 120/947 |
+| dome | 261 | 261/261 | 261/261 |
+| closed | 184 | 183/184 | 183/184 |
+| open | 32 | 32/32 | 32/32 |
 
 ## Feature Definitions
 
@@ -42,9 +38,9 @@ All weather features are pregame-safe.
 
 | Feature | Source | Description |
 |---------|--------|-------------|
-| `temperature_f` | avg(weather_tmin, weather_tmax) °C→°F | Approximate game temperature |
-| `wind_mph` | weather_wind_speed, km/h→mph | Wind speed |
-| `precipitation_flag` | weather_precip > 0 | Any precipitation |
+| `temperature_f` | nflreadpy `temp` (°F) | Game-time temperature |
+| `wind_mph` | nflreadpy `wind` (mph) | Wind speed |
+| `precipitation_flag` | nflreadpy `temp`/`wind` available | Any adverse weather indicator |
 | `cold_flag` | temperature_f ≤ 32°F | Freezing or below |
 | `very_cold_flag` | temperature_f ≤ 20°F | Extremely cold |
 | `hot_flag` | temperature_f ≥ 85°F | Hot conditions |
@@ -53,9 +49,9 @@ All weather features are pregame-safe.
 | `bad_weather_flag` | cold OR windy OR precip | Combined adverse weather |
 | `outdoor_game_flag` | roof ∈ {outdoors, open} | Game is outdoors |
 | `is_dome` | roof ∈ {dome, closed} | Game is in dome/indoor |
-| `weather_missing_flag` | tmin or wind_speed null | Weather data unavailable |
-| `temp_missing_flag` | weather_tmin null | Temperature unavailable |
-| `wind_missing_flag` | weather_wind_speed null | Wind speed unavailable |
+| `weather_missing_flag` | temp or wind null | Weather data unavailable |
+| `temp_missing_flag` | temp null | Temperature unavailable |
+| `wind_missing_flag` | wind null | Wind speed unavailable |
 
 ## Dome/Indoor Handling
 
@@ -73,9 +69,9 @@ For games in domes or closed-roof stadiums (`is_dome=1`):
 
 ## Leakage Prevention
 
-- Weather data is daily historical data from Meteostat.
-- Temperature is approximated as the average of daily min/max
-  — this is a pregame-safe approximation.
+- Weather data is game-level from nflreadpy schedules.
+- `temp` and `wind` are game-time conditions or forecasts
+  — pregame-safe and available before kickoff.
 - Dome/indoor neutralization prevents outdoor weather
   from leaking into indoor games.
 - Rolling-origin folds prevent 2025 holdout from being
@@ -116,9 +112,9 @@ For games in domes or closed-roof stadiums (`is_dome=1`):
 | Model | Avg Val LL | Fold1 | Fold2 | Fold3 |
 |-------|------------|-------|-------|-------|
 | Platt (incumbent) | 0.6363 | 0.6438 | 0.6564 | 0.6088 |
-| MOV Elo + Weather | 0.6445 | 0.6554 | 0.6655 | 0.6125 |
-| Weather only | 0.6941 | 0.6947 | 0.6954 | 0.6923 |
-| Outdoor MOV+Weather | 0.6546 | 0.6785 | 0.6822 | 0.6031 |
+| MOV Elo + Weather | 0.6689 | 0.7186 | 0.6700 | 0.6179 |
+| Weather only | 0.7193 | 0.7536 | 0.7025 | 0.7018 |
+| Outdoor MOV+Weather | 0.6924 | 0.7813 | 0.6859 | 0.6100 |
 
 ## Full Comparison (2025 Holdout)
 
@@ -127,8 +123,8 @@ For games in domes or closed-roof stadiums (`is_dome=1`):
 | Random | 0.6931 | 0.2500 | 0.5000 | 0.5000 |
 | Home prior (0.548) | 0.6908 | — | — | 0.5000 |
 | Platt (incumbent) | 0.6373 | 0.2230 | 0.6522 | 0.6907 |
-| MOV Elo + Weather | 0.6439 | 0.2258 | 0.6486 | 0.6803 |
-| Weather only | 0.6973 | 0.2518 | 0.5362 | 0.5031 |
+| MOV Elo + Weather | 0.6485 | 0.2277 | 0.6522 | 0.6764 |
+| Weather only | 0.7024 | 0.2543 | 0.5362 | 0.4675 |
 
 ## Subset Analysis (2025 Holdout)
 
@@ -136,9 +132,9 @@ For games in domes or closed-roof stadiums (`is_dome=1`):
 |--------|---|---------------|----------------|
 | All games | 276 | 0.6373 | 0.6464 |
 | Outdoor games | 187 | 0.6373 | 0.6461 |
-| Cold games (≤32°F) | 26 | 0.6373 | 0.5777 |
-| Windy games (≥15 mph) | 15 | 0.6373 | 0.6521 |
-| Bad weather | 90 | 0.6373 | 0.6359 |
+| Cold games (≤32°F) | 19 | 0.6373 | 0.4346 |
+| Windy games (≥15 mph) | 21 | 0.6373 | 0.6279 |
+| Bad weather | 38 | 0.6373 | 0.5591 |
 
 ## Platt (Incumbent, Holdout)
 
@@ -157,20 +153,20 @@ For games in domes or closed-roof stadiums (`is_dome=1`):
 
 | Bucket | Count | Mean Pred | Mean Actual | Cal Error |
 |--------|-------|-----------|-------------|-----------|
-| [0.1, 0.2) | 3 | 0.1867 | 0.3333 | 0.1466 |
-| [0.2, 0.3) | 28 | 0.2522 | 0.3929 | 0.1407 |
-| [0.3, 0.4) | 29 | 0.358 | 0.2759 | 0.0821 |
-| [0.4, 0.5) | 43 | 0.4456 | 0.3721 | 0.0735 |
-| [0.5, 0.6) | 60 | 0.5511 | 0.5833 | 0.0322 |
-| [0.6, 0.7) | 50 | 0.6534 | 0.62 | 0.0334 |
-| [0.7, 0.8) | 44 | 0.7493 | 0.7045 | 0.0447 |
-| [0.8, 0.9) | 19 | 0.8237 | 0.7895 | 0.0343 |
+| [0.1, 0.2) | 2 | 0.1907 | 0.5 | 0.3093 |
+| [0.2, 0.3) | 31 | 0.2565 | 0.3548 | 0.0983 |
+| [0.3, 0.4) | 30 | 0.3612 | 0.3333 | 0.0278 |
+| [0.4, 0.5) | 45 | 0.4506 | 0.3556 | 0.095 |
+| [0.5, 0.6) | 56 | 0.5485 | 0.5893 | 0.0408 |
+| [0.6, 0.7) | 42 | 0.6539 | 0.619 | 0.0349 |
+| [0.7, 0.8) | 55 | 0.7467 | 0.7091 | 0.0376 |
+| [0.8, 0.9) | 15 | 0.8282 | 0.8 | 0.0282 |
 
 ## Recommendation
 
 ⚠️ **Incumbent (MOV Elo + Platt) remains the research incumbent.**
 
-No weather-augmented model beat the incumbent on holdout. Closest: MOV Elo + Weather (val LL=0.6445, hold LL=0.6439) vs incumbent hold LL=0.6373.
+No weather-augmented model beat the incumbent on holdout. Closest: MOV Elo + Weather (val LL=0.6689, hold LL=0.6485) vs incumbent hold LL=0.6373.
 
 Weather features did not meaningfully improve over MOV Elo + Platt on this dataset (2021–2025).
 

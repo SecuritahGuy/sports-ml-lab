@@ -4,10 +4,10 @@
 
 | Artifact | Description | Status |
 |----------|-------------|--------|
-| [`incumbent_predictions.csv`](https://github.com/timdev/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions.csv) | All eligible games | OK |
-| [`incumbent_predictions_2025_holdout.csv`](https://github.com/timdev/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions_2025_holdout.csv) | 2025 holdout | OK |
-| [`weekly_report.md`](https://github.com/timdev/sports-ml-lab/blob/main/reports/predictions/weekly_report.md) | Weekly report | OK |
-| [`incumbent_prediction_cards.md`](https://github.com/timdev/sports-ml-lab/blob/main/reports/predictions/incumbent_prediction_cards.md) | Game cards | OK |
+| [`incumbent_predictions.csv`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions.csv) | All eligible games | OK |
+| [`incumbent_predictions_2025_holdout.csv`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions_2025_holdout.csv) | 2025 holdout | OK |
+| [`weekly_report.md`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/weekly_report.md) | Weekly report | OK |
+| [`incumbent_prediction_cards.md`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/incumbent_prediction_cards.md) | Game cards | OK |
 
 ## Prediction Schema
 
@@ -65,4 +65,16 @@ closing moneyline odds and is NOT used in model training.
 The 2025 holdout contains **276 games** (regular season and playoffs).
 The current incumbent achieves log loss **0.6262** on this set.
 
-*Holdout file: [`https://github.com/timdev/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions_2025_holdout.csv`](https://github.com/timdev/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions_2025_holdout.csv)*
+*Holdout file: [`https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions_2025_holdout.csv`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions_2025_holdout.csv)*
+
+## 2025 Backtest Report
+
+A comprehensive 2025 backtest analysis is available, including week-by-week,
+team-level, calibration bucket, subgroup diagnostics, and extreme-game analysis.
+
+- [Full Backtest Report](backtest-2025)
+- [Weekly Summary CSV](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/backtests/2025_weekly_summary.csv)
+- [Team Summary CSV](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/backtests/2025_team_summary.csv)
+- [Calibration Buckets CSV](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/backtests/2025_calibration_buckets.csv)
+- [Extreme Games CSV](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/backtests/2025_extreme_games.csv)
+- [Subgroup Summary CSV](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/backtests/2025_subgroup_summary.csv)

@@ -6,7 +6,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Name** | Standard Elo + QB-Change Season Regression + Rolling MOV + Platt |
+| **Name** | Standard Elo + qb_changed + rolling_mov_3 + Platt |
 | **Version** | v2.0.0 |
 | **Type** | Logistic regression on Elo probability + binary/continuous features |
 | **Domain** | Football-only, pregame-safe, zero-leakage NFL win prediction |
@@ -154,6 +154,41 @@ Identified by residual diagnostics (`reports/experiments/residual_diagnostics.md
 The closing moneyline market (no-vig) achieves holdout log loss **0.6090**, significantly better than the incumbent (0.6262). The market is the true performance ceiling for pregame NFL prediction. The incumbent is a purely pregame, market-free benchmark for measuring whether independent football features can approach market efficiency.
 
 **Elo residuals vs market residuals correlate at r=0.9768** — our errors are nearly identical to the market's, just amplified. This suggests Elo captures the same signal as the market, but with more noise.
+
+## Elo-Only vs Incumbent Comparison (2025 Holdout)
+
+| Model | Log Loss | Brier | Accuracy | AUC |
+|-------|----------|-------|----------|-----|
+| Raw Elo (no calibration) | 0.6345 | 0.2220 | 0.6667 | 0.6983 |
+| Elo-only Platt | 0.6315 | 0.2204 | 0.6739 | 0.6983 |
+| **Incumbent** | **0.6262** | **0.2180** | 0.6630 | **0.7050** |
+
+The four non-Elo features (qb_changed ×2 + rolling_mov_3 ×2) improve holdout
+log loss by **0.0053** over Elo-only Platt, with better calibration and AUC.
+
+## Research Integrity
+
+A comprehensive research-integrity audit was performed in June 2026,
+documented in `docs/research_integrity_audit.md`. The audit verified:
+
+- Elo outputs are emitted before rating updates (no leakage)
+- Rolling MOV excludes the current game margin
+- QB-change detection is chronological with no look-ahead
+- Ties are excluded from logistic regression training
+- The incumbent uses exactly 5 features (schema-frozen)
+- 36 automated tests enforce these guarantees
+
+### QB-Change Timing Note
+
+The `home_qb_changed` / `away_qb_changed` features use final actual starter
+data from nflreadpy. This is a backtest-safe oracle source — for live
+prediction, a pregame-announced starter source would be needed.
+
+### Tie Handling
+
+Ties are excluded from logistic training (model_eligible=False). Elo updates
+treat ties as half-wins (0.5). Rolling MOV includes the tie's MOV of 0.
+A `predict-future` CLI command exists for generating predictions without scores.
 
 ## Leakage Controls
 

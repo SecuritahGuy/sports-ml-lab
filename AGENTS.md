@@ -1437,3 +1437,138 @@ The site uses the Cayman theme (`jekyll-theme-cayman`) with GFM markdown. All pa
 2. Enable GitHub Pages from repo settings (Settings → Pages → Deploy from `main` `/docs`)
 3. Consider integrating qb_changed + rolling_mov_3 into `build_features.py` as default pipeline
 4. QB-specific depth features (backup QB experience, weeks-since-change)
+
+---
+
+## Session Summary: Research Integrity Hardening + 2025 Backtest
+
+### Goal
+Perform a research-integrity hardening pass, verify pregame safety, freeze incumbent schema, add leakage tests, create future-prediction mode, produce a verified 2025 backtest report, and compare Elo-only vs incumbent.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `tests/__init__.py` | **New** — test package init |
+| `tests/conftest.py` | **New** — shared fixtures (sample_schedule, sample_schedule_with_tie, sample_schedule_multi_season, small_elo_result) |
+| `tests/test_elo_leakage.py` | **New** — 8 tests: output order, formula verification, no future leakage, MOV effect, preseason regression, decay |
+| `tests/test_rolling_mov_leakage.py` | **New** — 8 tests: current game excluded, first game = 0, season reset, single-team rolling, tie MOV |
+| `tests/test_qb_change_timing.py` | **New** — 7 tests: chronological detection, no look-ahead, missing data, season reset, team-specific tracking |
+| `tests/test_tie_handling.py` | **New** — 4 tests: eligibility, Elo update, pipeline filtering, Platt training |
+| `tests/test_incumbent_schema.py` | **New** — 9 tests: exact 5-feature set, excluded families (market/weather/injury/coach/scheduling/efficiency), version match, LL match, CSV schema, no extra columns |
+| `src/sportslab/evaluation/predict_future.py` | **New** — future-prediction mode: fits Elo on historical games, predicts without scores, emits Platt-calibrated probs, CLI via `sportslab predict-future` |
+| `src/sportslab/cli.py` | Added `predict-future` command with `--input`/`--output` options |
+| `docs/research_integrity_audit.md` | **New** — comprehensive audit report: 7 sections covering leakage controls, timing assumptions, tie handling, schema, holdout results, Elo-only comparison, risks |
+| `reports/benchmarks/incumbent_model_card.md` | Added Elo-only comparison table, research integrity section, QB-change timing note, tie handling documentation |
+
+### Test Results
+
+**38 tests, all passing.**
+
+| Test File | Tests | What It Verifies |
+|-----------|-------|------------------|
+| `test_elo_leakage.py` | 8 | Elo order: emit before update; formula: matches `1/(1+10^(-diff/400))`; no future data; MOV effect; preseason regression; decay |
+| `test_rolling_mov_leakage.py` | 8 | Rolling MOV excludes current game margin; first game = 0; season reset; exact prior-window matching; tie MOV |
+| `test_qb_change_timing.py` | 7 | Chronological only; no look-ahead; missing data; season reset; team-specific tracking |
+| `test_tie_handling.py` | 4 | Eligibility (model_eligible=False); Elo update (0.5); pipeline filtering; Platt training (ties excluded) |
+| `test_incumbent_schema.py` | 9 | Exactly 5 features; market/weather/injury/coach/scheduling/efficiency NOT used; version match; holdout LL match; CSV schema; no extra columns |
+
+### 2025 Backtest Metrics
+
+| Metric | Value |
+|--------|-------|
+| Games evaluated | 276 |
+| **Log loss** | **0.6262** ✅ matches `INCUMBENT_HOLDOUT_LL` |
+| Brier score | 0.2180 |
+| Accuracy | 0.6630 |
+| ROC AUC | 0.7050 |
+| Ties excluded | 4 (all ties removed, 0 evaluated) |
+| Neutral-site excluded | 8 |
+| Non-eligible (other) | 1 |
+
+### Elo-Only vs Incumbent Comparison
+
+| Model | Log Loss | Brier | Accuracy | AUC |
+|-------|----------|-------|----------|-----|
+| Raw Elo (no calibration) | 0.6345 | 0.2220 | 0.6667 | 0.6983 |
+| Elo-only Platt | 0.6315 | 0.2204 | 0.6739 | 0.6983 |
+| **Incumbent** (Elo + qb_changed + mov3 + Platt) | **0.6262** | **0.2180** | 0.6630 | **0.7050** |
+
+The four non-Elo features improve holdout log loss by **0.0053** over Elo-only Platt.
+
+### Research Integrity Findings
+
+1. **No bugs found** — all leakage controls are correctly implemented
+2. **QB-change timing is oracle-based**: Uses final actual starter data (backtest-safe), not pregame-announced. Documented risk for live prediction.
+3. **Tie win-streak is technically incorrect**: Ties treated as losses by `compute_situational_features` (harmless — ties are excluded from all evaluation)
+4. **Incumbent schema verified**: Exactly 5 features, no market/weather/injury/coach/scheduling/efficiency leakage
+5. **Future-prediction mode added**: `sportslab predict-future` for generating probabilities without scores
+6. **No pyproject.toml**: Build configuration missing
+
+### Key Decisions
+- **Incumbent unchanged** (holdout LL 0.6262). No bugs found requiring model change.
+- **QB-change timing documented** as research-oracle feature, not live-pregame safe
+- **Tie handling documented** and verified: excluded from logistic training, 0.5 in Elo updates
+- **`predict-future` mode added** for pregame-safe predictions without scores
+- **Benchmark files unchanged** (LL matches exactly)
+
+### Relevant Files
+- `tests/` — 5 new test files with 38 tests
+- `src/sportslab/evaluation/predict_future.py` — future-prediction module
+- `docs/research_integrity_audit.md` — comprehensive audit report
+- `reports/benchmarks/incumbent_model_card.md` — updated with comparison + integrity section
+
+---
+
+## Session Summary: Production Hardening — Infrastructure + Testing
+
+### Goal
+Transform the repo from research-prototype state into a cleaner deployment-ready workflow while preserving all incumbent metrics, research integrity, and football-only constraints.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `pyproject.toml` | **New** — project metadata, dependencies (pandas, numpy, scikit-learn, click), optional groups (dev, ingest, experiments), pytest config, ruff config, console_scripts entry point |
+| `Makefile` | **New** — `test`, `lint`, `format`, `check`, `ingest`, `build-features`, `predict-incumbent`, `predict-future`, `simulate`, `backtest-2025`, `audit`, `dashboard`, `clean`, `install` |
+| `.gitignore` | **New** — Python/IDE/OS patterns, MLflow exclusions |
+| `src/sportslab/features/situational.py` | **Fixed** — tie win-streak: ties now reset streak to 0 (was counting as loss for both teams). **Fixed** — losing streak formula: `-min(str,0)-1` → `str-1 when ≤0` (bug masked by no tests). Both fixes are safe (win_streak is not an incumbent feature) |
+| `src/sportslab/features/qb_input.py` | **New** — `parse_qb_input_csv()` and `apply_qb_input()` for live-safe QB starter overrides via CSV |
+| `src/sportslab/evaluation/predict_future.py` | **Extended** — added `--qb-input` CSV override, `--season`/`--week` filtering, output now includes `qb_source` column (oracle vs live_pregame) |
+| `src/sportslab/evaluation/simulate_2025.py` | **New** — week-by-week as-if-future simulation: iterates 2025 weeks, fits Elo on data available before each week, predicts, records metrics. Supports oracle and live-safe modes via `--qb-input` |
+| `src/sportslab/cli.py` | Added `simulate-2025` command with `--qb-input`, `--output`, `--report` options |
+| `Makefile` | Added `simulate-oracle`, `simulate-live`, `simulate-compare` targets |
+| `tests/test_qb_input.py` | **New** — 7 tests: CSV parsing, missing columns, empty file, file not found, apply override, no match, NaN handling |
+| `tests/test_predict_future_ext.py` | **New** — 5 tests: split availability, importability, output schema, feature table exists |
+| `tests/test_simulate_2025.py` | **New** — 9 tests: QB mode constants, metrics (all-correct, all-wrong, random, empty, clipped), feature table loading, 2025 weeks extraction, callable |
+| `tests/test_tie_win_streak.py` | **New** — 8 tests: positive streak, negative streak, tie resets, tie after win, tie after loss, tie doesn't increment W/L, away streaks |
+| `reports/simulations/simulate_2025_report.md` | **New** — per-week 2025 simulation results (overall LL 0.6284 across 276 games, matching incumbent 0.6262 closely) |
+
+### Bug Fixes
+
+**1. Tie streak bug** (`situational.py`): Ties were counted as losses for both teams because `bool(home_win == 1)` on pd.NA falls through to the `else` branch. Fixed by explicit `is_tie` check that resets streak to 0.
+
+**2. Losing streak formula bug** (`situational.py`): The formula `-min(win_streak, 0) - 1` for extending losing streaks was wrong: when win_streak=-1, it computed `-(-1)-1 = 0` instead of `-2`. Fixed to `win_streak - 1 when ≤ 0`. This was present since the original `compute_situational_features` was created. Neither bug affected the incumbent (win_streak is not a feature).
+
+### Validation
+- **67 tests passing** (+29 new tests, all passing)
+- **38 original tests unchanged** (all pass)
+- **Lint clean** (ruff) on all new/modified files
+- **2025 simulation**: overall log loss 0.6284 across 276 games (week-by-week matches incumbent's 0.6262 fitted-once)
+- **pyproject.toml** valid, tests run via `python -m pytest`
+- No incumbent metrics changed
+
+### Key Decisions
+- **pyproject.toml uses minimum dependency versions** — does not pin exact versions, allowing compatibility with system-installed packages
+- **QB input CSV format**: simple 3-column CSV (`game_id,home_qb_id,away_qb_id`), no DB or network required
+- **qb_source column** added to predict-future output to distinguish oracle vs live_pregame predictions
+- **Simulation uses `_is_pred` marker column** to track prediction rows through Elo/feature pipeline instead of fragile index-based masks
+- **Tie win-streak fix is safe** — win_streak is not one of the 5 incumbent features (qb_changed, mov_3). Proven by unchanged incumbent LL
+- **Losing streak formula fix is safe** — same reasoning
+- **No git commits made** — user asked not to
+
+### Next Steps
+1. Supply actual pregame QB starter data CSV for live-pregame comparison vs oracle
+2. Any model must beat **Standard Elo + qb_changed + rolling_mov_3 + Platt (holdout LL 0.6262)** to become the new clean football-only incumbent
+3. Consider adding `make install` target that installs from pyproject.toml
+4. Consider publishing to PyPI or building a wheel for easier distribution

@@ -1,143 +1,79 @@
-VENV = .venv
-PYTHON = $(VENV)/bin/python3
-SPORTSLAB = $(VENV)/bin/sportslab
-RUFF = $(VENV)/bin/ruff
-PIP = $(VENV)/bin/pip
+.PHONY: install test lint format check clean ingest build-features \
+        predict-incumbent predict-future weekly-report simulate \
+        backtest-2025 audit dashboard
 
-.PHONY: install install-dev test lint format clean mlflow ingest-nfl build-features train-baseline train-baseline-team-strength elo-tuning rolling-origin-elo schedule-features margin-aware-elo qb-features weather-features expressive-models market-baseline residual-diagnostics epa-features confidence-calibration market-benchmark decayed-elo team-hfa season-regression residual-blending coach-season-regression autogluon injury-features optuna-elo-search qb-injury-flag glicko qb-market-delta feature-selection combined-features optuna-feature-selection predict-incumbent rolling-mov-sensitivity weekly-report comprehensive-efficiency audit-artifacts venv
+# ── Install ──
+install:
+	pip install -e ".[dev]"
 
-venv:
-	python3 -m venv $(VENV)
-
-install: venv
-	$(PIP) install -e .
-
-install-dev: venv
-	$(PIP) install -e ".[dev]"
-
+# ── Quality ──
 test:
-	$(PYTHON) -m pytest tests/ -v --tb=short
+	python -m pytest --tb=short -x -q tests/
+
+test-all:
+	python -m pytest --tb=short -q tests/
+
+test-v:
+	python -m pytest --tb=short -v tests/
 
 lint:
-	$(RUFF) check src/ tests/
+	ruff check src/ tests/
 
 format:
-	$(RUFF) format src/ tests/
-	$(RUFF) check --fix src/ tests/
+	ruff format src/ tests/
 
-clean:
-	rm -rf build/ dist/ *.egg-info/
-	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+check: lint test
 
-mlflow:
-	mlflow ui --port 5000
-
-# This project only supports seasons 2021–current.
-# Add the current season (e.g. 2026) once week 1 data is available.
-ingest-nfl:
-	$(SPORTSLAB) ingest-nfl 2021 2022 2023 2024 2025
+# ── Data ──
+ingest:
+	sportslab ingest-nfl
 
 build-features:
-	$(SPORTSLAB) build-features
+	sportslab build-features
 
-train-baseline:
-	$(SPORTSLAB) train-baseline --feature-set baseline
-
-train-baseline-team-strength:
-	$(SPORTSLAB) train-baseline --feature-set team_strength
-
-elo-tuning:
-	$(SPORTSLAB) elo-tuning
-
-rolling-origin-elo:
-	$(SPORTSLAB) rolling-origin
-
-schedule-features:
-	$(SPORTSLAB) schedule-features
-
-margin-aware-elo:
-	$(SPORTSLAB) margin-aware-elo
-
-qb-features:
-	$(SPORTSLAB) qb-features
-
-weather-features:
-	$(SPORTSLAB) weather-features
-
-expressive-models:
-	$(SPORTSLAB) expressive-models
-
-market-baseline:
-	$(SPORTSLAB) market-baseline
-
-residual-diagnostics:
-	$(SPORTSLAB) residual-diagnostics
-
-epa-features:
-	$(SPORTSLAB) epa-features
-
-confidence-calibration:
-	$(SPORTSLAB) confidence-calibration
-
-market-benchmark:
-	$(SPORTSLAB) market-benchmark
-
-decayed-elo:
-	$(SPORTSLAB) decayed-elo
-
-team-hfa:
-	$(SPORTSLAB) team-hfa
-
-season-regression:
-	$(SPORTSLAB) season-regression
-
-residual-blending:
-	$(SPORTSLAB) residual-blending
-
-coach-season-regression:
-	$(SPORTSLAB) coach-season-regression
-
-autogluon:
-	$(SPORTSLAB) autogluon
-
-injury-features:
-	$(SPORTSLAB) injury-features
-
-optuna-elo-search:
-	$(SPORTSLAB) optuna-search
-
-qb-injury-flag:
-	$(SPORTSLAB) qb-injury
-
-glicko:
-	$(SPORTSLAB) glicko
-
-qb-market-delta:
-	$(SPORTSLAB) qb-market-delta
-
-feature-selection:
-	$(SPORTSLAB) feature-selection
-
-combined-features:
-	$(SPORTSLAB) combined-features
-
-optuna-feature-selection:
-	$(SPORTSLAB) optuna-feature-selection
-
+# ── Predictions ──
 predict-incumbent:
-	$(SPORTSLAB) predict-incumbent
+	sportslab predict-incumbent
 
-rolling-mov-sensitivity:
-	$(SPORTSLAB) rolling-mov-sensitivity
+predict-future:
+	sportslab predict-future
 
 weekly-report:
-	$(SPORTSLAB) weekly-report
+	sportslab weekly-report
 
-comprehensive-efficiency:
-	$(SPORTSLAB) comprehensive-efficiency
+simulate-oracle:
+	sportslab simulate-2025
 
-audit-artifacts:
-	$(SPORTSLAB) audit-artifacts
+simulate-live:
+	sportslab simulate-2025 --qb-input qb_input_2025.csv
 
-build-dashboard:
-	$(SPORTSLAB) build-dashboard
+simulate-compare:
+	sportslab simulate-2025
+	sportslab simulate-2025 --qb-input qb_input_2025.csv --output reports/simulations/simulate_2025_results_live.csv --report reports/simulations/simulate_2025_live_report.md
+	python -c "
+	import pandas as pd
+	o = pd.read_csv('reports/simulations/simulate_2025_results.csv')
+	l = pd.read_csv('reports/simulations/simulate_2025_results_live.csv')
+	from sklearn.metrics import log_loss
+	print(f'Oracle log loss: {log_loss(o.home_win_actual.astype(int), o.incumbent_home_win_prob):.4f}')
+	print(f'Live-safe log loss: {log_loss(l.home_win_actual.astype(int), l.incumbent_home_win_prob):.4f}')
+	"
+
+# ── Validation ──
+backtest-2025:
+	sportslab backtest-2025
+
+audit:
+	sportslab audit-artifacts
+
+dashboard:
+	sportslab build-dashboard
+
+# ── Clean ──
+clean:
+	rm -rf .pytest_cache/ __pycache__/ .ruff_cache/
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+
+# ── Development ──
+.PHONY: dev
+dev: install check

@@ -1,35 +1,36 @@
 # Python
 __pycache__/
 *.py[cod]
-*.so
 *.egg-info/
-*.egg
-.eggs/
 dist/
 build/
+*.egg
 
-# Virtual environment
+# Environments
 .venv/
+.env
 venv/
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Environment
-.env
+# Ruff / testing
+.ruff_cache/
+.pytest_cache/
 
-# Data (generated files, not raw tracked data)
-data/raw/
-data/interim/
-
-# MLflow
-mlruns/
-mlartifacts/
-
-# pytest benchmark artifacts
-.benchmarks/
+# Data files — raw data is tracked; generated artifacts not committed by default
+# data/features/     — uncomment if you want to ignore generated feature tables
+# reports/predictions/ — uncomment to ignore generated predictions
 
 # OS
 .DS_Store
 Thumbs.db
+
+# MLflow
+mlruns/
+
+# Misc
+*.parquet

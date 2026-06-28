@@ -1,6 +1,6 @@
 # Model Card
 
-*This page is generated from [`https://github.com/timdev/sports-ml-lab/blob/main/reports/benchmarks/incumbent_model_card.md`](https://github.com/timdev/sports-ml-lab/blob/main/reports/benchmarks/incumbent_model_card.md).*
+*This page is generated from [`https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/benchmarks/incumbent_model_card.md`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/benchmarks/incumbent_model_card.md).*
 
 
 *Generated: 2026-06-24*
@@ -9,7 +9,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Name** | Standard Elo + QB-Change Season Regression + Rolling MOV + Platt |
+| **Name** | Standard Elo + qb_changed + rolling_mov_3 + Platt |
 | **Version** | v2.0.0 |
 | **Type** | Logistic regression on Elo probability + binary/continuous features |
 | **Domain** | Football-only, pregame-safe, zero-leakage NFL win prediction |

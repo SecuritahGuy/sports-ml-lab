@@ -1,6 +1,8 @@
 # NFL Research Incumbent
 
-*Last updated: 2026-06-23*
+*Last updated: 2026-06-24*
+
+**Short name:** Standard Elo + qb_changed + rolling_mov_3 + Platt
 
 ## Football-Only Research Incumbent
 

@@ -2,8 +2,16 @@ import click
 
 from sportslab.data.ingest_nfl import ingest_nfl
 from sportslab.evaluation.audit_artifacts import run_audit
+from sportslab.evaluation.adaptive_k_experiment import run_adaptive_k_experiment
 from sportslab.evaluation.autogluon_experiment import run_autogluon_experiment
+from sportslab.evaluation.backtest_2025 import run_backtest, run_backtest_2025
 from sportslab.evaluation.build_dashboard import build_all
+from sportslab.evaluation.calibration_improvements_experiment import (
+    run_calibration_experiment,
+)
+from sportslab.evaluation.coach_qb_tenure_experiment import (
+    run_coach_qb_tenure_experiment,
+)
 from sportslab.evaluation.coach_season_regression_experiment import (
     run_coach_season_regression_experiment,
 )
@@ -28,9 +36,11 @@ from sportslab.evaluation.market_baseline import run_market_baseline
 from sportslab.evaluation.market_benchmark import run_market_benchmark
 from sportslab.evaluation.optuna_elo_search import run_optuna_search
 from sportslab.evaluation.optuna_feature_selection_experiment import run_optuna_feature_selection
+from sportslab.evaluation.predict_future import run_predict_future
 from sportslab.evaluation.predict_incumbent import generate_incumbent_predictions
 from sportslab.evaluation.qb_features_experiment import run_qb_features_experiment
 from sportslab.evaluation.qb_injury_experiment import run_qb_injury_experiment
+from sportslab.evaluation.qb_magnitude_experiment import run_qb_magnitude_experiment
 from sportslab.evaluation.qb_market_delta import run_qb_market_delta_experiment
 from sportslab.evaluation.residual_blending_experiment import run_residual_blending_experiment
 from sportslab.evaluation.residual_diagnostics import run_residual_diagnostics
@@ -287,3 +297,88 @@ def audit_artifacts_cmd():
 def build_dashboard_cmd():
     """Build static GitHub Pages dashboard from benchmark registry and prediction artifacts."""
     build_all()
+
+
+@cli.command()
+def backtest_2025_cmd():
+    """Run comprehensive 2025 backtest analysis for the incumbent model."""
+    run_backtest_2025()
+
+
+@cli.command()
+@click.argument("seasons", nargs=-1, type=int)
+def backtest(seasons):
+    """Run backtest for one or more seasons (e.g. 'sportslab backtest 2022 2023')."""
+    if not seasons:
+        click.echo("Usage: sportslab backtest <season> [season ...]")
+        return
+    results = run_backtest(list(seasons))
+    click.echo(f"Report: {results['report']}")
+
+
+@cli.command()
+def qb_magnitude():
+    """Run QB change magnitude experiment (continuous QB quality dropoff features)."""
+    run_qb_magnitude_experiment()
+
+
+@cli.command(name="calibration-improvements")
+def calibration_improvements():
+    """Run calibration improvements experiment (era split + high-confidence shrinkage)."""
+    run_calibration_experiment()
+
+
+@cli.command(name="adaptive-k")
+def adaptive_k():
+    """Run adaptive Elo K by week experiment."""
+    run_adaptive_k_experiment()
+
+
+@cli.command(name="coach-qb-tenure")
+def coach_qb_tenure():
+    """Run coach-QB tenure experiment."""
+    run_coach_qb_tenure_experiment()
+
+
+@cli.command(name="simulate-2025")
+@click.option("--qb-input", type=str, default=None,
+              help="CSV with game_id,home_qb_id,away_qb_id for live-safe QB starters")
+@click.option("--output", type=str, default=None, help="Output CSV path")
+@click.option("--report", type=str, default=None, help="Report output path")
+def simulate_2025_cmd(qb_input, output, report):
+    """Run week-by-week as-if-future simulation for 2025.
+
+    Simulates what the incumbent would have predicted if used
+    in real time, fitting Elo on all available data before each week.
+
+    Uses oracle QB data by default; provide --qb-input for live-safe mode.
+    """
+    from sportslab.evaluation.simulate_2025 import simulate_2025
+    simulate_2025(
+        qb_input_path=qb_input,
+        output_path=output or "reports/simulations/simulate_2025_results.csv",
+        report_path=report or "reports/simulations/simulate_2025_report.md",
+    )
+
+
+@cli.command(name="predict-future")
+@click.option("--input", type=str, default=None, help="CSV with future games to predict")
+@click.option("--output", type=str, default=None, help="Output CSV path")
+@click.option("--qb-input", type=str, default=None,
+              help="CSV with game_id,home_qb_id,away_qb_id for live-safe QB starters")
+@click.option("--season", type=int, default=None, help="Season year to predict (default: all future)")
+@click.option("--week", type=int, default=None, help="Week number to predict (default: all future)")
+def predict_future_cmd(input, output, qb_input, season, week):
+    """Generate pregame predictions for future games without requiring scores.
+
+    Fits Elo on all available historical data (2021-current),
+    then emits pregame-safe predictions using the incumbent
+    (Elo + qb_changed + rolling_mov_3 + Platt) without updating
+    ratings on the predicted games.
+
+    By default uses oracle QB data from nflreadpy schedules.
+    Provide --qb-input to override with live-safe pregame-announced starters.
+    """
+    from sportslab.evaluation.predict_future import run_predict_future
+    run_predict_future(input_path=input, output=output, qb_input=qb_input,
+                       season=season, week=week)
