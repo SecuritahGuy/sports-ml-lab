@@ -184,8 +184,16 @@ def generate_incumbent_predictions() -> Dict[str, str]:
             "predicted_winner": pred_winner,
             "confidence_bucket": [_assign_confidence_bucket(p) for p in prob],
             "model_version": INCUMBENT_VERSION,
+            "model_date": INCUMBENT_DATE,
+            "training_seasons": "2021-2024",
             "feature_set": INCUMBENT_FEATURE_SET,
             "calibration_method": INCUMBENT_CALIBRATION,
+            "model_holdout_ll": INCUMBENT_HOLDOUT_LL,
+            "elo_k": BEST_K,
+            "elo_hfa": BEST_HFA,
+            "elo_reg": BEST_REG,
+            "elo_decay": BEST_DECAY,
+            "elo_qb_bonus": BEST_QB_BONUS,
         }
     )
 

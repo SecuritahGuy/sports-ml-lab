@@ -1,8 +1,8 @@
 import click
 
 from sportslab.data.ingest_nfl import ingest_nfl
-from sportslab.evaluation.audit_artifacts import run_audit
 from sportslab.evaluation.adaptive_k_experiment import run_adaptive_k_experiment
+from sportslab.evaluation.audit_artifacts import run_audit
 from sportslab.evaluation.autogluon_experiment import run_autogluon_experiment
 from sportslab.evaluation.backtest_2025 import run_backtest, run_backtest_2025
 from sportslab.evaluation.build_dashboard import build_all
@@ -34,6 +34,12 @@ from sportslab.evaluation.injury_features_experiment import (
 from sportslab.evaluation.margin_aware_elo import run_margin_aware_experiment
 from sportslab.evaluation.market_baseline import run_market_baseline
 from sportslab.evaluation.market_benchmark import run_market_benchmark
+from sportslab.evaluation.no_qb_baseline import run_no_qb_baseline
+from sportslab.evaluation.qb_ablation import run_qb_ablation
+from sportslab.evaluation.qb_continuity import run_qb_continuity
+from sportslab.evaluation.qb_depth_experiment import run_qb_depth_experiment
+from sportslab.evaluation.qb_gated_experience import run_qb_gated_experience
+from sportslab.evaluation.turnover_experiment import run_turnover_experiment
 from sportslab.evaluation.optuna_elo_search import run_optuna_search
 from sportslab.evaluation.optuna_feature_selection_experiment import run_optuna_feature_selection
 from sportslab.evaluation.predict_future import run_predict_future
@@ -49,6 +55,7 @@ from sportslab.evaluation.rolling_origin_elo_validation import (
 )
 from sportslab.evaluation.schedule_rest_experiment import run_schedule_rest_experiment
 from sportslab.evaluation.season_regression_experiment import run_season_regression_experiment
+from sportslab.evaluation.situational_micro_experiment import run_situational_micro_experiment
 from sportslab.evaluation.team_hfa_experiment import run_team_hfa_experiment
 from sportslab.evaluation.train_baseline import train_baseline
 from sportslab.evaluation.weather_features_experiment import run_weather_features_experiment
@@ -273,9 +280,60 @@ def predict_incumbent_cmd():
     default=None,
     help="Output path (default: reports/predictions/weekly_report.md)",
 )
-def weekly_report_cmd(season, week, output):
-    """Generate weekly report from incumbent predictions."""
-    generate_weekly_report(season=season, week=week, output=output)
+@click.option(
+    "--input",
+    "input_path",
+    type=str,
+    default=None,
+    help="Input prediction CSV path (default: auto-detect incumbent or future)",
+)
+def weekly_report_cmd(season, week, output, input_path):
+    """Generate weekly report from incumbent or future predictions."""
+    generate_weekly_report(season=season, week=week, output=output, input_path=input_path)
+
+
+@cli.command(name="no-qb-baseline")
+def no_qb_baseline_cmd():
+    """Compare incumbent vs no-QB live-safe baseline on 2025 simulation."""
+    run_no_qb_baseline()
+
+
+@cli.command(name="qb-ablation")
+@click.option("--qb-input", default=None,
+              help="Path to QB input CSV for live-QB fixture mode")
+def qb_ablation_cmd(qb_input):
+    """Comprehensive QB ablation: oracle vs no-QB vs live fixture."""
+    run_qb_ablation(qb_input_path=qb_input)
+
+
+@cli.command(name="qb-continuity")
+def qb_continuity_cmd():
+    """Narrow QB-continuity refinement experiment (6 model variants)."""
+    run_qb_continuity()
+
+
+@cli.command(name="qb-gated-experience")
+def qb_gated_experience_cmd():
+    """Gated QB-experience diagnostic experiment (5 variants)."""
+    run_qb_gated_experience()
+
+
+@cli.command(name="qb-depth-experiment")
+def qb_depth_cmd():
+    """QB depth features experiment (rust, first-season-start, career starts, win %, missing)."""
+    run_qb_depth_experiment()
+
+
+@cli.command(name="turnover-experiment")
+def turnover_cmd():
+    """Focused turnover features experiment (rolling TO differential windows)."""
+    run_turnover_experiment()
+
+
+@cli.command(name="situational-micro")
+def situational_micro_cmd():
+    """Situational micro-features experiment (divisional, first-year coach, surface)."""
+    run_situational_micro_experiment()
 
 
 @cli.command()
@@ -366,8 +424,10 @@ def simulate_2025_cmd(qb_input, output, report):
 @click.option("--output", type=str, default=None, help="Output CSV path")
 @click.option("--qb-input", type=str, default=None,
               help="CSV with game_id,home_qb_id,away_qb_id for live-safe QB starters")
-@click.option("--season", type=int, default=None, help="Season year to predict (default: all future)")
-@click.option("--week", type=int, default=None, help="Week number to predict (default: all future)")
+@click.option("--season", type=int, default=None,
+              help="Season year to predict (default: all future)")
+@click.option("--week", type=int, default=None,
+              help="Week number to predict (default: all future)")
 def predict_future_cmd(input, output, qb_input, season, week):
     """Generate pregame predictions for future games without requiring scores.
 
@@ -379,6 +439,5 @@ def predict_future_cmd(input, output, qb_input, season, week):
     By default uses oracle QB data from nflreadpy schedules.
     Provide --qb-input to override with live-safe pregame-announced starters.
     """
-    from sportslab.evaluation.predict_future import run_predict_future
     run_predict_future(input_path=input, output=output, qb_input=qb_input,
                        season=season, week=week)

@@ -1,6 +1,7 @@
 .PHONY: install test lint format check clean ingest build-features \
         predict-incumbent predict-future weekly-report simulate \
-        backtest-2025 audit dashboard
+        backtest-2025 audit dashboard no-qb-baseline qb-continuity \
+qb-gated-experience qb-depth-experiment turnover-experiment situational-micro
 
 # ── Install ──
 install:
@@ -40,6 +41,27 @@ predict-future:
 
 weekly-report:
 	sportslab weekly-report
+
+no-qb-baseline:
+	sportslab no-qb-baseline
+
+qb-ablation:
+	sportslab qb-ablation
+
+qb-continuity:
+	sportslab qb-continuity
+
+qb-gated-experience:
+	sportslab qb-gated-experience
+
+qb-depth-experiment:
+	sportslab qb-depth-experiment
+
+turnover-experiment:
+	sportslab turnover-experiment
+
+situational-micro:
+	sportslab situational-micro
 
 simulate-oracle:
 	sportslab simulate-2025

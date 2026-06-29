@@ -18,11 +18,8 @@ import pytest
 from sportslab.evaluation.predict_incumbent import (
     FEATURE_COLS,
     INCUMBENT_HOLDOUT_LL,
-    INCUMBENT_VAL_LL,
     INCUMBENT_VERSION,
-    _fit_incumbent,
     _build_feature_pipeline,
-    generate_incumbent_predictions,
 )
 
 
@@ -31,17 +28,13 @@ class TestIncumbentSchema:
 
     def test_exact_feature_set(self):
         """Incumbent must use exactly 5 features: elo_prob + 4 binary/continuous."""
-        expected = {"elo_prob", "home_qb_changed", "away_qb_changed",
-                     "home_rolling_mov_3", "away_rolling_mov_3"}
-        actual = set(FEATURE_COLS)
-        # elo_prob is not in FEATURE_COLS, it's added separately
-        # Total features = len(FEATURE_COLS) + 1 (elo_prob)
-        assert len(FEATURE_COLS) == 4, f"Expected 4 feature columns in FEATURE_COLS, got {len(FEATURE_COLS)}: {FEATURE_COLS}"
+        assert len(FEATURE_COLS) == 4, (
+            f"Expected 4 feature columns, got {len(FEATURE_COLS)}: {FEATURE_COLS}"
+        )
+        allowed = {"home_qb_changed", "away_qb_changed",
+                    "home_rolling_mov_3", "away_rolling_mov_3"}
         for col in FEATURE_COLS:
-            assert col in {"home_qb_changed", "away_qb_changed",
-                           "home_rolling_mov_3", "away_rolling_mov_3"}, (
-                f"Unexpected feature column: {col}"
-            )
+            assert col in allowed, f"Unexpected feature column: {col}"
 
     def test_market_features_not_in_incumbent(self):
         """Market features must not be used as model inputs for the incumbent."""
@@ -108,7 +101,9 @@ class TestIncumbentSchema:
         required = [
             "game_id", "season", "week", "home_team", "away_team",
             "incumbent_home_win_prob", "confidence_bucket",
-            "model_version", "feature_set",
+            "model_version", "model_date", "training_seasons",
+            "feature_set", "calibration_method", "model_holdout_ll",
+            "elo_k", "elo_hfa", "elo_reg", "elo_decay", "elo_qb_bonus",
         ]
         for col in required:
             assert col in df.columns, f"Missing column: {col}"

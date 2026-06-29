@@ -127,6 +127,26 @@ The project follows strict principles to ensure research validity:
 4. Experiments must report log loss, Brier score, accuracy, calibration notes, and leakage risk
 5. Never promote models based on ROI alone
 
+## Feature Research Closure
+
+As of 2026-06-29, the feature-hunting phase is **closed**. See `reports/benchmarks/feature_family_status.md` for the master inventory.
+
+**Do Not Retest Rule:** Rejected and Watchlist families must not be retested unless one of these triggers is met:
+1. **New data accumulates** — at least 2 additional seasons (260+ games) past 2021-2025
+2. **New pregame-safe data source** is added to the repo
+3. **Live prediction logs** reveal a repeatable failure mode not in residual diagnostics
+4. **Market benchmark** is requested as diagnostic only
+
+**Current incumbent:**
+```
+Model:        Elo + qb_changed + rolling_mov_3 + Platt
+Val LL:       0.6334
+Holdout LL:   0.6262
+Holdout Brier: 0.2180
+Holdout AUC:   0.7050
+Version:      v2.0.0
+```
+
 ## Sports ML Rules
 
 - Predict probabilities, not vibes.
@@ -180,39 +200,40 @@ sports-ml-lab/
 
 ---
 
-## Session Summary: Rolling-Origin Elo Validation
+## Session Summaries
 
-### Goal
-Implement rolling-origin Elo validation with cross-fold selection, expanded grid, and one-time 2025 holdout evaluation. Establish a new research incumbent if rolling-origin selected models beat the current tuned Elo (K=32, HFA=25, reg=0, holdout LL 0.6616).
+Full session history (20+ experiments) has been consolidated into the governance document.
 
-### Changes Made
+### Current State
 
-| File | Change |
-|------|--------|
-| `src/sportslab/evaluation/elo_tuning.py` | Added `compute_holdout` param to `run_elo_grid_search` — when False (default), no holdout metrics computed/printed during grid search |
-| `src/sportslab/evaluation/rolling_origin_elo_validation.py` | **New file** — rolling-origin grid search (3 folds: 2021→2022, 2021-2022→2023, 2021-2023→2024), expanded grid (K=20..48, HFA=10..40, reg=0.0..0.33), calibration via Platt/isotonic, minimal logistic challenger, comprehensive report writer |
-| `src/sportslab/cli.py` | Added `rolling-origin` CLI command |
-| `Makefile` | Added `rolling-origin-elo` target |
-| `tests/test_rolling_origin_elo.py` | **New file** — 11 tests for fold definitions, holdout exclusion, no holdout in grid search, backward compat |
-| `reports/experiments/rolling_origin_elo_validation.md` | **New file** — full experiment report (174 lines) |
+```
+Incumbent:    Elo + qb_changed + rolling_mov_3 + Platt
+Val LL:       0.6334
+Holdout LL:   0.6262
+Tests:        267 passing
+Lint:         clean
+```
 
-### Experiment Results
+### Feature Research Closure
 
-- **Selected params** by average validation log loss across 3 rolling folds: K=40, HFA=40, reg=0.25
-- Rolling-origin avg val LL: 0.6363
-- 210 combinations searched
+Feature hunting is **closed** as of 2026-06-29. All 30+ feature families have been tested and documented. See `reports/benchmarks/feature_family_status.md` for the master inventory, rejection rationale, and "do not retest" rules.
 
-**2025 Holdout Comparison:**
-| Model | Holdout Log Loss |
-|-------|-----------------|
-| Random | 0.6931 |
-| Home prior (0.548) | 0.6908 |
-| Original Elo K=20 (old incumbent) | 0.6678 |
-| Current tuned Elo K=32 HFA=25 | 0.6616 |
-| Rolling-origin selected raw Elo | 0.6409 |
-| **Rolling-origin selected + Platt** | **0.6395 ← NEW INCUMBENT** |
-| Rolling-origin selected + Isotonic | 0.6459 |
-| Rolling-origin selected Minimal Logistic | 0.6443 |
+### What Has Been Tested (Shorthand)
+
+| Category | Families |
+|----------|----------|
+| **Promoted** | Elo (tuned), QB change flag, rolling MOV 3-game, Platt calibration |
+| **Rejected (27)** | Scheduling, weather, QB identity OHE, QB rookie/backup, QB injury, QB depth, QB continuity, QB magnitude, coach tenure, coach+QB regression, first-year coach, surface mismatch, divisional, team HFA, home/away Elo, turnovers, team EPA, PFR stats, snap counts, win streak, Glicko, AutoGluon, tree models, decayed Elo, residual blending, confidence calibration, adaptive K |
+| **Watchlist (4)** | Turnover diff (to_net_3), team-specific HFA, QB market delta, rolling MOV 1-game |
+| **Diagnostic only** | Market moneyline, spread, referee, QB career stats |
+
+### Next Steps (Feature Hunting Closed)
+
+Future model development must follow one of these triggers:
+1. New season data accumulates (2+ seasons / 260+ games)
+2. New pregame-safe data source added to repo
+3. Live prediction logs reveal repeatable failure mode
+4. Market benchmark diagnostic requested
 
 - **NEW INCUMBENT: Rolling-origin selected Elo (K=40, HFA=40, reg=0.25) + Platt scaling** with holdout log loss 0.6395
 - Isotonic calibration rejected (overfit risk, no improvement)
@@ -1572,3 +1593,138 @@ Transform the repo from research-prototype state into a cleaner deployment-ready
 2. Any model must beat **Standard Elo + qb_changed + rolling_mov_3 + Platt (holdout LL 0.6262)** to become the new clean football-only incumbent
 3. Consider adding `make install` target that installs from pyproject.toml
 4. Consider publishing to PyPI or building a wheel for easier distribution
+
+---
+
+## Session Summary: QB Depth Features
+
+### Goal
+Test whether QB career starts, win percentage, rust (games since last start), and first-season-start flags improve on the incumbent.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/qb_depth.py` | **New** — `compute_qb_depth_features()`: 8 columns — `qb_rust_games`, `qb_first_season_start`, `home_qb_career_starts`, `away_qb_career_starts`, `home_qb_career_win_pct`, `away_qb_career_win_pct`, `home_qb_career_starts_missing`, `away_qb_career_starts_missing` |
+| `src/sportslab/evaluation/qb_depth_experiment.py` | **New** — rolling-origin 6-variant experiment, fitted-once, calibration, report writer |
+| `src/sportslab/cli.py` | Added `qb-depth-experiment` command |
+| `Makefile` | Added `qb-depth-experiment` target |
+| `tests/test_qb_depth.py` | **New** — 20 tests |
+| `reports/experiments/qb_depth.md` | **New** — full report |
+
+### Experiment Results
+
+**Rolling-Origin Average Validation Log Loss (Δ vs incumbent):**
+| Variant | Val LL | Δ | Holdout LL | Δ |
+|---------|--------|---|-----------|---|
+| incumbent | 0.6406 | — | 0.6315 | — |
+| career_starts | 0.6534 | +0.0128 | 0.6380 | +0.0065 |
+| win_pct | 0.6434 | +0.0028 | 0.6320 | +0.0005 |
+| missing_flag | 0.6406 | 0.0000 | 0.6315 | 0.0000 |
+| qb_depth (rust + first) | 0.6584 | +0.0178 | 0.6358 | +0.0043 |
+| all_depth | 0.6730 | +0.0324 | 0.6445 | +0.0130 |
+
+**All variants rejected.** QB depth features add noise, not signal. Missing flag identical to incumbent (zero feature value when data exists). Career starts and win pct from nflreadpy `load_players()` have near-zero variance for established QBs.
+
+### Key Decisions
+- QB depth features permanently rejected at this sample size
+- No untested QB feature directions remain
+
+---
+
+## Session Summary: Turnover Features
+
+### Goal
+Test whether rolling turnover differential features (3-game and 5-game windows) improve on the incumbent.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/turnovers.py` | **New** — `compute_turnover_features()`: 2 columns — `to_net_3`, `to_net_5` |
+| `src/sportslab/evaluation/turnover_experiment.py` | **New** — rolling-origin 5-variant experiment, fitted-once, report writer |
+| `src/sportslab/cli.py` | Added `turnover-experiment` command |
+| `Makefile` | Added `turnover-experiment` target |
+| `tests/test_turnovers.py` | **New** — 9 tests |
+| `reports/experiments/turnover_features.md` | **New** — full report |
+
+### Experiment Results
+
+**Rolling-Origin Average Validation Log Loss (Δ vs incumbent):**
+| Variant | Val LL | Δ | Holdout LL | Δ |
+|---------|--------|---|-----------|---|
+| incumbent | 0.6406 | — | 0.6315 | — |
+| to_net_3 | 0.6442 | +0.0036 | **0.6283** | **−0.0032** |
+| to_net_5 | 0.6424 | +0.0018 | 0.6335 | +0.0020 |
+| elo + to 3+5 | 0.6445 | +0.0039 | 0.6296 | −0.0019 |
+| platt + to_3 | 0.6454 | +0.0048 | 0.6340 | +0.0025 |
+| to only (3+5) | 0.6945 | +0.0539 | 0.6937 | +0.0622 |
+
+**All rejected.** Best variant (to_net_3) wins holdout (−0.0032) but loses validation (+0.0036). No variant beats incumbent on BOTH. to_net_3 placed on watchlist (0.6283 holdout is close to incumbent 0.6315).
+
+### Key Decisions
+- All turnover variants rejected
+- to_net_3 marked watchlist-only — revisit if more seasons accumulate
+
+---
+
+## Session Summary: Situational Micro-Features
+
+### Goal
+Test three narrow feature families (divisional interaction, first-year coach change, surface mismatch) against the incumbent. No model promoted. Referee features diagnostic-only.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/situational_micro.py` | **New** — `compute_situational_micro_features()`: 8 columns — div×qb_changed (2), first-year coach (3), surface mismatch (3) |
+| `src/sportslab/evaluation/situational_micro_experiment.py` | **New** — rolling-origin 5-variant experiment, bootstrap CI, calibration/confidence/worst-20, referee audit, report writer |
+| `src/sportslab/cli.py` | Added `situational-micro` command |
+| `Makefile` | Added `situational-micro` target |
+| `tests/test_situational_micro.py` | **New** — 33 tests |
+| `reports/experiments/situational_micro.md` | **New** — full report (239 lines) |
+
+### Experiment Results
+
+**Rolling-Origin Average Validation Log Loss (Δ vs incumbent):**
+| Variant | Val LL | Δ | Holdout LL | Δ |
+|---------|--------|---|-----------|---|
+| incumbent | 0.6334 | — | 0.6262 | — |
+| divisional | 0.6349 | +0.0015 | **0.6260** | **−0.0002** |
+| divisional_interaction | 0.6350 | +0.0016 | 0.6315 | +0.0053 |
+| first_year_coach | 0.6349 | +0.0015 | 0.6295 | +0.0033 |
+| surface_mismatch | 0.6358 | +0.0024 | 0.6287 | +0.0025 |
+
+**All variants rejected.** No variant beats incumbent on BOTH validation and holdout. divisional wins holdout by 0.0002 but loses val by 0.0015. Divisional interaction, first-year coach, and surface mismatch all lose on both.
+
+**Bootstrap CI (Δ = challenger − incumbent):**
+| Challenger | Mean Δ | 95% CI |
+|------------|--------|--------|
+| divisional | −0.0003 | [−0.0021, 0.0017] |
+| divisional_interaction | −0.0014 | [−0.0054, 0.0025] |
+| first_year_coach | +0.0068 | [−0.0030, 0.0166] |
+| surface_mismatch | +0.0033 | [−0.0017, 0.0085] |
+
+All CIs include zero.
+
+**Referee Audit:** 21 unique referees (1 missing), 70 games/ref median. Marginally usable but recommended diagnostic-only without penalty data.
+
+### Key Decisions
+- No model promoted. Incumbent unchanged.
+- Divisional, first-year coach, surface mismatch all rejected
+- Referee features diagnostic-only
+
+### Current Test State
+- 267 tests passing (33 new)
+- Lint clean (no new errors)
+
+### Relevant Files
+- `src/sportslab/features/situational_micro.py` — feature computation
+- `src/sportslab/evaluation/situational_micro_experiment.py` — experiment module
+- `reports/experiments/situational_micro.md` — full report
+- `tests/test_situational_micro.py` — 33 tests
+
+### Next Steps
+1. Any model must beat **Standard Elo + qb_changed + rolling_mov_3 + Platt (holdout LL 0.6262)** to become the new clean football-only incumbent
+2. Continue exploring situational features (rolling averages, game context)
+3. Consider DVOA/EPA features if available

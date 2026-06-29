@@ -19,7 +19,17 @@ import pandas as pd
 from sklearn.metrics import log_loss as sk_log_loss
 
 from sportslab.evaluation.predict_incumbent import (
+    BEST_DECAY,
+    BEST_HFA,
+    BEST_K,
+    BEST_QB_BONUS,
+    BEST_REG,
     FEATURE_COLS,
+    INCUMBENT_DATE,
+    INCUMBENT_FEATURE_SET,
+    INCUMBENT_HOLDOUT_LL,
+    INCUMBENT_VAL_LL,
+    INCUMBENT_VERSION,
     _assign_confidence_bucket,
     _build_pipeline,
 )
@@ -211,7 +221,21 @@ def simulate_2025(
                                          df_feat.loc[is_pred, "home_team"].values,
                                          df_feat.loc[is_pred, "away_team"].values),
             "confidence_bucket": [_assign_confidence_bucket(p) for p in prob],
+            "model_version": INCUMBENT_VERSION,
+            "model_date": INCUMBENT_DATE,
+            "training_seasons": "2021-2024",
+            "feature_set": INCUMBENT_FEATURE_SET,
+            "calibration_method": "Platt (logistic on Elo prob + features)",
+            "model_val_ll": INCUMBENT_VAL_LL,
+            "model_holdout_ll": INCUMBENT_HOLDOUT_LL,
+            "elo_k": BEST_K,
+            "elo_hfa": BEST_HFA,
+            "elo_reg": BEST_REG,
+            "elo_decay": BEST_DECAY,
+            "elo_qb_bonus": BEST_QB_BONUS,
             "qb_source": qb_source,
+            "home_qb_id": df_feat.loc[is_pred, "home_qb_id"].values,
+            "away_qb_id": df_feat.loc[is_pred, "away_qb_id"].values,
         })
 
         metrics = _compute_metrics(actual, prob)

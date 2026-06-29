@@ -41,9 +41,13 @@ def test_predict_future_output_schema():
         "game_id", "season", "week", "gameday",
         "away_team", "home_team",
         "incumbent_home_win_prob", "predicted_winner",
-        "confidence_bucket", "model_version", "feature_set",
-        "calibration_method", "qb_source",
+        "confidence_bucket", "model_version", "model_date",
+        "training_seasons", "feature_set", "calibration_method",
+        "model_val_ll", "model_holdout_ll",
+        "elo_k", "elo_hfa", "elo_reg", "elo_decay", "elo_qb_bonus",
+        "qb_source",
         "caution_qb_change", "caution_early_season",
+        "home_qb_id", "away_qb_id",
     ]
     assert "qb_source" in expected, "Output should include qb_source field"
     assert INCUMBENT_VERSION is not None

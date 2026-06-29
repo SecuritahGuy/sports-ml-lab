@@ -87,3 +87,32 @@ def test_simulate_2025_importable():
     """simulate_2025 function is callable."""
     from sportslab.evaluation.simulate_2025 import simulate_2025
     assert callable(simulate_2025)
+
+
+def test_simulate_2025_output_schema():
+    """Simulation output includes QB id columns."""
+    from sportslab.evaluation.predict_incumbent import (
+        BEST_DECAY,
+        BEST_HFA,
+        BEST_K,
+        BEST_QB_BONUS,
+        BEST_REG,
+        INCUMBENT_DATE,
+        INCUMBENT_FEATURE_SET,
+        INCUMBENT_VERSION,
+    )
+    from sportslab.evaluation.simulate_2025 import (
+        _load_feature_table,
+    )
+    df = _load_feature_table()
+    assert "home_qb_id" in df.columns
+    assert "away_qb_id" in df.columns
+    # All metadata constants should be defined
+    assert INCUMBENT_VERSION == "v2.0.0"
+    assert INCUMBENT_DATE is not None
+    assert INCUMBENT_FEATURE_SET is not None
+    assert isinstance(BEST_K, int)
+    assert isinstance(BEST_HFA, int)
+    assert isinstance(BEST_REG, float)
+    assert isinstance(BEST_DECAY, int)
+    assert isinstance(BEST_QB_BONUS, float)
