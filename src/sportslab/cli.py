@@ -43,6 +43,7 @@ from sportslab.evaluation.predict_future import run_predict_future
 from sportslab.evaluation.predict_incumbent import generate_incumbent_predictions
 from sportslab.evaluation.prediction_audit import build_prediction_index, run_prediction_audit
 from sportslab.evaluation.qb_ablation import run_qb_ablation
+from sportslab.evaluation.qb_adjusted_elo_experiment import run_qb_adjusted_elo_experiment
 from sportslab.evaluation.qb_continuity import run_qb_continuity
 from sportslab.evaluation.qb_depth_experiment import run_qb_depth_experiment
 from sportslab.evaluation.qb_features_experiment import run_qb_features_experiment
@@ -66,6 +67,8 @@ from sportslab.evaluation.weather_features_experiment import run_weather_feature
 from sportslab.evaluation.weekly_pipeline import grade_week, predict_week, season_report
 from sportslab.evaluation.weekly_report import generate_weekly_report
 from sportslab.features.build_features import build_feature_table
+from sportslab.features.qb_adjustment import compute_qb_adjustments
+from sportslab.ratings.roster_strength import compute_roster_strength
 
 
 @click.group()
@@ -559,3 +562,141 @@ def rehearsal_season_cmd(season, qb_input):
     Does NOT modify live prediction artifacts or the incumbent model.
     """
     rehearse_season(season=season, qb_input_path=qb_input)
+
+
+@cli.command(name="build-qb-adjustments")
+@click.option("--output", type=str, default="data/features/nfl/qb_adjustments.parquet",
+              help="Output path for QB adjustments parquet")
+def build_qb_adjustments_cmd(output):
+    """Build QB adjustment features and export as parquet.
+
+    Computes per-game QB strength adjustments (in Elo points) with
+    Bayesian shrinkage toward replacement level.  Exports all games
+    with home_qb_adj, away_qb_adj, home_qb_starts, away_qb_starts.
+    """
+    import pandas as pd
+
+    from sportslab.evaluation.season_regression_experiment import (
+        build_team_regression_overrides,
+    )
+    from sportslab.features.ratings import compute_elo_features
+
+    fp = "data/features/nfl/feature_table.parquet"
+    df_raw = pd.read_parquet(fp)
+
+    overrides = build_team_regression_overrides(
+        df_raw, preseason_regression=0.1, qb_change_bonus=0.2,
+    )
+    df = compute_elo_features(
+        df_raw, k_factor=36, home_advantage=40,
+        preseason_regression=0.1, team_regression_overrides=overrides,
+        decay_half_life=32,
+    )
+    df = compute_qb_adjustments(df)
+
+    out_cols = [
+        "game_id", "season", "week", "gameday",
+        "away_team", "home_team", "home_qb_id", "away_qb_id",
+        "home_qb_name", "away_qb_name",
+        "home_elo_pre", "away_elo_pre",
+        "home_qb_adj", "away_qb_adj",
+        "home_qb_starts", "away_qb_starts",
+    ]
+    avail = [c for c in out_cols if c in df.columns]
+    out_path = str(output)
+    df[avail].to_parquet(out_path, index=False)
+    click.echo(f"QB adjustments saved: {out_path} ({len(df)} games, {len(avail)} columns)")
+
+
+@cli.command(name="qb-adjusted-elo")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def qb_adjusted_elo_cmd(output):
+    """Run QB-adjusted Elo experiment V0: 5 models, rolling validation, holdout."""
+    run_qb_adjusted_elo_experiment(output_csv=output)
+
+
+@cli.command(name="frozen-qb-overlay")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def frozen_qb_overlay_cmd(output):
+    """Run frozen-incumbent QB overlay experiment: final QB promotion test.
+
+    Applies QB adjustment ONLY in logit space on top of frozen incumbent
+    probabilities.  Non-gated games are identical to the incumbent.
+    No recalibration after gating.
+    """
+    from sportslab.evaluation.frozen_qb_overlay_experiment import (
+        run_frozen_qb_overlay_experiment,
+    )
+    run_frozen_qb_overlay_experiment(output_csv=output)
+
+
+@cli.command(name="frozen-qb-overlay-foldsafe")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def frozen_qb_overlay_foldsafe_cmd(output):
+    """Run fold-safe frozen-incumbent QB overlay experiment.
+
+    Fits Platt calibration per rolling-origin fold to avoid future-data
+    leakage in validation.  Selects best variant by average val LL.
+    Evaluates selected variant once on 2025 holdout.
+    """
+    from sportslab.evaluation.frozen_qb_overlay_foldsafe_experiment import (
+        run_frozen_qb_overlay_foldsafe,
+    )
+    run_frozen_qb_overlay_foldsafe(output_csv=output)
+
+
+@cli.command(name="gated-qb-elo")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def gated_qb_elo_cmd(output):
+    """Run gated QB-adjusted Elo experiment V1: 7+ gating variants, sweep."""
+    from sportslab.evaluation.gated_qb_adjusted_elo_experiment import (
+        run_gated_qb_adjusted_elo_experiment,
+    )
+    run_gated_qb_adjusted_elo_experiment(output_csv=output)
+
+
+@cli.command(name="roster-strength")
+@click.option("--output", type=str, default="data/features/nfl/roster_strength.parquet",
+              help="Output path for roster strength parquet")
+def roster_strength_cmd(output):
+    """Build V1 roster-strength features (only QB points populated in V0).
+
+    Creates the full roster-strength feature table with position-group
+    points.  Only QB points are populated (via qb_adjustment); other
+    position groups return 0 in V0.  Ready for V1+ expansion.
+    """
+    import pandas as pd
+
+    from sportslab.evaluation.season_regression_experiment import (
+        build_team_regression_overrides,
+    )
+    from sportslab.features.ratings import compute_elo_features
+
+    fp = "data/features/nfl/feature_table.parquet"
+    df_raw = pd.read_parquet(fp)
+
+    overrides = build_team_regression_overrides(
+        df_raw, preseason_regression=0.1, qb_change_bonus=0.2,
+    )
+    df = compute_elo_features(
+        df_raw, k_factor=36, home_advantage=40,
+        preseason_regression=0.1, team_regression_overrides=overrides,
+        decay_half_life=32,
+    )
+    df = compute_roster_strength(df)
+
+    from sportslab.ratings.roster_strength import ALL_ROSTER_COLUMNS
+    out_cols = [
+        "game_id", "season", "week", "gameday",
+        "away_team", "home_team",
+        "home_elo_pre", "away_elo_pre",
+    ] + ALL_ROSTER_COLUMNS
+    avail = [c for c in out_cols if c in df.columns]
+    out_path = str(output)
+    df[avail].to_parquet(out_path, index=False)
+    click.echo(f"Roster strength saved: {out_path} ({len(df)} games, {len(avail)} columns)")
+    click.echo("  Note: V0 only populates QB points. OL/skill/DL/LB/coverage/ST are 0.")

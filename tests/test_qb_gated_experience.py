@@ -404,7 +404,7 @@ def test_no_promotion_effects():
     from sportslab.evaluation.predict_incumbent import INCUMBENT_HOLDOUT_LL
     from sportslab.evaluation.qb_gated_experience import FEATURE_COLS as GATED_FEATURES
     assert list(INC_FEATURES) == list(GATED_FEATURES)
-    assert INCUMBENT_HOLDOUT_LL == 0.6262
+    assert INCUMBENT_HOLDOUT_LL == 0.6200
 
 
 class TestDeterministic:

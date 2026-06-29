@@ -31,3 +31,7 @@ team_stats,rolling_player_stats_aggregate_team_yards_fantasy_sacks,rolling_origi
 optuna_feature_selection,optuna_tpe_500_trials_16_groups,rolling_origin_3fold,0.6334,0.6347,,,,diagnostic,reports/experiments/optuna_feature_selection.md,2026-06-24
 qb_market_delta,incumbent_vs_market_7_blends_qb_change_delta_gating,rolling_origin_3fold,0.6050,0.6083,0.7205,0.2115,0.6667,market-aware diagnostic,reports/experiments/qb_market_delta.md,2026-06-24
 comprehensive_efficiency,team_epa_total_pfr_advanced_snap_counts,rolling_origin_3fold,0.6368,0.6313,0.6895,0.2300,0.6522,rejected,reports/experiments/comprehensive_efficiency.md,2026-06-24
+qb_adjusted_elo_v0,elo_plus_shrunken_qb_ratings_platt,rolling_origin_3fold,0.6338,0.6299,0.6972,0.2201,0.6522,rejected,reports/experiments/qb_adjusted_elo.md,2026-06-29
+gated_qb_adjusted_elo_v1,elo_plus_gated_shrunken_qb_ratings_15_variants,rolling_origin_3fold,0.6341,0.6255,0.7020,0.2179,0.6486,rejected,reports/experiments/gated_qb_adjusted_elo.md,2026-06-29
+frozen_qb_overlay_v2,frozen_incumbent_logit_overlay_192_variants,flawed_validation_platt_fit_once,0.6238,0.6200,0.7098,0.2157,0.6630,diagnostic,reports/experiments/frozen_qb_overlay.md,2026-06-29
+frozen_qb_overlay_foldsafe_v3,incumbent_plus_frozen_qb_overlay_changed_or_starts_lt_17_cap_40,fold_safe_rolling_origin_3fold,0.6305,0.6200,0.7098,0.2157,0.6630,promoted,reports/experiments/frozen_qb_overlay_foldsafe.md,2026-06-29

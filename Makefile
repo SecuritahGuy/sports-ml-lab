@@ -3,7 +3,8 @@
         backtest-2025 audit dashboard no-qb-baseline qb-continuity \
 qb-gated-experience qb-depth-experiment turnover-experiment situational-micro \
 predict-week grade-week season-report prediction-audit rehearsal-season prediction-index publish-predictions \
-data-audit preseason-fire-drill live-preflight
+data-audit preseason-fire-drill live-preflight \
+build-qb-adjustments qb-adjusted-elo roster-strength
 
 # ── Install ──
 install:
@@ -150,6 +151,25 @@ preseason-fire-drill: build-features data-audit predict-week-oracle prediction-a
 	@echo "  Dry-run predictions created, audit generated."
 	@echo "  Ready for live season."
 	@echo "  Next: make predict-week SEASON=2026 WEEK=1 MODE=live QB_INPUT=qb.csv"
+
+# ── QB-Adjusted Elo / Roster Strength ──
+build-qb-adjustments:
+	sportslab build-qb-adjustments
+
+qb-adjusted-elo:
+	sportslab qb-adjusted-elo
+
+gated-qb-elo:
+	sportslab gated-qb-elo
+
+frozen-qb-overlay:
+	sportslab frozen-qb-overlay
+
+frozen-qb-overlay-foldsafe:
+	sportslab frozen-qb-overlay-foldsafe
+
+roster-strength:
+	sportslab roster-strength
 
 # ── Development ──
 .PHONY: dev

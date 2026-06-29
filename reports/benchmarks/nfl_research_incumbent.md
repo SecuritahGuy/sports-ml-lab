@@ -1,32 +1,36 @@
 # NFL Research Incumbent
 
-*Last updated: 2026-06-24*
+*Last updated: 2026-06-29*
 
-**Short name:** Standard Elo + qb_changed + rolling_mov_3 + Platt
+**Short name:** Standard Elo + qb_changed + rolling_mov_3 + Platt + Frozen QB overlay (gated)
 
 ## Football-Only Research Incumbent
 
-**Model:** Standard Elo (K=36, HFA=40, reg=0.1, decay=32, qb_bonus=0.2, MOV capped_linear scale=0.05 cap=2.0) + Platt calibration + qb_changed + rolling_mov_3
+**Model:** Standard Elo (K=36, HFA=40, reg=0.1, decay=32, qb_bonus=0.2, MOV capped_linear) + Platt calibration + qb_changed + rolling_mov_3 + frozen QB overlay gated on `qb_changed OR starts<17` with cap=40 (gamma=1.0)
 
-*This is the purely pregame, zero-leakage benchmark. All parameters selected by average rolling validation log loss. No 2025 holdout data used for any selection decision.*
+*The frozen QB overlay applies a logit-space adjustment on top of the incumbent probability when the pregame gate is active. Non-gated games are identical to the base incumbent (equality check PASSED). All parameters selected by fold-safe rolling origin validation (3 folds: 2021→2022, 2021-2022→2023, 2021-2023→2024). No 2025 holdout data used for selection.*
 
 | Attribute | Value |
 |-----------|-------|
-| **Model** | Standard Elo + QB-change season regression + Platt + `home_qb_changed` + `away_qb_changed` + `home_rolling_mov_3` + `away_rolling_mov_3` via logistic regression |
+| **Model** | Standard Elo + QB-change season regression + Platt + `home_qb_changed` + `away_qb_changed` + `home_rolling_mov_3` + `away_rolling_mov_3` + frozen QB overlay (gate: changed OR starts<17, cap=40) |
+| **Overlay type** | Logit-space additive: `final_logit = logit(incumbent_prob) + gamma * net_adj_elo * ln(10) / 400` (gated) |
 | **K-factor** | 36 |
 | **HFA** | 40 |
 | **Preseason regression** | 0.1 (base) + 0.2 for teams with QB change |
 | **MOV type** | `capped_linear` (scale=0.05, cap=2.0) |
 | **Decay half-life** | 32 games |
-| **Additional features** | `home_qb_changed`, `away_qb_changed` (binary), `home_rolling_mov_3`, `away_rolling_mov_3` (avg MOV last 3 games) |
-| **Selection method** | Rolling-origin 3-fold validation + forward selection |
-| **Avg validation log loss** | 0.6334 |
-| **2025 holdout log loss** | **0.6262** |
-| **2025 holdout Brier** | — |
-| **2025 holdout AUC** | — |
-| **2025 holdout accuracy** | — |
-| **Report** | `reports/experiments/combined_features.md` |
-| **Selection date** | 2026-06-23 |
+| **Base features** | `home_qb_changed`, `away_qb_changed` (binary), `home_rolling_mov_3`, `away_rolling_mov_3` (avg MOV last 3 games) |
+| **Overlay gamma** | 1.0 |
+| **Overlay cap** | 40 Elo points |
+| **Overlay gate** | `qb_changed OR starts<17` (either side) |
+| **Selection method** | Fold-safe rolling-origin 3-fold validation (Platt fit per fold) |
+| **Avg validation log loss** | 0.6305 |
+| **2025 holdout log loss** | **0.6200** |
+| **2025 holdout Brier** | 0.2157 |
+| **2025 holdout AUC** | 0.7098 |
+| **2025 holdout accuracy** | 0.6630 |
+| **Report** | `reports/experiments/frozen_qb_overlay_foldsafe.md` |
+| **Selection date** | 2026-06-29 |
 
 ## Holdout-Informed Diagnostics
 

@@ -38,7 +38,7 @@ Selection uses average validation log loss. The **2025 season is a one-shot
 holdout**, never accessed during model selection.
 
 ### Feature governance
-19 feature families have been
+21 feature families have been
 tested and rejected. Each experiment is documented in a reproducible report.
 No feature enters the model without proving itself on both validation and holdout.
 
@@ -64,7 +64,7 @@ the repo. Run `make test` (645+ tests) to validate the entire pipeline.
 | **2025 holdout log loss** | **0.6262** |
 | **Calibration** | Platt scaling (logistic on Elo prob + features) |
 
-### Rejected feature families (19 total)
+### Rejected feature families (21 total)
 
 Weather, scheduling/rest, EPA team efficiency, comprehensive efficiency
 (58 columns), injury reports, QB identity OHE (catastrophic overfit),
@@ -79,15 +79,15 @@ and [Experiments](experiments) for full details.
 
 | Metric | Count |
 |--------|-------|
-| Total experiments | 32 |
-| Promoted / superseded | 6 |
-| Rejected | 19 |
-| Diagnostic | 7 |
+| Total experiments | 36 |
+| Promoted / superseded | 7 |
+| Rejected | 21 |
+| Diagnostic | 8 |
 
 ## Pages
 
 - [Benchmarks & Leaderboard](benchmarks) — incumbent, promotion rules, leaderboard
-- [Predictions](predictions) — prediction dashboard, audit reports, artifacts, runbook
+- [Predictions](predictions) — prediction artifacts, holdout file, weekly report
 - [Model Card](model-card) — full model documentation
 - [Experiments](experiments) — experiment reports grouped by outcome
 - [Backtest Reports](backtests) — season-by-season analysis (2022–2025)

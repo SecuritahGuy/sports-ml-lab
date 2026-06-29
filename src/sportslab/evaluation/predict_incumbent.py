@@ -1,9 +1,10 @@
 """Incumbent prediction artifact generation and registry validation.
 
 Produces reproducible prediction CSVs for all model-eligible games using
-the current clean football-only incumbent model:
+the current clean football-only incumbent model v3.0.0:
   Standard Elo (K=36, HFA=40, reg=0.1, decay=32, qb_bonus=0.2)
   + qb_changed + rolling_mov_3 + Platt scaling
+  + frozen QB overlay (gate: changed OR starts<17, gamma=1.0, cap=40)
 """
 
 from pathlib import Path
@@ -27,16 +28,20 @@ from sportslab.features.build_features import (
 from sportslab.features.coach import compute_coach_features
 from sportslab.features.market import compute_market_features
 from sportslab.features.qb import compute_qb_features
+from sportslab.features.qb_adjustment import compute_qb_adjustments
 from sportslab.features.ratings import compute_elo_features
 from sportslab.features.situational import compute_situational_features
 
-INCUMBENT_VERSION = "v2.0.0"
-INCUMBENT_DATE = "2026-06-23"
-INCUMBENT_VAL_LL = 0.6334
-INCUMBENT_HOLDOUT_LL = 0.6262
-INCUMBENT_FEATURE_SET = "qb_changed + rolling_mov_3"
-INCUMBENT_CALIBRATION = "Platt (logistic on Elo prob + features)"
-INCUMBENT_REPORT = "reports/experiments/combined_features.md"
+INCUMBENT_VERSION = "v3.0.0"
+INCUMBENT_DATE = "2026-06-29"
+INCUMBENT_VAL_LL = 0.6305
+INCUMBENT_HOLDOUT_LL = 0.6200
+INCUMBENT_FEATURE_SET = "qb_changed + rolling_mov_3 + frozen QB overlay"
+INCUMBENT_CALIBRATION = (
+    "Platt + frozen QB overlay "
+    "(logit-space, gated changed OR starts<17, gamma=1.0, cap=40)"
+)
+INCUMBENT_REPORT = "reports/experiments/frozen_qb_overlay_foldsafe.md"
 INCUMBENT_REGISTRY = "reports/benchmarks/nfl_research_incumbent.md"
 BEST_K = 36
 BEST_HFA = 40
@@ -44,13 +49,21 @@ BEST_REG = 0.1
 BEST_DECAY = 32
 BEST_QB_BONUS = 0.2
 HOLDOUT_SEASON = 2025
+
+# Base model feature columns (before overlay)
 FEATURE_COLS = [
     "home_qb_changed",
     "away_qb_changed",
     "home_rolling_mov_3",
     "away_rolling_mov_3",
 ]
+
+# QB overlay parameters
+OVERLAY_GAMMA = 1.0
+OVERLAY_CAP = 40
 TRAIN_SEASONS = [2021, 2022, 2023, 2024]
+
+ELO_TO_LOGIT = np.log(10) / 400.0
 
 CONFIDENCE_BINS = [
     (0.50, 0.55, "50-55"),
@@ -60,6 +73,16 @@ CONFIDENCE_BINS = [
     (0.70, 0.80, "70-80"),
     (0.80, 1.01, "80+"),
 ]
+
+
+def _sigmoid(x: np.ndarray) -> np.ndarray:
+    x = np.clip(x, -500, 500)
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def _logit(p: np.ndarray) -> np.ndarray:
+    p = np.clip(p, 1e-15, 1 - 1e-15)
+    return np.log(p / (1.0 - p))
 
 
 def _assign_confidence_bucket(prob: float) -> str:
@@ -98,13 +121,14 @@ def _build_feature_pipeline() -> pd.DataFrame:
         decay_half_life=BEST_DECAY,
     )
     df = compute_qb_features(df)
+    df = compute_qb_adjustments(df)
     df = compute_situational_features(df)
     df = compute_coach_features(df)
     df = compute_market_features(df)
     return df
 
 
-def _fit_incumbent(df: pd.DataFrame) -> Pipeline:
+def _fit_base_incumbent(df: pd.DataFrame) -> Pipeline:
     is_train = df["season"].isin(TRAIN_SEASONS).values
     train_elo = df.loc[is_train, "elo_prob"].values
     train_y = df.loc[is_train, TARGET_COLUMN].astype(int).values
@@ -114,6 +138,29 @@ def _fit_incumbent(df: pd.DataFrame) -> Pipeline:
     pipe = _build_pipeline()
     pipe.fit(x_train, train_y)
     return pipe
+
+
+def _build_gate_mask(df: pd.DataFrame) -> np.ndarray:
+    h_changed = df.get("home_qb_changed", pd.Series(0)).values.astype(float)
+    a_changed = df.get("away_qb_changed", pd.Series(0)).values.astype(float)
+    h_starts = df.get("home_qb_team_starts_pre", pd.Series(0.0)).fillna(0).values.astype(float)
+    a_starts = df.get("away_qb_team_starts_pre", pd.Series(0.0)).fillna(0).values.astype(float)
+    return (h_changed == 1) | (a_changed == 1) | (h_starts < 17) | (a_starts < 17)
+
+
+def _apply_frozen_overlay(
+    incumbent_prob: np.ndarray,
+    home_qb_adj: np.ndarray,
+    away_qb_adj: np.ndarray,
+    gate_mask: np.ndarray,
+) -> np.ndarray:
+    base_logit = _logit(incumbent_prob)
+    capped_h = np.clip(home_qb_adj, -OVERLAY_CAP, OVERLAY_CAP)
+    capped_a = np.clip(away_qb_adj, -OVERLAY_CAP, OVERLAY_CAP)
+    net_adj = capped_h - capped_a
+    overlay = OVERLAY_GAMMA * net_adj * ELO_TO_LOGIT
+    final_logit = base_logit + overlay * gate_mask.astype(float)
+    return _sigmoid(final_logit)
 
 
 def _add_caution_flags(
@@ -157,15 +204,25 @@ def generate_incumbent_predictions() -> Dict[str, str]:
 
     print(f"  Eligible games: {len(df)}")
 
-    print("=== Fitting incumbent model on 2021-2024 ===")
-    pipe = _fit_incumbent(df)
-    print("  Fit complete")
+    print("=== Fitting base incumbent model on 2021-2024 ===")
+    base_pipe = _fit_base_incumbent(df)
+    print("  Base incumbent fit complete")
 
     elo_prob = df["elo_prob"].values
     feat_cols = [c for c in FEATURE_COLS if c in df.columns]
     feat_vals = df[feat_cols].values if feat_cols else np.empty((len(df), 0))
     x_all = np.column_stack([elo_prob, feat_vals]) if feat_vals.size else elo_prob.reshape(-1, 1)
-    prob = pipe.predict_proba(x_all)[:, 1]
+    base_prob = base_pipe.predict_proba(x_all)[:, 1]
+
+    print("=== Applying frozen QB overlay ===")
+    home_qb_adj = df.get("home_qb_adj", pd.Series(0.0)).values.astype(float)
+    away_qb_adj = df.get("away_qb_adj", pd.Series(0.0)).values.astype(float)
+    gate_mask = _build_gate_mask(df)
+    prob = _apply_frozen_overlay(base_prob, home_qb_adj, away_qb_adj, gate_mask)
+    n_gated = int(gate_mask.sum())
+    n_total = len(df)
+    print(f"  Overlay active: {n_gated}/{n_total} games")
+
     pred_winner = np.where(prob >= 0.5, df["home_team"], df["away_team"])
 
     df_out = pd.DataFrame(
@@ -181,6 +238,7 @@ def generate_incumbent_predictions() -> Dict[str, str]:
             "result": df.get("result", pd.Series([np.nan] * len(df))),
             "home_win_actual": df.get(TARGET_COLUMN, pd.Series([np.nan] * len(df))),
             "incumbent_home_win_prob": prob,
+            "base_incumbent_prob": base_prob,
             "predicted_winner": pred_winner,
             "confidence_bucket": [_assign_confidence_bucket(p) for p in prob],
             "model_version": INCUMBENT_VERSION,
@@ -194,6 +252,11 @@ def generate_incumbent_predictions() -> Dict[str, str]:
             "elo_reg": BEST_REG,
             "elo_decay": BEST_DECAY,
             "elo_qb_bonus": BEST_QB_BONUS,
+            "overlay_gamma": OVERLAY_GAMMA,
+            "overlay_cap": OVERLAY_CAP,
+            "overlay_gate_active": gate_mask.astype(int),
+            "home_qb_adj": home_qb_adj.round(1),
+            "away_qb_adj": away_qb_adj.round(1),
         }
     )
 
@@ -265,25 +328,29 @@ def _write_prediction_cards(df_hold: pd.DataFrame, path: Path) -> None:
     with open(path, "w") as f:
         f.write("# Incumbent Prediction Cards — 2025 Holdout\n\n")
         f.write(f"*Generated by `predict-incumbent` ({INCUMBENT_VERSION}, {INCUMBENT_DATE})*\n\n")
-        f.write("| Game | Away | Home | Prob | Winner | Actual | Bucket | QB Chg | Mkt-Model |\n")
-        f.write("|------|------|------|------|--------|--------|--------|--------|-----------|\n")
+        f.write("| Game | Away | Home | Prob | Base | Winner | Act | Bkt | OLap | QB | Mkt-Mdl |\n")
+        f.write("|------|------|------|------|------|--------|-----|-----|------|-----|--------|\n")
         cards = []
         for _, row in df_hold.iterrows():
             corr = (row["home_win_actual"] == 1 and row["incumbent_home_win_prob"] >= 0.5) or (
                 row["home_win_actual"] == 0 and row["incumbent_home_win_prob"] < 0.5
             )
             mark = " ✅ " if corr else " ❌ "
+            overlay_active = "⚡" if row.get("overlay_gate_active", 0) else ""
+            qb_change = "⚠" if row.get("caution_qb_change", 0) else ""
             cards.append(
                 f"| {row['season']} W{row['week']} "
                 f"({row['gameday']}) "
                 f"| {row['away_team']} "
                 f"| {row['home_team']} "
                 f"| {row['incumbent_home_win_prob']:.3f} "
+                f"| {row.get('base_incumbent_prob', 0):.3f} "
                 f"| {row['predicted_winner']} "
                 f"| {'H' if row['home_win_actual'] == 1 else 'A'}"
                 f"| {mark}"
                 f"| {row.get('confidence_bucket', '')} "
-                f"| {'⚠' if row.get('caution_qb_change', 0) else ''} "
+                f"| {overlay_active} "
+                f"| {qb_change} "
                 f"| {row.get('market_model_diff', '')} |\n"
             )
         f.writelines(cards)

@@ -1,6 +1,6 @@
 # Experiments
 
-All 32 experiments grouped by outcome.
+All 36 experiments grouped by outcome.
 
 ---
 
@@ -12,6 +12,7 @@ All 32 experiments grouped by outcome.
 - **decayed_elo** (promoted) — val 0.6321, holdout 0.6298 — [decayed_elo.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/decayed_elo.md)
 - **season_regression** (promoted) — val 0.6315, holdout 0.6285 — [season_regression.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/season_regression.md)
 - **combined_features** (promoted) — val 0.6334, holdout 0.6262 — [combined_features.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/combined_features.md)
+- **frozen_qb_overlay_foldsafe_v3** (promoted) — val 0.6305, holdout 0.6200 — [frozen_qb_overlay_foldsafe.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/frozen_qb_overlay_foldsafe.md)
 
 ---
 
@@ -36,6 +37,8 @@ All 32 experiments grouped by outcome.
 - **home_away_elo** (rejected) — val 0.6622, holdout 0.6634 — [home_away_elo.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/home_away_elo.md)
 - **team_stats** (rejected) — val 0.6541, holdout 0.6415 — [team_stats.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/team_stats.md)
 - **comprehensive_efficiency** (rejected) — val 0.6368, holdout 0.6313 — [comprehensive_efficiency.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/comprehensive_efficiency.md)
+- **qb_adjusted_elo_v0** (rejected) — val 0.6338, holdout 0.6299 — [qb_adjusted_elo.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/qb_adjusted_elo.md)
+- **gated_qb_adjusted_elo_v1** (rejected) — val 0.6341, holdout 0.6255 — [gated_qb_adjusted_elo.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/gated_qb_adjusted_elo.md)
 
 ---
 
@@ -47,6 +50,7 @@ All 32 experiments grouped by outcome.
 - **qb_market_delta** (diagnostic) — val 0.6052, holdout 0.6090 — [qb_market_delta.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/qb_market_delta.md)
 - **feature_selection** (diagnostic) — val 0.6334, holdout 0.6314 — [feature_selection.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/feature_selection.md)
 - **optuna_feature_selection** (diagnostic) — val 0.6334, holdout 0.6347 — [optuna_feature_selection.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/optuna_feature_selection.md)
+- **frozen_qb_overlay_v2** (diagnostic) — val 0.6238, holdout 0.6200 — [frozen_qb_overlay.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/frozen_qb_overlay.md)
 
 ---
 

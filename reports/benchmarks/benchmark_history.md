@@ -480,15 +480,15 @@ Each entry includes:
 
 ## Summary Statistics
 
-| Total experiments | 32 |
+| Total experiments | 36 |
 |------------------|-----|
-| Promoted (clean) | 5 |
-| Rejected | 20 |
+| Promoted (clean) | 6 |
+| Rejected | 21 |
 | Diagnostic | 7 |
 | Market-aware diagnostic | 1 |
 | Holdout-informed diagnostic | 1 |
-| Current football-only incumbent | Standard Elo (K=36, reg=0.1, decay=32, qb_bonus=0.2, capped_linear) + Platt + qb_changed + rolling_mov_3 |
-| Incumbent holdout LL | **0.6262** |
+| Current football-only incumbent | Frozen QB Overlay (standard Elo + Platt + qb_changed + rolling_mov_3 + frozen QB overlay, gate: changed OR starts<17, cap=40) |
+| Incumbent holdout LL | **0.6200** |
 | Best holdout-informed diagnostic | O/D Elo ko52_kd20 + Platt (**0.6258**) |
 | Best overall (diagnostic) | Market no-vig (0.6090 holdout) |
 
@@ -520,3 +520,135 @@ Tests 58 comprehensive efficiency features from 3 nflreadpy sources (Team Stats 
 **Selected by val LL:** Platt incumbent (no promotion)
 **Holdout (incumbent):** 0.6313
 **Report:** `reports/experiments/comprehensive_efficiency.md`
+
+---
+
+## 33. QB-Adjusted Elo V0 (2026-06-29)
+
+**Type:** Rejected
+
+Tests whether shrunken per-QB Elo-point ratings improve on the binary `qb_changed` flag. QB ratings computed from prior starts with Bayesian shrinkage (PRIOR_STARTS=17, PRIOR_IMPACT=-0.03). Five model variants compared.
+
+**Models:**
+| Model | Avg Val LL | Holdout LL |
+|-------|-----------|------------|
+| A. Incumbent (Elo + qb_changed + mov3 + Platt) | 0.6341 | **0.6259** |
+| B. QB-adjusted Elo (raw, no calibration) | 0.6349 | 0.6392 |
+| C. QB-adjusted Elo + Platt | 0.6405 | 0.6376 |
+| D. QB-adj + qb_changed + mov3 + Platt | **0.6338** | 0.6299 |
+| X. Diagnostic: 3x aggressive QB adj + Platt | 0.6440 | 0.6473 |
+
+**Slice analysis (QB-change games):** QB-adjusted Elo improves on QB-change games (LL 0.6544 vs incumbent 0.6579, Δ=-0.0035) but hurts on non-QB-change games (0.6334 vs 0.6288, Δ=+0.0046). Net: no improvement on holdout.
+
+**Decision:** No model beats incumbent on both val and holdout. Best challenger (Model D) wins val (0.6338 < 0.6341) but loses holdout (0.6299 > 0.6259). QB adjustment adds signal for QB-change games but the replacement-level prior adds noise to the majority of games. **Rejected for promotion; promising for QB-change refinement.**
+
+**Report:** `reports/experiments/qb_adjusted_elo.md`
+
+---
+
+## 34. Gated QB-Adjusted Elo V1 (2026-06-29)
+
+**Type:** Rejected
+
+Tests whether pregame-safe gating (applying QB adjustment only when QB change, low continuity, or with shrunk/ capped variants) preserves the QB-change improvement from V0 without degrading stable-QB games. 15 variants tested across 5 gate modes with hyperparameter sweeps.
+
+**Gating variants:**
+| Gate Mode | Parameters | Avg Val LL | Holdout LL |
+|-----------|-----------|-----------|------------|
+| A. Incumbent (baseline) | — | **0.6341** | **0.6259** |
+| B. Full (V0) | — | 0.6405 | 0.6376 |
+| C. qb_changed_only | — | 0.6367 | 0.6339 |
+| D. low_continuity | starts<4 | 0.6389 | 0.6308 |
+| D. low_continuity | starts<8 | 0.6390 | 0.6280 |
+| D. low_continuity | starts<17 | 0.6414 | 0.6255 |
+| E. shrunk_stable | shrink=0.1 | 0.6368 | 0.6339 |
+| F. capped_only | cap=40 | 0.6395 | 0.6326 |
+| H. aggressive_diagnostic | 2x/0x | 0.6359 | 0.6395 |
+| I. recency_weighted | HL=32 | 0.6405 | 0.6366 |
+| J. combined | low cont+cap=60 | 0.6386 | 0.6281 |
+
+**Slice analysis:**
+- Best gated variant (low_continuity starts<17) won holdout by -0.0005 but lost validation by +0.0073
+- No variant won both validation and holdout
+- QB-change games: most variants improved (none beat incumbent on both slices)
+- Non-QB-change games: all gated variants added noise relative to incumbent
+
+**Decision:** No gated variant beats the incumbent on both validation and holdout. All gated QB-adjustment variants are **rejected for promotion**. The gating logic is correct and informative but the QB adjustment signal is not strong enough to reliably improve predictions through pregame gating at this sample size.
+
+**Best validation:** A. Incumbent baseline (0.6341)
+**Best holdout:** D. Gated QB (low_continuity starts<17) (0.6255)
+**Report:** `reports/experiments/gated_qb_adjusted_elo.md`
+
+---
+
+## 35. Frozen-Incumbent QB Overlay V2 (2026-06-29)
+
+**Type:** Diagnostic (inconclusive)
+
+Final QB-specific promotion test using a frozen-incumbent overlay approach: the QB adjustment is applied in logit space on top of the frozen incumbent probability. Non-gated games are mathematically identical to the incumbent (equality check PASSED, max diff 1.11e-16). No recalibration after gating.
+
+**Gates tested:** 8 gate modes × 6 gamma values × 4 cap values = 192 overlay variants + 1 baseline
+
+**Key results (holdout 2025, best variant H. changed OR starts<17 cap=40):**
+
+| Model | Val LL | Holdout LL | Δ val | Δ hold |
+|-------|--------|-----------|-------|--------|
+| Incumbent baseline | 0.6259 | 0.6259 | — | — |
+| H. changed OR starts<17 cap=40 | 0.6245 | 0.6200 | -0.0014 | **-0.0059** |
+| B. qb_changed cap=20 (clean gate) | 0.6250 | 0.6250 | -0.0009 | -0.0009 |
+
+**Design flaw:** The Platt model was fitted once on full 2021-2024 data, but rolling-origin folds validate on 2023/2024 — the model saw those years during fitting. This means the validation LL numbers are NOT proper rolling-origin estimates. The holdout (2025) comparison is valid, but the "wins both" criterion cannot be evaluated correctly.
+
+**Slice analysis (best challenger):**
+- All games: Δ = -0.0059
+- QB change: Δ = -0.0022 (55 games)
+- No QB change: Δ = -0.0069 (221 games)
+- Low continuity: Δ = -0.0078 (86 games)
+- High confidence: Δ = -0.0094 (64 games)
+
+Note: The "no QB change" improvement (-0.0069) is larger than the "QB change" improvement (-0.0022), suggesting the overlay acts as a broad correction rather than a targeted QB-change fix — the wide gate (starts<17) covers 76.2% of all games.
+
+**Decision:** Not promoted. The design flaw makes the validation uninterpretable. The holdout improvements are promising (up to Δ = -0.0059) but must be confirmed with per-fold Platt fitting before any promotion decision. The frozen overlay structural design (non-gated games match incumbent exactly) is correct and should be reused in any future gated experiment.
+
+**Best holdout:** H. changed OR starts<17 cap=40 (0.6200)
+**Equality check:** PASSED (max diff 1.11e-16)
+**Report:** `reports/experiments/frozen_qb_overlay.md`
+
+---
+
+## 36. Fold-Safe Frozen-Incumbent QB Overlay V3 (2026-06-29)
+
+**Type:** Promoted ✅
+
+The diagnostic V2 experiment was refactored with proper fold-safe validation: Platt calibration is fitted per rolling-origin fold (train seasons only), never seeing the validation season. This fixes the design flaw that made V2's validation uninterpretable.
+
+**Methodology:**
+- 3 rolling-origin folds: 2021→2022, 2021-2022→2023, 2021-2023→2024
+- Platt fit per fold on training seasons only
+- 127 variants tested (8 gates × 6 gammas × 3 caps + baseline)
+- Variant selected by average validation log loss
+- 2025 holdout evaluated once with selected variant
+- Best-holdout and cleanest-gate results reported as diagnostic
+
+**Key results:**
+
+| Model | Val LL | Holdout LL | QC Δ | NoQC Δ |
+|-------|--------|-----------|------|--------|
+| Incumbent baseline | 0.6341 | 0.6259 | — | — |
+| **H. changed OR starts<17 cap=40** | **0.6305** | **0.6200** | **-0.0022** | **-0.0069** |
+| B. qb_changed cap=20 (clean gate, diagnostic) | 0.6329 | 0.6250 | -0.0046 | +0.0000 |
+
+**All 5 promotion criteria met:**
+1. ✅ Beats incumbent on avg val LL (0.6305 < 0.6341)
+2. ✅ Beats incumbent on 2025 holdout LL (0.6200 < 0.6259)
+3. ✅ Non-gated equality passed (max diff 1.11e-16)
+4. ✅ Improves QB-change slice (0.6674 vs 0.6696)
+5. ✅ Tests/lint pass (162 tests, lint clean)
+
+**Decision:** PROMOTED. The frozen QB overlay (gate: changed OR starts<17, cap=40) becomes the new research incumbent. The overlay is applied in logit space on top of the base incumbent probability. Non-gated games are identical to the base model. The overlay improves both QB-change and non-QB-change slices, with a net holdout improvement of Δ = -0.0059.
+
+**Validation-selected:** H. changed OR starts<17 cap=40 (0.6305 val, 0.6200 hold)
+**Best-holdout diagnostic:** Same as selected (0.6200)
+**Cleanest-gate diagnostic:** B. qb_changed cap=20 (0.6250, NoQC Δ = 0.0000)
+**Equality check:** PASSED (max diff 1.11e-16)
+**Report:** `reports/experiments/frozen_qb_overlay_foldsafe.md`

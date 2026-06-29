@@ -108,7 +108,7 @@ def test_simulate_2025_output_schema():
     assert "home_qb_id" in df.columns
     assert "away_qb_id" in df.columns
     # All metadata constants should be defined
-    assert INCUMBENT_VERSION == "v2.0.0"
+    assert INCUMBENT_VERSION == "v3.0.0"
     assert INCUMBENT_DATE is not None
     assert INCUMBENT_FEATURE_SET is not None
     assert isinstance(BEST_K, int)

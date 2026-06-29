@@ -34,7 +34,7 @@ from sportslab.features.build_features import (
     build_feature_table,
 )
 from sportslab.features.ratings import compute_elo_features
-from sportslab.evaluation.predict_incumbent import _fit_incumbent, _build_feature_pipeline
+from sportslab.evaluation.predict_incumbent import _fit_base_incumbent, _build_feature_pipeline
 
 
 def test_tie_marked_not_eligible(sample_schedule_with_tie):
@@ -155,5 +155,5 @@ def test_incumbent_fit_handles_no_ties(sample_schedule):
     df["market_away_prob_novig"] = 0.45
 
     # Fit — should work fine
-    pipe = _fit_incumbent(df)
+    pipe = _fit_base_incumbent(df)
     assert pipe is not None, "Incumbent fit should succeed"

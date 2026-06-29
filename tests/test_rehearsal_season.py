@@ -250,7 +250,7 @@ class TestRehearseSeason:
         assert "Worst Predictions" in content
         assert "Season-Week Performance" in content
         assert "checksums" in content
-        assert "v2.0.0" in content
+        assert "v3.0.0" in content
 
     def test_audit_includes_calibration_buckets(self):
         """Audit report has calibration data (not empty)."""
@@ -343,5 +343,5 @@ class TestRehearseSeason:
             INCUMBENT_VERSION,
         )
 
-        assert INCUMBENT_HOLDOUT_LL == 0.6262
-        assert INCUMBENT_VERSION == "v2.0.0"
+        assert INCUMBENT_HOLDOUT_LL == 0.6200
+        assert INCUMBENT_VERSION == "v3.0.0"

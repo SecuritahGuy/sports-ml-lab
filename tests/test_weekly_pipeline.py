@@ -90,7 +90,7 @@ class TestHistory:
                     "brier": [0.22],
                     "accuracy": [0.65],
                     "auc": [0.70],
-                    "model_version": ["v2.0.0"],
+                    "model_version": ["v3.0.0"],
                     "snapshot": ["test.csv"],
                     "graded_at": ["20260101_000000"],
                 }
@@ -120,7 +120,7 @@ class TestSeasonReport:
                 "brier": [0.22, 0.23, 0.21],
                 "accuracy": [0.65, 0.62, 0.71],
                 "auc": [0.70, 0.68, 0.73],
-                "model_version": ["v2.0.0"] * 3,
+                "model_version": ["v3.0.0"] * 3,
                 "snapshot": ["a.csv", "b.csv", "c.csv"],
                 "graded_at": ["t1", "t2", "t3"],
             }

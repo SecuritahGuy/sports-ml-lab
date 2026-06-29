@@ -90,7 +90,7 @@ class TestIncumbentSchema:
 
     def test_incumbent_version_consistency(self):
         """Version string should be consistent across files."""
-        assert INCUMBENT_VERSION == "v2.0.0"
+        assert INCUMBENT_VERSION == "v3.0.0"
 
     def test_predictions_csv_schema(self):
         """Predictions CSV must contain expected columns."""
@@ -172,6 +172,9 @@ class TestIncumbentSchema:
             "rest_diff_squared",
             # Derived flags
             "is_tie", "model_eligible", "is_neutral",
+            # QB adjustment columns (overlay features)
+            "home_qb_adj", "away_qb_adj",
+            "home_qb_starts", "away_qb_starts",
             # Leakage columns preserved for audit
             "overtime", "result", "total",
             # Weather (if present)

@@ -35,6 +35,7 @@ These models were promoted as the research incumbent at some point:
 | decayed_elo | promoted | 0.6321 | 0.6298 | 0.7024 | [decayed_elo.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/decayed_elo.md) |
 | season_regression | promoted | 0.6315 | 0.6285 | 0.7024 | [season_regression.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/season_regression.md) |
 | combined_features | promoted | 0.6334 | 0.6262 | — | [combined_features.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/combined_features.md) |
+| frozen_qb_overlay_foldsafe_v3 | promoted | 0.6305 | 0.6200 | 0.7098 | [frozen_qb_overlay_foldsafe.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/frozen_qb_overlay_foldsafe.md) |
 
 
 ### Rejected Challengers
@@ -62,6 +63,8 @@ These models failed to beat the incumbent:
 | home_away_elo | rejected | 0.6622 | 0.6634 | — | [home_away_elo.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/home_away_elo.md) |
 | team_stats | rejected | 0.6541 | 0.6415 | 0.6730 | [team_stats.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/team_stats.md) |
 | comprehensive_efficiency | rejected | 0.6368 | 0.6313 | 0.6895 | [comprehensive_efficiency.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/comprehensive_efficiency.md) |
+| qb_adjusted_elo_v0 | rejected | 0.6338 | 0.6299 | 0.6972 | [qb_adjusted_elo.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/qb_adjusted_elo.md) |
+| gated_qb_adjusted_elo_v1 | rejected | 0.6341 | 0.6255 | 0.7020 | [gated_qb_adjusted_elo.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/gated_qb_adjusted_elo.md) |
 
 
 ### Diagnostics
@@ -76,6 +79,7 @@ These experiments produced diagnostic insights but were not promoted:
 | qb_market_delta | diagnostic | 0.6052 | 0.6090 | 0.7199 | [qb_market_delta.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/qb_market_delta.md) |
 | feature_selection | diagnostic | 0.6334 | 0.6314 | — | [feature_selection.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/feature_selection.md) |
 | optuna_feature_selection | diagnostic | 0.6334 | 0.6347 | — | [optuna_feature_selection.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/optuna_feature_selection.md) |
+| frozen_qb_overlay_v2 | diagnostic | 0.6238 | 0.6200 | 0.7098 | [frozen_qb_overlay.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/frozen_qb_overlay.md) |
 
 
 ### Market-Aware Diagnostics
