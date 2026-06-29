@@ -1,5 +1,9 @@
 # Predictions
 
+> **See the [Prediction Dashboard](./predictions/) for live status,
+> audit reports, and generated artifact index.**
+> This page documents the schema and conventions.
+
 ## Latest Prediction Artifacts
 
 | Artifact | Description | Status |

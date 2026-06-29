@@ -2,7 +2,7 @@
         predict-incumbent predict-future weekly-report simulate \
         backtest-2025 audit dashboard no-qb-baseline qb-continuity \
 qb-gated-experience qb-depth-experiment turnover-experiment situational-micro \
-predict-week grade-week season-report
+predict-week grade-week season-report prediction-audit rehearsal-season prediction-index publish-predictions
 
 # ── Install ──
 install:
@@ -106,6 +106,23 @@ grade-week:
 
 season-report:
 	sportslab season-report --season $(SEASON)
+
+prediction-audit:
+	sportslab prediction-audit --season $(SEASON)
+
+rehearsal-season:
+	sportslab rehearsal-season --season $(SEASON)
+
+rehearsal-2025:
+	sportslab rehearsal-season --season 2025
+
+prediction-index:
+	sportslab build-prediction-index
+
+publish-predictions:
+	sportslab build-prediction-index
+	@echo "  Audit reports are published by 'sportslab prediction-audit --season <YEAR>' (live mode)."
+	@echo "  Run: make prediction-audit SEASON=<YEAR> for each tracked season."
 
 # ── Development ──
 .PHONY: dev

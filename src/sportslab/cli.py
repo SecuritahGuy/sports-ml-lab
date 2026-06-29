@@ -35,19 +35,20 @@ from sportslab.evaluation.margin_aware_elo import run_margin_aware_experiment
 from sportslab.evaluation.market_baseline import run_market_baseline
 from sportslab.evaluation.market_benchmark import run_market_benchmark
 from sportslab.evaluation.no_qb_baseline import run_no_qb_baseline
-from sportslab.evaluation.qb_ablation import run_qb_ablation
-from sportslab.evaluation.qb_continuity import run_qb_continuity
-from sportslab.evaluation.qb_depth_experiment import run_qb_depth_experiment
-from sportslab.evaluation.qb_gated_experience import run_qb_gated_experience
-from sportslab.evaluation.turnover_experiment import run_turnover_experiment
 from sportslab.evaluation.optuna_elo_search import run_optuna_search
 from sportslab.evaluation.optuna_feature_selection_experiment import run_optuna_feature_selection
 from sportslab.evaluation.predict_future import run_predict_future
 from sportslab.evaluation.predict_incumbent import generate_incumbent_predictions
+from sportslab.evaluation.prediction_audit import build_prediction_index, run_prediction_audit
+from sportslab.evaluation.qb_ablation import run_qb_ablation
+from sportslab.evaluation.qb_continuity import run_qb_continuity
+from sportslab.evaluation.qb_depth_experiment import run_qb_depth_experiment
 from sportslab.evaluation.qb_features_experiment import run_qb_features_experiment
+from sportslab.evaluation.qb_gated_experience import run_qb_gated_experience
 from sportslab.evaluation.qb_injury_experiment import run_qb_injury_experiment
 from sportslab.evaluation.qb_magnitude_experiment import run_qb_magnitude_experiment
 from sportslab.evaluation.qb_market_delta import run_qb_market_delta_experiment
+from sportslab.evaluation.rehearsal_season import rehearse_season
 from sportslab.evaluation.residual_blending_experiment import run_residual_blending_experiment
 from sportslab.evaluation.residual_diagnostics import run_residual_diagnostics
 from sportslab.evaluation.rolling_origin_elo_validation import (
@@ -56,10 +57,11 @@ from sportslab.evaluation.rolling_origin_elo_validation import (
 from sportslab.evaluation.schedule_rest_experiment import run_schedule_rest_experiment
 from sportslab.evaluation.season_regression_experiment import run_season_regression_experiment
 from sportslab.evaluation.situational_micro_experiment import run_situational_micro_experiment
-from sportslab.evaluation.weekly_pipeline import grade_week, predict_week, season_report
 from sportslab.evaluation.team_hfa_experiment import run_team_hfa_experiment
 from sportslab.evaluation.train_baseline import train_baseline
+from sportslab.evaluation.turnover_experiment import run_turnover_experiment
 from sportslab.evaluation.weather_features_experiment import run_weather_features_experiment
+from sportslab.evaluation.weekly_pipeline import grade_week, predict_week, season_report
 from sportslab.evaluation.weekly_report import generate_weekly_report
 from sportslab.features.build_features import build_feature_table
 
@@ -482,3 +484,39 @@ def season_report_cmd(season):
     metrics, cumulative totals, and model metadata.
     """
     season_report(season=season)
+
+
+@cli.command(name="prediction-audit")
+@click.option("--season", type=int, required=True, help="Season year")
+def prediction_audit_cmd(season):
+    """Generate prediction audit report for a season.
+
+    Reads graded snapshots from manifest, produces calibration buckets,
+    confidence buckets, worst-prediction ledger, QB-source breakdown,
+    week-by-week table, and history validation.
+    """
+    run_prediction_audit(season=season, mode="live")
+
+
+@cli.command(name="build-prediction-index")
+def build_prediction_index_cmd():
+    """Generate docs/predictions/index.md from manifest state."""
+    build_prediction_index()
+
+
+@cli.command(name="rehearsal-season")
+@click.option("--season", type=int, default=2025, help="Season year to rehearse")
+@click.option(
+    "--qb-input", type=str, default=None,
+    help="CSV with game_id,home_qb_id,away_qb_id for live-safe QB starters",
+)
+def rehearsal_season_cmd(season, qb_input):
+    """Replay a completed season through the weekly prediction pipeline.
+
+    Generates week-by-week prediction snapshots, grades each week,
+    and produces a season report and prediction audit — all isolated
+    to ``reports/predictions/rehearsal/``.
+
+    Does NOT modify live prediction artifacts or the incumbent model.
+    """
+    rehearse_season(season=season, qb_input_path=qb_input)

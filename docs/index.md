@@ -87,7 +87,7 @@ and [Experiments](experiments) for full details.
 ## Pages
 
 - [Benchmarks & Leaderboard](benchmarks) — incumbent, promotion rules, leaderboard
-- [Predictions](predictions) — prediction artifacts, holdout file, weekly report
+- [Predictions](predictions) — prediction dashboard, audit reports, artifacts, runbook
 - [Model Card](model-card) — full model documentation
 - [Experiments](experiments) — experiment reports grouped by outcome
 - [Backtest Reports](backtests) — season-by-season analysis (2022–2025)
