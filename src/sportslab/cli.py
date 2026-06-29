@@ -56,6 +56,7 @@ from sportslab.evaluation.rolling_origin_elo_validation import (
 from sportslab.evaluation.schedule_rest_experiment import run_schedule_rest_experiment
 from sportslab.evaluation.season_regression_experiment import run_season_regression_experiment
 from sportslab.evaluation.situational_micro_experiment import run_situational_micro_experiment
+from sportslab.evaluation.weekly_pipeline import grade_week, predict_week, season_report
 from sportslab.evaluation.team_hfa_experiment import run_team_hfa_experiment
 from sportslab.evaluation.train_baseline import train_baseline
 from sportslab.evaluation.weather_features_experiment import run_weather_features_experiment
@@ -441,3 +442,43 @@ def predict_future_cmd(input, output, qb_input, season, week):
     """
     run_predict_future(input_path=input, output=output, qb_input=qb_input,
                        season=season, week=week)
+
+
+@cli.command(name="predict-week")
+@click.option("--season", type=int, required=True, help="Season year (e.g. 2026)")
+@click.option("--week", type=int, required=True, help="Week number (1-22)")
+@click.option("--qb-input", type=str, default=None,
+              help="CSV with game_id,home_qb_id,away_qb_id for live-safe QB starters")
+@click.option("--output", type=str, default=None, help="Override snapshot output path")
+def predict_week_cmd(season, week, qb_input, output):
+    """Generate predictions + snapshot + report for a single week.
+
+    Fits Elo on all historical data (2021+), predicts the specified
+    week, saves a timestamped snapshot and generates a weekly report.
+    """
+    predict_week(season=season, week=week, qb_input=qb_input, snapshot_path=output)
+
+
+@cli.command(name="grade-week")
+@click.option("--season", type=int, required=True, help="Season year")
+@click.option("--week", type=int, required=True, help="Week number (1-22)")
+@click.option("--snapshot", type=str, default=None,
+              help="Snapshot CSV path (auto-detected if not provided)")
+def grade_week_cmd(season, week, snapshot):
+    """Grade a completed week's predictions against actual results.
+
+    Loads the prediction snapshot, merges actual results from the
+    feature table, computes metrics, and appends to prediction history.
+    """
+    grade_week(season=season, week=week, snapshot=snapshot)
+
+
+@cli.command(name="season-report")
+@click.option("--season", type=int, required=True, help="Season year")
+def season_report_cmd(season):
+    """Generate cumulative season dashboard from prediction history.
+
+    Reads all graded weeks and produces a dashboard with per-week
+    metrics, cumulative totals, and model metadata.
+    """
+    season_report(season=season)

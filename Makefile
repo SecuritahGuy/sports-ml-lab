@@ -1,7 +1,8 @@
 .PHONY: install test lint format check clean ingest build-features \
         predict-incumbent predict-future weekly-report simulate \
         backtest-2025 audit dashboard no-qb-baseline qb-continuity \
-qb-gated-experience qb-depth-experiment turnover-experiment situational-micro
+qb-gated-experience qb-depth-experiment turnover-experiment situational-micro \
+predict-week grade-week season-report
 
 # ── Install ──
 install:
@@ -95,6 +96,16 @@ dashboard:
 clean:
 	rm -rf .pytest_cache/ __pycache__/ .ruff_cache/
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+
+# ── Weekly Operations ──
+predict-week:
+	sportslab predict-week --season $(SEASON) --week $(WEEK)
+
+grade-week:
+	sportslab grade-week --season $(SEASON) --week $(WEEK)
+
+season-report:
+	sportslab season-report --season $(SEASON)
 
 # ── Development ──
 .PHONY: dev
