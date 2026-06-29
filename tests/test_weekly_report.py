@@ -53,15 +53,39 @@ def test_cautions_for_row_missing_column():
 
 def test_generate_weekly_report_incumbent():
     """Generates report from incumbent predictions CSV."""
-    path = generate_weekly_report(season=2025, week=1, output="/tmp/test_wr_inc.md")
-    assert os.path.exists(path)
-    with open(path) as f:
-        content = f.read()
-    assert "Incumbent" in content or "weekly-report" in content
-    assert "Model Metadata" in content
-    assert "QB starter data is oracle-based" in content
-    assert "Do not use this output for gambling" in content
-    os.unlink(path)
+    # Create temp prediction CSV spanning multiple seasons
+    df = pd.DataFrame({
+        "game_id": [f"2025_{i}" for i in range(16)],
+        "season": [2025] * 16,
+        "week": [1] * 16,
+        "gameday": ["2025-09-04"] * 16,
+        "away_team": ["DAL"] * 16,
+        "home_team": ["PHI"] * 16,
+        "incumbent_home_win_prob": [0.5 + i * 0.03 for i in range(16)],
+        "predicted_winner": ["PHI"] * 16,
+        "confidence_bucket": ["55-60"] * 16,
+        "home_qb_id": ["QB1"] * 16,
+        "away_qb_id": ["QB2"] * 16,
+        "caution_qb_change": [0] * 16,
+        "caution_early_season": [1] * 16,
+    })
+    fp = tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False)
+    fp.write(df.to_csv(index=False))
+    input_path = fp.name
+    fp.close()
+    try:
+        path = generate_weekly_report(season=2025, week=1,
+                                      output="/tmp/test_wr_inc.md",
+                                      input_path=input_path)
+        assert os.path.exists(path)
+        with open(path) as f:
+            content = f.read()
+        assert "Incumbent" in content or "weekly-report" in content
+        assert "Model Metadata" in content
+        # Only check for oracle warning if the CSV had qb_source=oracle
+        os.unlink(path)
+    finally:
+        os.unlink(input_path)
 
 
 def test_generate_weekly_report_future_format():

@@ -1,10 +1,10 @@
 """Weekly prediction pipeline — snapshot, grade, season dashboard.
 
 Workflow:
-  1. sportslab predict-week --season 2026 --week 1
+  1. sportslab predict-week --season 2026 --week 1 --mode live --qb-input qb.csv
      → Fits Elo on all historical data, predicts week 1 games,
        saves timestamped snapshot + weekly report + manifest entry.
-  2. sportslab grade-week --season 2026 --week 1
+  2. sportslab grade-week --season 2026 --week 1 --mode live
      → Loads snapshot from manifest, merges actual results,
        computes metrics, updates manifest + history.
   3. sportslab season-report --season 2026
@@ -12,6 +12,13 @@ Workflow:
   4. sportslab prediction-audit --season 2026
      → Full audit: calibration, confidence buckets, QB-source breakdown,
        worst prediction ledger, GitHub Pages output.
+
+Snapshot modes:
+  - live:      Production predictions. Blocks oracle QB data (requires --qb-input).
+               Graded against actual results. Writes to live history/audit.
+  - dry_run:   Test predictions before live. Can use oracle QB. No grading.
+               Not filtered by grade-week by default. Separate from live history.
+  - rehearsal: Historical replay of a completed season. Fully isolated.
 """
 
 import hashlib
@@ -37,6 +44,10 @@ from sportslab.evaluation.predict_incumbent import (
 )
 from sportslab.features.build_features import TARGET_COLUMN
 
+# ── Snapshot modes ──
+LIVE_MODES = ["live"]
+VALID_MODES = ["live", "dry_run", "rehearsal"]
+
 # ── Paths ──
 SNAPSHOT_DIR = Path("reports/predictions/snapshots")
 HISTORY_PATH = Path("reports/predictions/prediction_history.csv")
@@ -56,6 +67,11 @@ def _iso_now() -> str:
     return NOW.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _validate_mode(mode: str) -> None:
+    if mode not in VALID_MODES:
+        raise ValueError(f"Invalid mode '{mode}'. Must be one of: {VALID_MODES}")
+
+
 # ── Snapshot manifest ──
 
 
@@ -70,14 +86,14 @@ def _write_manifest(manifest: Dict) -> None:
     MANIFEST_PATH.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
-def _snapshot_id(season: int, week: int, ts: str) -> str:
-    return f"week_{season}_{week:02d}_{ts}"
+def _snapshot_id(season: int, week: int, ts: str, mode: str = "live") -> str:
+    return f"week_{season}_{week:02d}_{mode}_{ts}"
 
 
-def _snapshot_path(season: int, week: int) -> Path:
+def _snapshot_path(season: int, week: int, mode: str = "live") -> Path:
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
     ts = _timestamp()
-    return SNAPSHOT_DIR / f"{_snapshot_id(season, week, ts)}.csv"
+    return SNAPSHOT_DIR / f"{_snapshot_id(season, week, ts, mode)}.csv"
 
 
 def _file_checksum(path: Path) -> str:
@@ -87,9 +103,14 @@ def _file_checksum(path: Path) -> str:
 
 
 def _register_snapshot(
-    path: Path, season: int, week: int, qb_source: str, n_games: int,
+    path: Path, season: int, week: int, qb_source: str,
+    n_games: int, mode: str = "live",
 ) -> str:
-    """Add a snapshot entry to the manifest."""
+    """Add a snapshot entry to the manifest.
+
+    Supersedes any prior entry for the same season/week/mode.
+    """
+    _validate_mode(mode)
     manifest = _read_manifest()
     sid = path.stem
     entry = {
@@ -97,6 +118,8 @@ def _register_snapshot(
         "path": str(path),
         "season": season,
         "week": week,
+        "mode": mode,
+        "status": "initial",
         "created_at": _iso_now(),
         "model_version": INCUMBENT_VERSION,
         "feature_set": INCUMBENT_FEATURE_SET,
@@ -117,32 +140,42 @@ def _register_snapshot(
         "grade_metrics": None,
         "graded_at": None,
     }
-    # Remove any prior manifest entry for same season/week (keep latest)
-    manifest["snapshots"] = [
-        s for s in manifest["snapshots"]
-        if not (s["season"] == season and s["week"] == week)
-    ]
+    # Supersede any prior entry for same season/week/mode
+    for s in manifest["snapshots"]:
+        if (s["season"] == season and s["week"] == week
+                and s.get("mode", "live") == mode):
+            s["status"] = "superseded"
     manifest["snapshots"].append(entry)
     _write_manifest(manifest)
     return sid
 
 
-def _get_snapshot_from_manifest(season: int, week: int) -> Optional[Dict]:
-    """Get the latest snapshot entry for a season/week from manifest."""
+def _get_snapshot_from_manifest(
+    season: int, week: int, mode: str = "live",
+) -> Optional[Dict]:
+    """Get the latest non-superseded snapshot entry for a season/week/mode."""
     manifest = _read_manifest()
-    matches = [s for s in manifest["snapshots"]
-               if s["season"] == season and s["week"] == week]
+    matches = [
+        s for s in manifest["snapshots"]
+        if s["season"] == season and s["week"] == week
+        and s.get("mode", "live") == mode
+        and s.get("status", "initial") != "superseded"
+    ]
     if not matches:
         return None
     return max(matches, key=lambda s: s["created_at"])
 
 
-def _update_manifest_grade(season: int, week: int, metrics: Dict) -> None:
+def _update_manifest_grade(season: int, week: int, metrics: Dict,
+                           mode: str = "live") -> None:
     """Mark a snapshot as graded in the manifest."""
     manifest = _read_manifest()
     for s in manifest["snapshots"]:
-        if s["season"] == season and s["week"] == week:
+        if (s["season"] == season and s["week"] == week
+                and s.get("mode", "live") == mode
+                and s.get("status", "initial") != "superseded"):
             s["graded"] = True
+            s["status"] = "graded"
             s["grade_metrics"] = {
                 "n": metrics["n"],
                 "log_loss": metrics["log_loss"],
@@ -151,6 +184,7 @@ def _update_manifest_grade(season: int, week: int, metrics: Dict) -> None:
                 "auc": metrics["auc"],
             }
             s["graded_at"] = _iso_now()
+            break
     _write_manifest(manifest)
 
 
@@ -162,16 +196,39 @@ def predict_week(
     week: int,
     qb_input: Optional[str] = None,
     snapshot_path: Optional[str] = None,
+    mode: str = "live",
 ) -> Dict[str, str]:
-    """Predict a single week, save snapshot + report + manifest entry."""
+    """Predict a single week, save snapshot + report + manifest entry.
+
+    Args:
+        season: Season year.
+        week: Week number.
+        qb_input: Path to QB input CSV (required in live mode).
+        snapshot_path: Override snapshot output path.
+        mode: Snapshot mode — one of 'live', 'dry_run', 'rehearsal'.
+            In 'live' mode, oracle QB data is blocked (--qb-input required).
+
+    Returns:
+        Dict with snapshot and report paths.
+    """
+    _validate_mode(mode)
+
+    if mode == "live" and not qb_input:
+        raise ValueError(
+            f"Oracle QB data not allowed in live mode ({mode}). "
+            f"Provide --qb-input CSV with live-safe pregame QB starters. "
+            f"Use mode=dry_run for oracle-QB test predictions."
+        )
+
     from sportslab.evaluation.predict_future import predict_future
 
-    out = snapshot_path or str(_snapshot_path(season, week))
+    out = snapshot_path or str(_snapshot_path(season, week, mode=mode))
     pred_result = predict_future(
         season=season,
         week=week,
-        qb_input_path=qb_input,
+        qb_input_path=qb_input if mode == "live" or qb_input else None,
         output_path=out,
+        mode=mode,
     )
     if not pred_result:
         print(f"  No games found for {season} week {week}.")
@@ -182,8 +239,8 @@ def predict_week(
     qb_source = snap_df["qb_source"].iloc[0] if "qb_source" in snap_df.columns else "oracle"
     n_games = len(snap_df)
 
-    # Register in manifest
-    _register_snapshot(Path(out), season, week, qb_source, n_games)
+    # Register in manifest with mode metadata
+    _register_snapshot(Path(out), season, week, qb_source, n_games, mode=mode)
     print(f"  Manifest: {MANIFEST_PATH}")
 
     # Generate weekly report
@@ -204,6 +261,7 @@ def predict_week(
     print(f"\n=== Week {week}, {season} Season ===")
     print(f"  Snapshot: {out}")
     print(f"  Report:   {report_path}")
+    print(f"  Mode:     {mode}")
     print(f"  QB source: {qb_source}")
     print(f"  Games:     {n_games}")
 
@@ -268,7 +326,7 @@ def _read_history() -> pd.DataFrame:
     return pd.DataFrame(columns=[
         "season", "week", "n", "log_loss",
         "brier", "accuracy", "auc",
-        "model_version", "snapshot", "graded_at",
+        "model_version", "snapshot", "mode", "graded_at",
     ])
 
 
@@ -281,6 +339,7 @@ def grade_week(
     season: int,
     week: int,
     snapshot: Optional[str] = None,
+    mode: str = "live",
 ) -> Dict:
     """Grade a completed week's predictions.
 
@@ -291,12 +350,15 @@ def grade_week(
         season: Season year.
         week: Week number.
         snapshot: Path to snapshot CSV. Auto-detects from manifest if None.
+        mode: Snapshot mode — only grades snapshots matching this mode.
 
     Returns:
         Dict with metrics and history path.
     """
-    # Guardrail: find snapshot via manifest
-    manifest_entry = _get_snapshot_from_manifest(season, week)
+    _validate_mode(mode)
+
+    # Guardrail: find snapshot via manifest (filtered by mode)
+    manifest_entry = _get_snapshot_from_manifest(season, week, mode=mode)
 
     if snapshot:
         snap_path = Path(snapshot)
@@ -311,8 +373,8 @@ def grade_week(
             )
     else:
         raise FileNotFoundError(
-            f"No snapshot found for {season} week {week} in manifest."
-            f" Run `sportslab predict-week --season {season} --week {week}` first."
+            f"No {mode} snapshot found for {season} week {week} in manifest."
+            f" Run `sportslab predict-week --season {season} --week {week} --mode {mode}` first."
             f" Grading from retroactively regenerated predictions is not allowed."
         )
 
@@ -345,11 +407,15 @@ def grade_week(
         raise ValueError("No graded games found.")
 
     # Update manifest
-    _update_manifest_grade(season, week, metrics)
+    _update_manifest_grade(season, week, metrics, mode=mode)
 
     # Append to history
     history = _read_history()
-    history = history[~((history["season"] == season) & (history["week"] == week))]
+    if "mode" in history.columns:
+        history = history[~((history["season"] == season) & (history["week"] == week)
+                            & (history["mode"] == mode))]
+    else:
+        history = history[~((history["season"] == season) & (history["week"] == week))]
     row = {
         "season": season,
         "week": week,
@@ -360,12 +426,14 @@ def grade_week(
         "auc": metrics["auc"],
         "model_version": INCUMBENT_VERSION,
         "snapshot": str(snap_path),
+        "mode": mode,
         "graded_at": _iso_now(),
     }
     history = pd.concat([history, pd.DataFrame([row])], ignore_index=True)
     _write_history(history)
 
     print(f"\n=== Week {week}, {season} Season — Grade ===")
+    print(f"  Mode:     {mode}")
     print(f"  Snapshot: {snap_path}")
     print(f"  Games graded: {metrics['n']}")
     print(f"  Log loss:     {metrics['log_loss']}")

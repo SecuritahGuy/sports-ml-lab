@@ -137,13 +137,17 @@ def test_parse_not_found():
 
 
 def test_parse_handles_nan():
-    """NaN/empty QB values are mapped to pd.NA."""
-    content = "game_id,home_qb_id,away_qb_id\n2025_01_ARI_ATL,nan,J.Doe\n"
+    """NaN/empty QB values are mapped to pd.NA, valid values preserved."""
+    content = ("game_id,home_qb_id,away_qb_id\n"
+               "2025_01_ARI_ATL,nan,J.Doe\n"
+               "2025_02_CHI_GB,A.Rodgers,nan\n")
     path = _write_temp_csv(content)
     try:
         result = parse_qb_input_csv(path)
         assert pd.isna(result.iloc[0]["home_qb_id"])
         assert result.iloc[0]["away_qb_id"] == "J.Doe"
+        assert result.iloc[1]["home_qb_id"] == "A.Rodgers"
+        assert pd.isna(result.iloc[1]["away_qb_id"])
     finally:
         os.unlink(path)
 
@@ -243,3 +247,129 @@ def test_sample_fixture_loads():
     assert result["away_qb_name"].notna().all()
     assert result["source"].notna().all()
     assert result["confidence"].notna().all()
+
+
+# ── Malformed QB Input Tests ──
+
+
+def test_parse_duplicate_game_ids():
+    """Duplicate game_ids raise ValueError."""
+    content = (
+        "game_id,home_qb_id,away_qb_id\n"
+        "2025_01_ARI_ATL,J.McCarthy,C.Williams\n"
+        "2025_01_ARI_ATL,K.Murray,J.Fields\n"
+    )
+    path = _write_temp_csv(content)
+    try:
+        with pytest.raises(ValueError, match="Duplicate game_id"):
+            parse_qb_input_csv(path)
+    finally:
+        os.unlink(path)
+
+
+def test_parse_extra_whitespace_in_ids():
+    """Extra whitespace in QB IDs is stripped."""
+    content = "game_id,home_qb_id,away_qb_id\n2025_01_ARI_ATL, J.McCarthy ,C.Williams\n"
+    path = _write_temp_csv(content)
+    try:
+        result = parse_qb_input_csv(path)
+        assert result.iloc[0]["home_qb_id"] == "J.McCarthy"
+    finally:
+        os.unlink(path)
+
+
+def test_parse_wrong_column_case():
+    """Wrong column casing raises ValueError for missing required columns."""
+    content = "game_id,HOME_Qb_id,away_qb_id\n2025_01_ARI_ATL,J.McCarthy,C.Williams\n"
+    path = _write_temp_csv(content)
+    try:
+        with pytest.raises(ValueError, match="missing required columns"):
+            parse_qb_input_csv(path)
+    finally:
+        os.unlink(path)
+
+
+def test_parse_extra_columns():
+    """Extra columns are accepted and ignored (kept in output)."""
+    content = (
+        "game_id,home_qb_id,away_qb_id,team_color\n"
+        "2025_01_ARI_ATL,J.McCarthy,C.Williams,red\n"
+    )
+    path = _write_temp_csv(content)
+    try:
+        result = parse_qb_input_csv(path)
+        assert result.iloc[0]["home_qb_id"] == "J.McCarthy"
+        assert "team_color" not in result.columns
+    finally:
+        os.unlink(path)
+
+
+def test_parse_all_null_qb_ids():
+    """All QB IDs null raises ValueError."""
+    content = "game_id,home_qb_id,away_qb_id\n2025_01_ARI_ATL,nan,nan\n"
+    path = _write_temp_csv(content)
+    try:
+        with pytest.raises(
+            ValueError,
+            match=r"All (home|away)_qb_id values are missing",
+        ):
+            parse_qb_input_csv(path)
+    finally:
+        os.unlink(path)
+
+
+def test_apply_qb_input_wrong_type():
+    """apply_qb_input handles type mismatches gracefully."""
+    df = pd.DataFrame({
+        "game_id": [12345],
+        "home_qb_id": ["oracle_h"],
+        "away_qb_id": ["oracle_a"],
+    })
+    qb_input = pd.DataFrame({
+        "game_id": ["12345"],
+        "home_qb_id": ["live_h"],
+        "away_qb_id": ["live_a"],
+    })
+    result = apply_qb_input(df, qb_input)
+    assert result.loc[0, "home_qb_id"] == "oracle_h"
+
+
+def test_apply_qb_input_partial_match():
+    """Partial overlap: matched games override, unmatched keep oracle."""
+    df = pd.DataFrame({
+        "game_id": ["G1", "G2", "G3"],
+        "home_qb_id": ["h1", "h2", "h3"],
+        "away_qb_id": ["a1", "a2", "a3"],
+    })
+    qb_input = pd.DataFrame({
+        "game_id": ["G1", "G3"],
+        "home_qb_id": ["LIVE_H1", "LIVE_H3"],
+        "away_qb_id": ["LIVE_A1", "LIVE_A3"],
+    })
+    result = apply_qb_input(df, qb_input)
+    assert result.loc[0, "home_qb_id"] == "LIVE_H1"
+    assert result.loc[1, "home_qb_id"] == "h2"
+    assert result.loc[2, "home_qb_id"] == "LIVE_H3"
+
+
+def test_parse_missing_game_ids_column():
+    """Completely missing game_id column raises ValueError."""
+    content = "home_qb_id,away_qb_id\nJ.McCarthy,C.Williams\n"
+    path = _write_temp_csv(content)
+    try:
+        with pytest.raises(ValueError, match="missing required columns"):
+            parse_qb_input_csv(path)
+    finally:
+        os.unlink(path)
+
+
+def test_parse_special_characters():
+    """QB IDs with special characters (dots, hyphens) are preserved."""
+    content = "game_id,home_qb_id,away_qb_id\nG1,P. Mahomes II,Lamar 'MVP' Jackson\n"
+    path = _write_temp_csv(content)
+    try:
+        result = parse_qb_input_csv(path)
+        assert result.iloc[0]["home_qb_id"] == "P. Mahomes II"
+        assert result.iloc[0]["away_qb_id"] == "Lamar 'MVP' Jackson"
+    finally:
+        os.unlink(path)

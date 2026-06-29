@@ -6,16 +6,18 @@
     2022,
     2023,
     2024,
-    2025
+    2025,
+    2026
   ],
   "seasons_found": [
     2021,
     2022,
     2023,
     2024,
-    2025
+    2025,
+    2026
   ],
-  "row_count": 1424,
+  "row_count": 1696,
   "column_count": 46,
   "columns": [
     "game_id",
@@ -65,7 +67,7 @@
     "stadium_id",
     "stadium"
   ],
-  "created_at": "2026-06-23T17:54:10.964746",
+  "created_at": "2026-06-29T11:16:48.238627",
   "output_path": "data/raw/nfl/schedules.parquet",
   "source_function": "load_schedules"
 }

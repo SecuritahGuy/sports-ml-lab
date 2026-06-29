@@ -131,12 +131,16 @@ def _split_by_availability(df: pd.DataFrame):
     return df_known, df_future, has_result
 
 
+LIVE_MODES = ["live"]
+
+
 def predict_future(
     input_path: Optional[str] = None,
     output_path: str = DEFAULT_OUTPUT,
     qb_input_path: Optional[str] = None,
     season: Optional[int] = None,
     week: Optional[int] = None,
+    mode: str = "live",
 ) -> Dict[str, str]:
     """Generate predictions for future games using the incumbent model.
 
@@ -147,11 +151,24 @@ def predict_future(
             Overrides oracle QB data with live-safe pregame starter info.
         season: Optional season to filter future predictions.
         week: Optional week to filter future predictions.
+        mode: Snapshot mode — 'live', 'dry_run', or 'rehearsal'. In live mode,
+            oracle QB data is blocked.
 
     Returns:
         Dict with paths to output files.
     """
-    print("=== Future Prediction Mode ===")
+    from sportslab.evaluation.weekly_pipeline import _validate_mode
+    _validate_mode(mode)
+
+    # Live mode: block oracle QB data
+    if mode in LIVE_MODES and not qb_input_path:
+        raise ValueError(
+            f"Oracle QB data not allowed in live mode ({mode}). "
+            f"Provide qb_input_path with live-safe pregame QB starters. "
+            f"Use mode='dry_run' or mode='rehearsal' for oracle-QB predictions."
+        )
+
+    print(f"=== Future Prediction Mode ({mode}) ===")
 
     # Load data
     df_all = _load_historical_and_future(input_path, season=season, week=week)
@@ -197,9 +214,10 @@ def predict_future(
     elo_prob_all = df_feat["elo_prob"].values
     feat_all = df_feat[feat_cols].values if feat_cols else np.empty((len(df_feat), 0))
 
+    has_feats = len(feat_cols) > 0
     x_known = np.column_stack(
         [elo_prob_all[known_mask],
-         feat_all[known_mask]] if feat_cols.size else [elo_prob_all[known_mask]]
+         feat_all[known_mask]] if has_feats else [elo_prob_all[known_mask]]
     )
     y_known = df_feat.loc[known_mask, "home_win"].astype(int).values
 
@@ -211,7 +229,7 @@ def predict_future(
     future_mask = ~known_mask & ~df_feat["is_neutral"].fillna(False).values
     x_future = np.column_stack(
         [elo_prob_all[future_mask],
-         feat_all[future_mask]] if feat_cols.size else [elo_prob_all[future_mask]]
+         feat_all[future_mask]] if has_feats else [elo_prob_all[future_mask]]
     )
     prob = pipe.predict_proba(x_future)[:, 1]
     pred_winner = np.where(prob >= 0.5,
@@ -275,6 +293,7 @@ def run_predict_future(
     qb_input: Optional[str] = None,
     season: Optional[int] = None,
     week: Optional[int] = None,
+    mode: str = "live",
 ) -> Dict[str, str]:
     """CLI entry point for future prediction."""
     if qb_input is not None and not Path(qb_input).exists():
@@ -285,4 +304,5 @@ def run_predict_future(
         qb_input_path=qb_input,
         season=season,
         week=week,
+        mode=mode,
     )

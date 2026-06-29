@@ -82,8 +82,30 @@ def parse_qb_input_csv(path: str) -> pd.DataFrame:
     if df.empty:
         raise ValueError(f"QB input CSV is empty: {path}")
 
+    # Strip whitespace from string columns
+    for col in df.columns:
+        if df[col].dtype == object:
+            df[col] = df[col].astype(str).str.strip()
+
+    # Check for duplicate game_ids
+    dups = df["game_id"].duplicated()
+    if dups.any():
+        dup_ids = df.loc[dups, "game_id"].tolist()
+        raise ValueError(
+            f"Duplicate game_id(s) found in QB input CSV: {dup_ids}. "
+            f"Each game_id must appear at most once."
+        )
+
     for col in ["home_qb_id", "away_qb_id"]:
-        df[col] = df[col].astype(str).replace(["nan", "", "None"], pd.NA)
+        df[col] = df[col].astype(str).replace(["nan", "", "None", "NaN", "N/A"], pd.NA)
+
+    # Check for all-null QB ID columns
+    for col in ["home_qb_id", "away_qb_id"]:
+        if df[col].isna().all():
+            raise ValueError(
+                f"All {col} values are missing in QB input CSV. "
+                f"Each game must have a valid QB identifier."
+            )
 
     for col in QB_INPUT_COLUMNS_V2:
         if col not in df.columns:

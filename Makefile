@@ -2,7 +2,8 @@
         predict-incumbent predict-future weekly-report simulate \
         backtest-2025 audit dashboard no-qb-baseline qb-continuity \
 qb-gated-experience qb-depth-experiment turnover-experiment situational-micro \
-predict-week grade-week season-report prediction-audit rehearsal-season prediction-index publish-predictions
+predict-week grade-week season-report prediction-audit rehearsal-season prediction-index publish-predictions \
+data-audit preseason-fire-drill live-preflight
 
 # ── Install ──
 install:
@@ -99,10 +100,13 @@ clean:
 
 # ── Weekly Operations ──
 predict-week:
-	sportslab predict-week --season $(SEASON) --week $(WEEK)
+	sportslab predict-week --season $(SEASON) --week $(WEEK) --mode $(MODE)
+
+predict-week-oracle:
+	sportslab predict-week --season $(SEASON) --week $(WEEK) --mode dry_run
 
 grade-week:
-	sportslab grade-week --season $(SEASON) --week $(WEEK)
+	sportslab grade-week --season $(SEASON) --week $(WEEK) --mode $(MODE)
 
 season-report:
 	sportslab season-report --season $(SEASON)
@@ -123,6 +127,29 @@ publish-predictions:
 	sportslab build-prediction-index
 	@echo "  Audit reports are published by 'sportslab prediction-audit --season <YEAR>' (live mode)."
 	@echo "  Run: make prediction-audit SEASON=<YEAR> for each tracked season."
+
+# ── Data Audit ──
+data-audit:
+	sportslab data-audit
+
+data-audit-seasons:
+	sportslab data-audit --seasons $(SEASONS)
+
+# ── Live Preflight ──
+live-preflight:
+	sportslab live-preflight
+
+live-preflight-qb:
+	sportslab live-preflight --qb-input $(QB_INPUT) --seasons $(SEASONS)
+
+# ── Preseason Fire Drill ──
+preseason-fire-drill: build-features data-audit predict-week-oracle prediction-audit
+	@echo ""
+	@echo "=== Preseason Fire Drill Complete ==="
+	@echo "  Ingest verified, features built, data healthy."
+	@echo "  Dry-run predictions created, audit generated."
+	@echo "  Ready for live season."
+	@echo "  Next: make predict-week SEASON=2026 WEEK=1 MODE=live QB_INPUT=qb.csv"
 
 # ── Development ──
 .PHONY: dev

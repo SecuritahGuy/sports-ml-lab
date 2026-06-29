@@ -22,6 +22,7 @@ from sportslab.evaluation.comprehensive_efficiency_experiment import (
 from sportslab.evaluation.confidence_calibration_experiment import (
     run_confidence_calibration_experiment,
 )
+from sportslab.evaluation.data_audit import run_data_audit
 from sportslab.evaluation.decayed_elo_experiment import run_decayed_elo_experiment
 from sportslab.evaluation.elo_tuning import run_elo_tuning
 from sportslab.evaluation.epa_features_experiment import run_epa_features_experiment
@@ -31,6 +32,7 @@ from sportslab.evaluation.glicko_experiment import run_glicko_experiment
 from sportslab.evaluation.injury_features_experiment import (
     run_injury_features_experiment,
 )
+from sportslab.evaluation.live_preflight import run_live_preflight
 from sportslab.evaluation.margin_aware_elo import run_margin_aware_experiment
 from sportslab.evaluation.market_baseline import run_market_baseline
 from sportslab.evaluation.market_benchmark import run_market_benchmark
@@ -452,13 +454,18 @@ def predict_future_cmd(input, output, qb_input, season, week):
 @click.option("--qb-input", type=str, default=None,
               help="CSV with game_id,home_qb_id,away_qb_id for live-safe QB starters")
 @click.option("--output", type=str, default=None, help="Override snapshot output path")
-def predict_week_cmd(season, week, qb_input, output):
+@click.option("--mode", type=click.Choice(["live", "dry_run", "rehearsal"]),
+              default="live", help="Snapshot mode (default: live)")
+def predict_week_cmd(season, week, qb_input, output, mode):
     """Generate predictions + snapshot + report for a single week.
 
     Fits Elo on all historical data (2021+), predicts the specified
     week, saves a timestamped snapshot and generates a weekly report.
+
+    In live mode (default), oracle QB data is blocked -- provide --qb-input.
     """
-    predict_week(season=season, week=week, qb_input=qb_input, snapshot_path=output)
+    predict_week(season=season, week=week, qb_input=qb_input,
+                 snapshot_path=output, mode=mode)
 
 
 @cli.command(name="grade-week")
@@ -484,6 +491,38 @@ def season_report_cmd(season):
     metrics, cumulative totals, and model metadata.
     """
     season_report(season=season)
+
+
+@cli.command(name="data-audit")
+@click.option("--seasons", type=str, default=None,
+              help="Comma-separated season list to check (default: all)")
+def data_audit_cmd(seasons):
+    """Validate schedule and feature table health.
+
+    Checks season coverage, row counts, column presence,
+    duplicates, score consistency, and incumbent feature safety.
+    """
+    season_list = [int(s.strip()) for s in seasons.split(",")] if seasons else None
+    run_data_audit(seasons=season_list)
+
+
+@cli.command(name="live-preflight")
+@click.option("--qb-input", type=str, default=None,
+              help="Path to live QB starter CSV for validation")
+@click.option("--seasons", type=str, default=None,
+              help="Comma-separated season list to check (default: all)")
+def live_preflight_cmd(qb_input, seasons):
+    """Run pre-week checklist: data audit, QB validation, dry-run smoke test.
+
+    Runs the full preflight checklist before a live prediction week:
+    1. Data audit (structure, staleness, partial ingest)
+    2. QB input CSV validation (if provided)
+    3. Dry-run predict smoke test
+
+    Reports pass/fail for each step.
+    """
+    season_list = [int(s.strip()) for s in seasons.split(",")] if seasons else None
+    run_live_preflight(qb_input_path=qb_input, seasons=season_list)
 
 
 @cli.command(name="prediction-audit")
