@@ -54,6 +54,7 @@ from sportslab.evaluation.qb_market_delta import run_qb_market_delta_experiment
 from sportslab.evaluation.rehearsal_season import rehearse_season
 from sportslab.evaluation.residual_blending_experiment import run_residual_blending_experiment
 from sportslab.evaluation.residual_diagnostics import run_residual_diagnostics
+from sportslab.evaluation.roster_overlay_foldsafe_experiment import run_roster_overlay_foldsafe
 from sportslab.evaluation.rolling_origin_elo_validation import (
     run_rolling_origin_validation,
 )
@@ -646,6 +647,19 @@ def frozen_qb_overlay_foldsafe_cmd(output):
         run_frozen_qb_overlay_foldsafe,
     )
     run_frozen_qb_overlay_foldsafe(output_csv=output)
+
+
+@cli.command(name="roster-overlay")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def roster_overlay_cmd(output):
+    """Run fold-safe roster overlay experiment.
+
+    Tests position-group availability overlays (OL, skill, front, LB,
+    coverage) on top of the frozen v3.0.0 incumbent. Selects best variant
+    by average validation log loss.
+    """
+    run_roster_overlay_foldsafe(output_csv=output)
 
 
 @cli.command(name="gated-qb-elo")

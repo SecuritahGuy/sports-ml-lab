@@ -1728,3 +1728,76 @@ All CIs include zero.
 1. Any model must beat **Standard Elo + qb_changed + rolling_mov_3 + Platt (holdout LL 0.6262)** to become the new clean football-only incumbent
 2. Continue exploring situational features (rolling averages, game context)
 3. Consider DVOA/EPA features if available
+
+---
+
+## Session Summary: Roster Overlay (Position-Group Availability)
+
+### Goal
+Test whether position-group availability overlays (OL, skill, front, LB, coverage) applied in logit space on top of the frozen v3.0.0 incumbent improve prediction.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/injuries.py` | Updated — DEFENSE positions split into front/LB/coverage subgroups, added `home_front_out`, `away_front_out`, `home_lb_out`, `away_lb_out`, `home_coverage_out`, `away_coverage_out` columns |
+| `src/sportslab/features/roster_availability.py` | **New** — `compute_roster_availability()`: 0-1 availability scores per position group from injury OUT counts, normalized by typical depth (OL=5, skill=5, front=4, LB=3, coverage=4, ST=3) |
+| `src/sportslab/ratings/roster_strength.py` | Updated from V0 (QB-only) to V1 — all 7 position groups populated from availability scores; each group's points = `weight * (2 * availability - 1)`; injury adjustment from total OUT counts |
+| `src/sportslab/evaluation/roster_overlay_foldsafe_experiment.py` | **New** — per-fold Platt fitting, 5 position groups (OL, skill, front, LB, coverage) + combined, gamma/threshold/cap sweep across 375 variants |
+| `src/sportslab/cli.py` | Added `roster-overlay` command |
+| `Makefile` | Added `roster-overlay` target |
+| `tests/test_roster_availability.py` | **New** — 10 tests for availability scores, range, depletion, auto-compute |
+| `tests/test_roster_strength.py` | **New** — 10 tests for V1 points, ranges, adjusted Elo prob |
+| `tests/test_roster_overlay.py` | **New** — 14 tests for overlay functions, gating, depletion masks |
+| `reports/experiments/roster_overlay_foldsafe.md` | **New** — full experiment report (77 lines) |
+
+### Experiment Results
+
+**Rolling-Origin Validation (v3.0.0 incumbent val LL: 0.6341):**
+| Group | Best Config | Val LL | Δ vs Inc |
+|-------|------------|--------|----------|
+| OL | g=10 th=0.6 cap=20 | 0.6342 | +0.0000 |
+| Skill | g=40 th=0.6 cap=20 | 0.6341 | -0.0000 |
+| Front | g=60 th=0.6 cap=60 | 0.6340 | -0.0001 |
+| LB | g=10 th=0.4 cap=20 | 0.6342 | +0.0000 |
+| Coverage | g=10 th=0.6 cap=20 | 0.6342 | +0.0001 |
+| Combined | g=10 th=0.4 cap=40 | 0.6342 | +0.0001 |
+
+**2025 Holdout:**
+| Model | Holdout LL |
+|-------|-----------|
+| Incumbent (v3.0.0) | 0.6259 |
+| skill g=40 th=0.6 cap=20 | **0.6255** |
+| front g=60 th=0.6 cap=60 | 0.6256 |
+| ol g=10 th=0.6 cap=20 | 0.6259 |
+| combined g=10 th=0.4 cap=40 | 0.6260 |
+| coverage g=10 th=0.6 cap=20 | 0.6261 |
+| lb g=10 th=0.4 cap=20 | 0.6261 |
+
+**Conclusion: REJECTED.** No variant beats the incumbent by at least 0.001 on both validation and holdout. Best variant (skill) wins holdout by 0.0004 but ties val at floating-point precision (0.6341 vs 0.6341). Improvements are noise-level.
+
+### Key Decisions
+- All position-group availability overlays rejected
+- v3.0.0 frozen QB overlay remains the research incumbent (holdout LL 0.6200)
+- Injury report OUT-count availability is too coarse to add meaningful signal at this sample size
+- V1 roster_strength ratings infrastructure built but unused in production pipeline
+- MIN_PROMOTION_DELTA=0.001 added to overlay experiment to prevent floating-point promotion
+
+### Current Test State
+- 534 tests passing (34 new: 10 + 10 + 14)
+- Lint clean
+
+### Relevant Files
+- `src/sportslab/features/injuries.py` — updated with front/LB/coverage subgroups
+- `src/sportslab/features/roster_availability.py` — availability score computation
+- `src/sportslab/ratings/roster_strength.py` — V1 with all 7 position groups
+- `src/sportslab/evaluation/roster_overlay_foldsafe_experiment.py` — fold-safe overlay experiment
+- `reports/experiments/roster_overlay_foldsafe.md` — full experiment report
+- `tests/test_roster_availability.py` — 10 tests
+- `tests/test_roster_strength.py` — 10 tests
+- `tests/test_roster_overlay.py` — 14 tests
+
+### Next Steps
+1. Any model must beat **v3.0.0 Frozen QB Overlay (holdout LL 0.6200)** to become the new incumbent
+2. Restore `docs/predictions.md` missing content from git revert
+3. No untested position-group feature directions remain at V1 level

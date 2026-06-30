@@ -168,6 +168,9 @@ frozen-qb-overlay:
 frozen-qb-overlay-foldsafe:
 	sportslab frozen-qb-overlay-foldsafe
 
+roster-overlay:
+	sportslab roster-overlay
+
 roster-strength:
 	sportslab roster-strength
 

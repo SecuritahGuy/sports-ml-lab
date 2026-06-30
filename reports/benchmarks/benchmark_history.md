@@ -480,10 +480,10 @@ Each entry includes:
 
 ## Summary Statistics
 
-| Total experiments | 36 |
+| Total experiments | 37 |
 |------------------|-----|
 | Promoted (clean) | 6 |
-| Rejected | 21 |
+| Rejected | 22 |
 | Diagnostic | 7 |
 | Market-aware diagnostic | 1 |
 | Holdout-informed diagnostic | 1 |
@@ -652,3 +652,36 @@ The diagnostic V2 experiment was refactored with proper fold-safe validation: Pl
 **Cleanest-gate diagnostic:** B. qb_changed cap=20 (0.6250, NoQC Δ = 0.0000)
 **Equality check:** PASSED (max diff 1.11e-16)
 **Report:** `reports/experiments/frozen_qb_overlay_foldsafe.md`
+
+---
+
+## 37. Roster Overlay (Position-Group Availability) (2026-06-29)
+
+**Type:** Rejected
+
+Tests whether position-group availability overlays (OL, skill, front, LB, coverage) applied in logit space on top of the frozen v3.0.0 incumbent improve prediction. Non-gated games are identical to the incumbent (equality check via gating).
+
+**Methodology:**
+- 3 rolling-origin folds with per-fold Platt fitting
+- 375 variants: 5 individual groups × 7 gamma × 4 thresholds × 3 caps + 1 combined × 5 gamma × 3 thresholds × 1 cap
+- Variant selected by average validation log loss
+- Position groups populated from injury report OUT counts
+
+**Key results:**
+
+| Group | Best Config | Val LL | Δ vs Inc | Holdout LL |
+|-------|------------|--------|----------|-----------|
+| OL | g=10 th=0.6 cap=20 | 0.6342 | +0.0000 | 0.6259 |
+| Skill | g=40 th=0.6 cap=20 | 0.6341 | -0.0000 | **0.6255** |
+| Front | g=60 th=0.6 cap=60 | 0.6340 | -0.0001 | 0.6256 |
+| LB | g=10 th=0.4 cap=20 | 0.6342 | +0.0000 | 0.6261 |
+| Coverage | g=10 th=0.6 cap=20 | 0.6342 | +0.0001 | 0.6261 |
+| Combined | g=10 th=0.4 cap=40 | 0.6342 | +0.0001 | 0.6260 |
+
+**Incumbent (v3.0.0):** 0.6341 val, 0.6259 holdout
+
+**Decision:** ❌ REJECTED. No variant beats the incumbent by at least 0.001 on both validation and holdout. Best variant (skill) wins holdout by 0.0004 but ties val at floating-point precision (0.6341 vs 0.6341). Improvements are noise-level. Injury report OUT-count availability is too coarse to add meaningful signal on this sample size.
+
+**Best validation:** Incumbent baseline (0.6341)
+**Best holdout:** skill g=40 th=0.6 cap=20 (0.6255)
+**Report:** `reports/experiments/roster_overlay_foldsafe.md`

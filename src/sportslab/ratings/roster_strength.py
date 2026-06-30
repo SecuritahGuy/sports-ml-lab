@@ -1,23 +1,20 @@
 """V1 scaffold: position-group roster strength rating system.
 
-Target design:
-    team_roster_points = qb_points
-                        + ol_points
-                        + skill_points
-                        + defensive_front_points
-                        + lb_points
-                        + coverage_points
-                        + special_teams_points
-                        + injury_adjustment
+Architecture:
+    team_roster_adjustment = qb_points * qb_weight
+                           + ol_points * ol_weight
+                           + skill_points * skill_weight
+                           + defensive_front_points * front_weight
+                           + lb_points * lb_weight
+                           + coverage_points * coverage_weight
+                           + injury_adjustment
 
-Current implementation (V0):
-    - QB points fully populated using compute_qb_adjustments()
-    - All other position groups return 0 (placeholder)
-    - Injury adjustment: 0 (placeholder)
+    team_effective_elo = team_elo + team_roster_adjustment
 
-This scaffold establishes the interface, tables, and data contracts
-so that future position-group modules can be plugged in without
-refactoring the experiment pipeline.
+Current implementation (V1):
+    - Position-group points populated from injury-based availability scores
+    - Each group's points = weight * (2 * availability - 1), mapping [0,1] to [-weight, weight]
+    - Injury adjustment uses total_out count (placeholder weight)
 """
 
 from typing import Dict
@@ -26,6 +23,10 @@ import numpy as np
 import pandas as pd
 
 from sportslab.features.qb_adjustment import compute_qb_adjustments
+from sportslab.features.roster_availability import (
+    POSITION_GROUP_DEPTH,
+    compute_roster_availability,
+)
 
 ROSTER_STRENGTH_COLUMNS = [
     "roster_qb_points",
@@ -39,8 +40,6 @@ ROSTER_STRENGTH_COLUMNS = [
     "roster_total_adjustment",
 ]
 
-# Weight (in Elo points) per unit of each position group rating.
-# These are placeholder defaults — to be tuned in future experiments.
 POSITION_WEIGHTS: Dict[str, float] = {
     "qb": 1.0,
     "ol": 0.5,
@@ -51,7 +50,6 @@ POSITION_WEIGHTS: Dict[str, float] = {
     "st": 0.1,
 }
 
-# Column name constants for downstream merging
 HOME_PREFIX = "home_"
 AWAY_PREFIX = "away_"
 
@@ -59,12 +57,16 @@ HOME_ROSTER_COLUMNS = [f"{HOME_PREFIX}{c}" for c in ROSTER_STRENGTH_COLUMNS]
 AWAY_ROSTER_COLUMNS = [f"{AWAY_PREFIX}{c}" for c in ROSTER_STRENGTH_COLUMNS]
 ALL_ROSTER_COLUMNS = HOME_ROSTER_COLUMNS + AWAY_ROSTER_COLUMNS
 
+# Groups with injury-based availability (non-QB)
+AVAILABILITY_GROUPS = ["ol", "skill", "front", "lb", "coverage", "st"]
+
 
 def compute_roster_strength(df: pd.DataFrame) -> pd.DataFrame:
     """Compute roster-strength features for each game.
 
-    V0: Only QB points are populated (via compute_qb_adjustments).
-    All other position groups return 0.
+    V1: All position groups are populated from injury report availability.
+    Each group's points = weight * (2 * availability - 1), ranging from
+    -weight (fully depleted) to +weight (fully healthy).
 
     Args:
         df: DataFrame with columns from compute_elo_features()
@@ -73,29 +75,35 @@ def compute_roster_strength(df: pd.DataFrame) -> pd.DataFrame:
 
     Returns:
         DataFrame with added roster strength columns.
-        Non-QB columns are 0 — ready for future V1+ expansion.
     """
     out = df.copy()
 
     # QB points from the QB adjustment system
     out = compute_qb_adjustments(out)
-
-    # Map QB adj (in Elo points) to roster_qb_points
     out[f"{HOME_PREFIX}roster_qb_points"] = out["home_qb_adj"].fillna(0.0)
     out[f"{AWAY_PREFIX}roster_qb_points"] = out["away_qb_adj"].fillna(0.0)
 
-    # Placeholder position groups (V1+)
-    for prefix in [HOME_PREFIX, AWAY_PREFIX]:
-        out[f"{prefix}roster_ol_points"] = 0.0
-        out[f"{prefix}roster_skill_points"] = 0.0
-        out[f"{prefix}roster_front_points"] = 0.0
-        out[f"{prefix}roster_lb_points"] = 0.0
-        out[f"{prefix}roster_coverage_points"] = 0.0
-        out[f"{prefix}roster_st_points"] = 0.0
-        out[f"{prefix}roster_injury_adj"] = 0.0
+    # Availability scores for all position groups
+    out = compute_roster_availability(out)
 
-    # Total roster adjustment (weighted sum of position groups)
-    # V0: only QB points contribute
+    # V1: populate non-QB groups from availability scores
+    for prefix in [HOME_PREFIX, AWAY_PREFIX]:
+        for group in AVAILABILITY_GROUPS:
+            avail_col = f"{prefix}{group}_availability"
+            pts_col = f"{prefix}roster_{group}_points"
+            weight = POSITION_WEIGHTS.get(group, 0.0)
+            avail = out.get(avail_col, pd.Series(1.0, index=out.index))
+            out[pts_col] = (weight * (2 * avail - 1)).round(2)
+
+        # Injury adjustment: sum of all position-group out counts * -0.1
+        total_out = np.zeros(len(out), dtype=float)
+        for group, depth in POSITION_GROUP_DEPTH.items():
+            out_col = f"{prefix}{group}_out"
+            if out_col in out.columns:
+                total_out += out[out_col].fillna(0).astype(float).values
+        out[f"{prefix}roster_injury_adj"] = (-0.1 * total_out).round(2)
+
+    # Total roster adjustment (weighted sum of position groups + injury adj)
     for prefix in [HOME_PREFIX, AWAY_PREFIX]:
         total = np.zeros(len(out), dtype=float)
         for group, weight in POSITION_WEIGHTS.items():
@@ -103,7 +111,7 @@ def compute_roster_strength(df: pd.DataFrame) -> pd.DataFrame:
             if col in out.columns:
                 total += out[col].values * weight
         total += out[f"{prefix}roster_injury_adj"].values
-        out[f"{prefix}roster_total_adjustment"] = total
+        out[f"{prefix}roster_total_adjustment"] = total.round(2)
 
     return out
 

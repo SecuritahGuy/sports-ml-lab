@@ -18,6 +18,9 @@ except ImportError:
 OL_POSITIONS = {"C", "G", "T"}
 SKILL_POSITIONS = {"QB", "RB", "WR", "TE", "FB"}
 DEFENSE_POSITIONS = {"DE", "DT", "LB", "S", "CB", "NT", "EDGE", "ILB", "OLB", "MLB", "SS", "FS"}
+FRONT_POSITIONS = {"DE", "DT", "NT", "EDGE"}
+LB_POSITIONS = {"LB", "ILB", "OLB", "MLB"}
+COVERAGE_POSITIONS = {"CB", "S", "SS", "FS"}
 
 INJURY_FEATURE_COLUMNS = [
     "home_qb_out",
@@ -34,10 +37,19 @@ INJURY_FEATURE_COLUMNS = [
     "away_ol_out",
     "home_def_out",
     "away_def_out",
+    "home_front_out",
+    "away_front_out",
+    "home_lb_out",
+    "away_lb_out",
+    "home_coverage_out",
+    "away_coverage_out",
     "any_qb_out",
     "net_injuries",
     "net_skill_out",
     "net_def_out",
+    "net_front_out",
+    "net_lb_out",
+    "net_coverage_out",
     "home_qb_injury_change",
     "away_qb_injury_change",
 ]
@@ -87,6 +99,9 @@ def _build_injury_summary(injuries: pd.DataFrame) -> pd.DataFrame:
         row["skill_out"], _ = _count(SKILL_POSITIONS)
         row["ol_out"], _ = _count(OL_POSITIONS)
         row["def_out"], _ = _count(DEFENSE_POSITIONS)
+        row["front_out"], _ = _count(FRONT_POSITIONS)
+        row["lb_out"], _ = _count(LB_POSITIONS)
+        row["coverage_out"], _ = _count(COVERAGE_POSITIONS)
         out_rows.append(row)
 
     summary = pd.DataFrame(out_rows)
@@ -118,6 +133,9 @@ def compute_injury_features(df: pd.DataFrame) -> pd.DataFrame:
             "skill_out": "home_skill_out",
             "ol_out": "home_ol_out",
             "def_out": "home_def_out",
+            "front_out": "home_front_out",
+            "lb_out": "home_lb_out",
+            "coverage_out": "home_coverage_out",
         }
     )
     away_inj = summary.rename(
@@ -130,6 +148,9 @@ def compute_injury_features(df: pd.DataFrame) -> pd.DataFrame:
             "skill_out": "away_skill_out",
             "ol_out": "away_ol_out",
             "def_out": "away_def_out",
+            "front_out": "away_front_out",
+            "lb_out": "away_lb_out",
+            "coverage_out": "away_coverage_out",
         }
     )
 
@@ -152,6 +173,12 @@ def compute_injury_features(df: pd.DataFrame) -> pd.DataFrame:
         "away_ol_out",
         "home_def_out",
         "away_def_out",
+        "home_front_out",
+        "away_front_out",
+        "home_lb_out",
+        "away_lb_out",
+        "home_coverage_out",
+        "away_coverage_out",
     ]
     for col in fill_cols:
         out[col] = out[col].fillna(0).astype(int)
@@ -161,6 +188,9 @@ def compute_injury_features(df: pd.DataFrame) -> pd.DataFrame:
     out["net_injuries"] = out["home_total_out"] - out["away_total_out"]
     out["net_skill_out"] = out["home_skill_out"] - out["away_skill_out"]
     out["net_def_out"] = out["home_def_out"] - out["away_def_out"]
+    out["net_front_out"] = out["home_front_out"] - out["away_front_out"]
+    out["net_lb_out"] = out["home_lb_out"] - out["away_lb_out"]
+    out["net_coverage_out"] = out["home_coverage_out"] - out["away_coverage_out"]
 
     # Injury-driven QB change detection
     # Track previous QB per team chronologically
