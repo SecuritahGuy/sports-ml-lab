@@ -26,6 +26,7 @@ from sportslab.evaluation.data_audit import run_data_audit
 from sportslab.evaluation.decayed_elo_experiment import run_decayed_elo_experiment
 from sportslab.evaluation.elo_tuning import run_elo_tuning
 from sportslab.evaluation.epa_features_experiment import run_epa_features_experiment
+from sportslab.evaluation.expanded_elo_spine_experiment import run_expanded_elo_spine
 from sportslab.evaluation.expressive_models_experiment import run_expressive_models_experiment
 from sportslab.evaluation.feature_selection_experiment import run_feature_selection_experiment
 from sportslab.evaluation.glicko_experiment import run_glicko_experiment
@@ -51,13 +52,14 @@ from sportslab.evaluation.qb_gated_experience import run_qb_gated_experience
 from sportslab.evaluation.qb_injury_experiment import run_qb_injury_experiment
 from sportslab.evaluation.qb_magnitude_experiment import run_qb_magnitude_experiment
 from sportslab.evaluation.qb_market_delta import run_qb_market_delta_experiment
+from sportslab.evaluation.qb_roster_interaction_experiment import run_qb_roster_interaction
 from sportslab.evaluation.rehearsal_season import rehearse_season
 from sportslab.evaluation.residual_blending_experiment import run_residual_blending_experiment
 from sportslab.evaluation.residual_diagnostics import run_residual_diagnostics
-from sportslab.evaluation.roster_overlay_foldsafe_experiment import run_roster_overlay_foldsafe
 from sportslab.evaluation.rolling_origin_elo_validation import (
     run_rolling_origin_validation,
 )
+from sportslab.evaluation.roster_overlay_foldsafe_experiment import run_roster_overlay_foldsafe
 from sportslab.evaluation.schedule_rest_experiment import run_schedule_rest_experiment
 from sportslab.evaluation.season_regression_experiment import run_season_regression_experiment
 from sportslab.evaluation.situational_micro_experiment import run_situational_micro_experiment
@@ -660,6 +662,32 @@ def roster_overlay_cmd(output):
     by average validation log loss.
     """
     run_roster_overlay_foldsafe(output_csv=output)
+
+
+@cli.command(name="qb-roster-interaction")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def qb_roster_cmd(output):
+    """Run QB × roster interaction overlay experiment.
+
+    Tests whether position-group availability overlays improve prediction
+    when applied only on top of games where the QB overlay gate is active.
+    Layer 1: frozen QB overlay champion (H.changed OR starts<17, cap=40,
+    gamma=1.0). Layer 2: position-group overlay swept over gamma/threshold/cap.
+    """
+    run_qb_roster_interaction(output_csv=output)
+
+
+@cli.command(name="expanded-elo-spine")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def expanded_elo_spine_cmd(output):
+    """Run expanded Elo spine + frozen QB overlay experiment.
+
+    Tests whether a better base Elo probability (wider K/HFA/regression/decay
+    grid) improves the v3.0.0 Frozen QB Overlay champion.
+    """
+    run_expanded_elo_spine(output_csv=output)
 
 
 @cli.command(name="gated-qb-elo")

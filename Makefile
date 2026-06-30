@@ -171,6 +171,12 @@ frozen-qb-overlay-foldsafe:
 roster-overlay:
 	sportslab roster-overlay
 
+qb-roster-interaction:
+	sportslab qb-roster-interaction
+
+expanded-elo-spine:
+	sportslab expanded-elo-spine
+
 roster-strength:
 	sportslab roster-strength
 

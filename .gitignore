@@ -32,5 +32,8 @@ Thumbs.db
 # MLflow
 mlruns/
 
+# Rehearsal snapshots (auto-generated, hundreds per session)
+reports/predictions/rehearsal/
+
 # Misc
 *.parquet

@@ -480,10 +480,10 @@ Each entry includes:
 
 ## Summary Statistics
 
-| Total experiments | 37 |
+| Total experiments | 38 |
 |------------------|-----|
 | Promoted (clean) | 6 |
-| Rejected | 22 |
+| Rejected | 23 |
 | Diagnostic | 7 |
 | Market-aware diagnostic | 1 |
 | Holdout-informed diagnostic | 1 |
@@ -685,3 +685,80 @@ Tests whether position-group availability overlays (OL, skill, front, LB, covera
 **Best validation:** Incumbent baseline (0.6341)
 **Best holdout:** skill g=40 th=0.6 cap=20 (0.6255)
 **Report:** `reports/experiments/roster_overlay_foldsafe.md`
+
+---
+
+## 38. QB × Roster Interaction Overlay (2026-06-30)
+
+**Type:** Rejected
+
+Tests whether position-group availability overlays improve prediction when applied **only** on top of games where the QB overlay gate is already active (QB stability is fragile). Two-layer architecture:
+
+```
+Layer 1 (fixed): QB overlay (H. changed OR starts<17, cap=40, gamma=1.0)
+Layer 2 (swept):  Position-group overlay on top, only where
+                  QB gate is active AND position depletion > threshold
+```
+
+**Methodology:**
+- 3 rolling-origin folds with per-fold Platt fitting
+- 198 variants: 5 groups × 6 gamma × 3 threshold × 3 cap + combined × 5 gamma × 3 threshold × 1 cap + 6 baselines
+- Layer 2 applied only when QB gate AND roster gate both active
+- Variant selected by average validation log loss
+
+**Key results:**
+
+| Group | Best Config | Val LL | Δ vs L1 | Holdout LL | Δ vs L1 |
+|-------|------------|--------|---------|-----------|---------|
+| QB overlay (L1) | frozen champion | 0.6305 | — | 0.6200 | — |
+| OL | g=0 (baseline) | 0.6305 | +0.0000 | 0.6200 | +0.0000 |
+| Skill | g=20 th=0.4 cap=40 | 0.6305 | -0.0001 | 0.6195 | -0.0005 |
+| Front | g=0 (baseline) | 0.6305 | +0.0000 | 0.6200 | +0.0000 |
+| LB | g=10 th=0.4 cap=40 | 0.6305 | -0.0001 | 0.6202 | +0.0002 |
+| Coverage | g=0 (baseline) | 0.6305 | +0.0000 | 0.6200 | +0.0000 |
+
+**Incumbent (v3.0.0):** 0.6341 val, 0.6259 holdout
+**Layer 1 (QB overlay):** 0.6305 val, 0.6200 holdout
+
+**Decision:** ❌ REJECTED. No QB × roster interaction overlay beats layer 1 (QB overlay alone) on both validation and holdout. Best variant (skill) wins holdout by only 0.0005 and ties val at floating-point precision (0.6305 vs 0.6305). Improvements are noise-level. Even within the QB-fragile subset, position-group availability adds only noise.
+
+**Key takeaway:** The QB overlay already absorbs all available signal from injury/availability data. Position-group availability is too coarse (simple OUT counts don't distinguish starter vs backup, snap share, or unit context) to add value beyond what Elo learns through ratings.
+
+**Selected by val LL:** v3.1.0 QB overlay (layer 1, 0.6305)
+**Best holdout:** skill g=20 th=0.4 cap=40 (0.6195, Δ = -0.0005 vs L1)
+**Report:** `reports/experiments/qb_roster_interaction.md`
+
+---
+
+## Entry 39: Expanded Elo Spine + Frozen QB Overlay (2026-06-30)
+
+**Goal:** Test whether a better base Elo spine (broader K/HFA/reg/decay sweep) improves the v3.0.0 Frozen QB Overlay champion.
+
+**Architecture:**
+```
+base Elo (swept: K, HFA, reg, decay)
+→ fold-safe Platt on [elo_prob, qb_changed, rolling_mov_3]
+→ frozen QB overlay (v3.0.0 champion, fixed)
+→ validation/holdout comparison
+```
+
+**Methodology:**
+- 3 rolling-origin folds with per-fold Platt fitting
+- 840 combos: 7K × 5HFA × 6reg × 4decay
+- Min promotion delta: 0.001
+
+**Key results:**
+| Model | Val LL | Δ val | Holdout LL | Δ holdout |
+|-------|--------|-------|-----------|-----------|
+| v3.0.0 champion (official) | 0.6305 | — | **0.6200** | — |
+| v3.0.0 champion (this run) | — | — | 0.6215 | — |
+| Best candidate (K=44, HFA=20, reg=0, decay=None) | 0.6299 | -0.0006 | 0.6302 | +0.0087 |
+
+- 131/840 combos beat v3.0.0 on val, but **0/840** by >= 0.001
+- The +0.0087 holdout delta is vs the candidate's internal v3.0.0 reproduction (0.6302 vs 0.6215). vs the official champion (0.6200), the gap would be +0.0102.
+
+**Decision:** ❌ REJECTED. No candidate beats v3.0.0 on both val and holdout. The QB overlay dominates — it compresses Elo base differences below promotion threshold.
+
+**Key takeaway:** The v3.0.0 Elo spine (K=36, HFA=40, reg=0.1, decay=32) is robust. Platt scaling + QB overlay absorbs base-Elo variation. No untuned Elo spine direction remains.
+
+**Report:** `reports/experiments/expanded_elo_spine.md`

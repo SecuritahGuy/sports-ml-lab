@@ -1801,3 +1801,137 @@ Test whether position-group availability overlays (OL, skill, front, LB, coverag
 1. Any model must beat **v3.0.0 Frozen QB Overlay (holdout LL 0.6200)** to become the new incumbent
 2. Restore `docs/predictions.md` missing content from git revert
 3. No untested position-group feature directions remain at V1 level
+
+---
+
+## Session Summary: QB × Roster Interaction Overlay
+
+### Goal
+Test whether position-group availability overlays improve prediction when applied **only** on top of games where the QB overlay gate is already active (QB stability is fragile).
+
+### Architecture
+```
+Layer 1 (fixed): QB overlay (H. changed OR starts<17, cap=40, gamma=1.0)
+Layer 2 (swept):  Position-group overlay on top, only where
+                  QB gate is active AND position depletion > threshold
+```
+
+Creates 4 game types: stable+healthy → base prob; fragile+healthy → QB overlay only; stable+depleted → base; fragile+depleted → both overlays.
+
+### Changes Made
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/qb_roster_interaction_experiment.py` | **New file** — 198 variants, fold-safe per-fold Platt fitting, 2-layer architecture, interaction gating |
+| `src/sportslab/cli.py` | Added `qb-roster-interaction` command |
+| `Makefile` | Added `qb-roster-interaction` target |
+| `tests/test_qb_roster_interaction.py` | **New file** — 26 tests for sigmoid/logit, depletion masks, QB overlay, roster overlay, constants, CL importability |
+| `reports/experiments/qb_roster_interaction.md` | **New file** — full report |
+| `reports/benchmarks/leaderboard.csv` | Row 39 added (rejected) |
+| `reports/benchmarks/benchmark_history.md` | Entry 38 added (rejected) |
+
+### Experiment Results
+
+**Rolling-Origin Validation:**
+| Group | Best Config | Val LL | Δ vs L1 |
+|-------|------------|--------|---------|
+| QB overlay (L1) | frozen champion | 0.6305 | — |
+| OL | g=0 (baseline) | 0.6305 | +0.0000 |
+| Skill | g=20 th=0.4 cap=40 | 0.6305 | -0.0001 |
+| Front | g=0 (baseline) | 0.6305 | +0.0000 |
+| LB | g=10 th=0.4 cap=40 | 0.6305 | -0.0001 |
+| Coverage | g=0 (baseline) | 0.6305 | +0.0000 |
+
+**2025 Holdout:**
+| Model | Log Loss |
+|-------|----------|
+| Incumbent (v3.0.0) | 0.6259 |
+| QB overlay only (L1) | **0.6200** |
+| skill g=20 th=0.4 cap=40 | **0.6195** |
+| All other variants | 0.6200–0.6202 |
+
+**Conclusion: REJECTED.** No QB × roster interaction overlay beats layer 1 (QB overlay alone) on both validation and holdout. Best variant (skill) wins holdout by only 0.0005 and ties val. The QB overlay already absorbs all available signal from injury/availability data.
+
+### Key Decisions
+- QB × roster interaction rejected — interaction is noise-level
+- QB overlay (layer 1) confirmed as correct research incumbent (0.6200 holdout)
+- Position-group availability is too coarse to add value beyond what Elo learns through ratings
+- No untested position-group feature directions remain
+
+### Current Test State
+- 560 tests passing (+26 new)
+- Lint clean
+
+### Relevant Files
+- `src/sportslab/evaluation/qb_roster_interaction_experiment.py` — 2-layer overlay experiment
+- `reports/experiments/qb_roster_interaction.md` — full report
+- `tests/test_qb_roster_interaction.py` — 26 tests
+
+### Next Steps
+1. Any model must beat **Frozen QB Overlay (holdout LL 0.6200)** to become the new incumbent
+2. No untested overlay or interaction feature directions remain
+3. Consider enabling GitHub Pages from repo settings (Settings → Pages → Deploy from `main` `/docs`)
+
+---
+
+## Session Summary: Expanded Elo Spine + Frozen QB Overlay
+
+### Goal
+Test whether a better base Elo spine (broader K/HFA/reg/decay sweep: 840 combos) improves the v3.0.0 Frozen QB Overlay champion (holdout 0.6200).
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/expanded_elo_spine_experiment.py` | **New file** — 840-combo grid, fold-safe Platt, frozen QB overlay, report writer |
+| `src/sportslab/cli.py` | Added `expanded-elo-spine` command |
+| `Makefile` | Added `expanded-elo-spine` target |
+| `tests/test_expanded_elo_spine.py` | **New file** — 22 tests |
+| `reports/experiments/expanded_elo_spine.md` | **New file** — full report (92 lines) |
+| `reports/benchmarks/leaderboard.csv` | Row 40 (rejected) |
+| `reports/benchmarks/benchmark_history.md` | Entry 39 (rejected) |
+
+### Experiment Results
+
+**Grid:** 840 combos (7K × 5HFA × 6reg × 4decay)
+
+| K | HFA | reg | decay | Val LL | Δ vs v3.0.0 |
+|---|-----|-----|-------|--------|-------------|
+| v3.0.0 champion | — | — | — | 0.6305 | — |
+| **44** | **20** | **0.0** | **None** | **0.6299** | **−0.0006** |
+| 40 | 20 | 0.1 | None | 0.6300 | −0.0005 |
+| 44 | 20 | 0.1 | None | 0.6300 | −0.0005 |
+| 52 | 20 | 0.0 | None | 0.6300 | −0.0005 |
+| 36 | 20 | 0.1 | None | 0.6300 | −0.0005 |
+
+- 131/840 combos beat v3.0.0 on val, but **0/840** by ≥ 0.001
+- Best val: K=44, HFA=20, reg=0.0, decay=None (0.6299, Δ=−0.0006)
+
+**2025 Holdout:**
+| Model | Holdout LL | Δ |
+|-------|-----------|---|
+| v3.0.0 champion (reproduced) | **0.6215** | — |
+| Best candidate (K=44, HFA=20, reg=0.0) | 0.6302 | **+0.0087** |
+
+**Decision: ❌ REJECTED** — Best candidate barely beats on val (<0.001 threshold) and loses on holdout.
+
+### Key Decisions
+- **Expanded Elo spine rejected** — no 840-combo candidate beats v3.0.0 on both val and holdout
+- v3.0.0 Elo spine (K=36, HFA=40, reg=0.1, decay=32) confirmed robust
+- Platt scaling + QB overlay absorbs base-Elo variation — differences are compressed below promotion threshold
+- v3.0.0 Frozen QB Overlay remains research incumbent (holdout 0.6200)
+
+### Current Test State
+- 584 tests passing (+22 new)
+- Lint clean
+
+### Relevant Files
+- `src/sportslab/evaluation/expanded_elo_spine_experiment.py` — 840-combo grid experiment
+- `reports/experiments/expanded_elo_spine.md` — full report (92 lines)
+- `tests/test_expanded_elo_spine.py` — 22 tests
+- `reports/benchmarks/benchmark_history.md` — entry 39
+- `reports/benchmarks/leaderboard.csv` — row 40
+
+### Next Steps
+1. Any model must beat **Frozen QB Overlay (holdout LL 0.6200)** to become the new incumbent
+2. No untested overlay, interaction, or Elo-spine feature directions remain
+3. Consider enabling GitHub Pages from repo settings
