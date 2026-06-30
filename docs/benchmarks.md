@@ -1,18 +1,23 @@
 # Benchmarks & Leaderboard
 
+[Home](index) | [2026 Schedule](2026-schedule) | **Benchmarks** | [Predictions](predictions) | [Model Card](model-card) | [Experiments](experiments) | [Backtests](backtests)
+
+---
+
+
 ## Current Football-Only Incumbent
 
-**Standard Elo + qb_changed + rolling_mov_3 + Platt**
+**Standard Elo + qb_changed + rolling_mov_3 + Platt + frozen QB overlay**
 
-- Version: v2.0.0
-- Holdout log loss: **0.6262**
-- Average validation log loss: 0.6334
-- Feature set: qb_changed + rolling_mov_3
+- Version: v3.0.0
+- Holdout log loss: **0.6200**
+- Average validation log loss: 0.6305
+- Feature set: qb_changed + rolling_mov_3 + frozen QB overlay
 - Full details: [Model Card](model-card)
 
 ### Promotion Rules
 
-1. A challenger must beat **0.6262** holdout log loss
+1. A challenger must beat **0.6200** holdout log loss
    to become the new football-only incumbent.
 2. The challenger must also have **better average rolling validation
    log loss** than the incumbent.
@@ -24,8 +29,6 @@
 ---
 
 ### Promoted / Superseded Models
-
-These models were promoted as the research incumbent at some point:
 
 | Experiment | Decision | Val LL | Holdout LL | Holdout AUC | Report |
 | --- | --- | --- | --- | --- | --- |
@@ -39,8 +42,6 @@ These models were promoted as the research incumbent at some point:
 
 
 ### Rejected Challengers
-
-These models failed to beat the incumbent:
 
 | Experiment | Decision | Val LL | Holdout LL | Holdout AUC | Report |
 | --- | --- | --- | --- | --- | --- |
@@ -65,11 +66,12 @@ These models failed to beat the incumbent:
 | comprehensive_efficiency | rejected | 0.6368 | 0.6313 | 0.6895 | [comprehensive_efficiency.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/comprehensive_efficiency.md) |
 | qb_adjusted_elo_v0 | rejected | 0.6338 | 0.6299 | 0.6972 | [qb_adjusted_elo.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/qb_adjusted_elo.md) |
 | gated_qb_adjusted_elo_v1 | rejected | 0.6341 | 0.6255 | 0.7020 | [gated_qb_adjusted_elo.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/gated_qb_adjusted_elo.md) |
+| roster_overlay_foldsafe | rejected | 0.6341 | 0.6255 | 0.7052 | [roster_overlay_foldsafe.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/roster_overlay_foldsafe.md) |
+| qb_roster_interaction | rejected | 0.6305 | 0.6195 | 0.7103 | [qb_roster_interaction.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/qb_roster_interaction.md) |
+| expanded_elo_spine | rejected | 0.6299 | 0.6302 | 0.6996 | [expanded_elo_spine.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/expanded_elo_spine.md) |
 
 
 ### Diagnostics
-
-These experiments produced diagnostic insights but were not promoted:
 
 | Experiment | Decision | Val LL | Holdout LL | Holdout AUC | Report |
 | --- | --- | --- | --- | --- | --- |
@@ -84,8 +86,6 @@ These experiments produced diagnostic insights but were not promoted:
 
 ### Market-Aware Diagnostics
 
-Market-relative benchmarks. Not football-only:
-
 | Experiment | Decision | Val LL | Holdout LL | Holdout AUC | Report |
 | --- | --- | --- | --- | --- | --- |
 | qb_market_delta | market-aware diagnostic | 0.6050 | 0.6083 | 0.7205 | [qb_market_delta.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/qb_market_delta.md) |
@@ -94,10 +94,10 @@ Market-relative benchmarks. Not football-only:
 ### Note on Market Benchmark
 
 Market (no-vig closing moneyline) achieves holdout log loss 0.6090,
-significantly better than the football-only incumbent (0.6262).
+significantly better than the football-only incumbent (0.6200).
 The market is the true performance ceiling for pregame NFL prediction.
 The incumbent is a purely pregame, market-free benchmark.
 
 ---
 
-*Source: [`https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/benchmarks/leaderboard.csv`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/benchmarks/leaderboard.csv) and [`https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/benchmarks/benchmark_history.md`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/benchmarks/benchmark_history.md)*
+*Source: [`leaderboard.csv`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main//Users/tim/dev/sports-ml-lab/reports/benchmarks/leaderboard.csv) and [`benchmark_history.md`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main//Users/tim/dev/sports-ml-lab/reports/benchmarks/benchmark_history.md)*

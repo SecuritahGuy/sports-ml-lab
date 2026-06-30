@@ -1,13 +1,9 @@
-# Predictions
+# Predictions & Artifacts
 
-## Latest Prediction Artifacts
+[Home](index) | [2026 Schedule](2026-schedule) | [Benchmarks](benchmarks) | **Predictions** | [Model Card](model-card) | [Experiments](experiments) | [Backtests](backtests)
 
-| Artifact | Description | Status |
-|----------|-------------|--------|
-| [`incumbent_predictions.csv`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions.csv) | All eligible games | OK |
-| [`incumbent_predictions_2025_holdout.csv`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions_2025_holdout.csv) | 2025 holdout | OK |
-| [`weekly_report.md`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/weekly_report.md) | Weekly report | OK |
-| [`incumbent_prediction_cards.md`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/incumbent_prediction_cards.md) | Game cards | OK |
+---
+
 
 ## Prediction Schema
 
@@ -18,20 +14,15 @@ Each prediction CSV contains:
 | `game_id` | Unique game identifier |
 | `season`, `week`, `gameday` | Game timing |
 | `away_team`, `home_team` | Teams |
-| `home_win_actual` | Actual result (1 = home win) |
 | `incumbent_home_win_prob` | Predicted home win probability |
 | `predicted_winner` | Home or away team based on prob |
 | `confidence_bucket` | Probability range bucket |
 | `model_version` | Incumbent version at prediction time |
 | `feature_set` | Features used |
 | `calibration_method` | Calibration type |
+| `qb_source` | QB data source (oracle / live_pregame / auto_qb) |
 | `caution_qb_change` | QB changed from prior game |
-| `caution_neutral` | Near-50% prediction |
 | `caution_early_season` | Weeks 1–4 |
-| `caution_missing_features` | Some features imputed |
-| `caution_model_market_disagreement` | Model vs market gap > 0.15 |
-| `market_prob_diagnostic` | Market-implied prob (diagnostic) |
-| `market_minus_model_diagnostic` | Market prob minus model prob |
 
 ## Confidence Buckets
 
@@ -44,37 +35,25 @@ Each prediction CSV contains:
 | 70-80 | 0.70–0.80 | Strong favorite |
 | 80+ | 0.80+ | Heavy favorite (rare in NFL) |
 
-## Caution Flags
+## 2025 Holdout Performance
 
-| Flag | Meaning |
-|------|---------|
-| QB change | QB did not start prior game |
-| Neutral | Near 50% probability |
-| Early season | Weeks 1–4 |
-| Missing features | Imputed input data |
-| Model-market disagreement | Gap > 0.15 in probability |
+| Metric | Value |
+|--------|-------|
+| Games | 276 |
+| Log loss | **0.6200** |
+| Brier | 0.2157 |
+| AUC | 0.7098 |
+| Accuracy | 0.6630 |
 
-## Market Fields (Diagnostic Only)
+## 2026 Predictions
 
-The `market_prob_diagnostic` and `market_minus_model_diagnostic`
-columns are for research comparison only. Market data comes from
-closing moneyline odds and is NOT used in model training.
+See [2026 Schedule & Predictions](2026-schedule) for the current season's
+predictions. Updated each week via:
 
-## Holdout Performance
+```
+sportslab predict-week --season 2026 --week <N> --auto-qb
+```
 
-The 2025 holdout contains **276 games** (regular season and playoffs).
-The current incumbent achieves log loss **0.6262** on this set.
+---
 
-*Holdout file: [`https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions_2025_holdout.csv`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/predictions/incumbent_predictions_2025_holdout.csv)*
-
-## 2025 Backtest Report
-
-A comprehensive 2025 backtest analysis is available, including week-by-week,
-team-level, calibration bucket, subgroup diagnostics, and extreme-game analysis.
-
-- [Full Backtest Report](backtest-2025)
-- [Weekly Summary CSV](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/backtests/2025_weekly_summary.csv)
-- [Team Summary CSV](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/backtests/2025_team_summary.csv)
-- [Calibration Buckets CSV](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/backtests/2025_calibration_buckets.csv)
-- [Extreme Games CSV](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/backtests/2025_extreme_games.csv)
-- [Subgroup Summary CSV](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/backtests/2025_subgroup_summary.csv)
+*Full registry: [`leaderboard.csv`](https://github.com/SecuritahGuy/sports-ml-lab/blob/main//Users/tim/dev/sports-ml-lab/reports/benchmarks/leaderboard.csv)*

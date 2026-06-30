@@ -197,6 +197,7 @@ def predict_week(
     qb_input: Optional[str] = None,
     snapshot_path: Optional[str] = None,
     mode: str = "live",
+    auto_qb: bool = False,
 ) -> Dict[str, str]:
     """Predict a single week, save snapshot + report + manifest entry.
 
@@ -207,16 +208,38 @@ def predict_week(
         snapshot_path: Override snapshot output path.
         mode: Snapshot mode — one of 'live', 'dry_run', 'rehearsal'.
             In 'live' mode, oracle QB data is blocked (--qb-input required).
+        auto_qb: If True, auto-source QB data from nflreadpy depth_charts.
 
     Returns:
         Dict with snapshot and report paths.
     """
     _validate_mode(mode)
 
-    if mode == "live" and not qb_input:
+    # Auto-source QB data from nflreadpy depth charts
+    if auto_qb and not qb_input:
+        from sportslab.features.qb_auto_source import build_auto_qb_csv
+        try:
+            qb_df, auto_source_label = build_auto_qb_csv(
+                season, week=week,
+            )
+            tmp_qb = Path(f"/tmp/auto_qb_{season}_w{week:02d}_{mode}.csv")
+            qb_df.to_csv(tmp_qb, index=False)
+            qb_input = str(tmp_qb)
+            print(f"  QB source: auto_qb (nflreadpy depth_charts, {tmp_qb})")
+        except (ImportError, ValueError, FileNotFoundError) as e:
+            print(f"  WARNING: Auto QB failed ({e}).")
+            if mode in LIVE_MODES:
+                raise ValueError(
+                    f"Auto QB failed in live mode: {e}. "
+                    f"Provide --qb-input CSV manually or use mode=dry_run."
+                )
+            print("  Falling back to oracle QB data (dry_run mode).")
+
+    if mode in LIVE_MODES and not qb_input:
         raise ValueError(
             f"Oracle QB data not allowed in live mode ({mode}). "
-            f"Provide --qb-input CSV with live-safe pregame QB starters. "
+            f"Provide --qb-input CSV with live-safe pregame QB starters, "
+            f"or use --auto-qb to source from nflreadpy depth charts. "
             f"Use mode=dry_run for oracle-QB test predictions."
         )
 

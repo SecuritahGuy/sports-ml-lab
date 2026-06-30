@@ -1,5 +1,10 @@
 # SportsLab / StatSpace NFL Research — GitHub Pages config
-title: "SportsLab / StatSpace NFL Research"
-description: "A reproducible ML research lab for pregame NFL win prediction. Not a betting bot."
+title: "SportsLab — NFL Prediction Research"
+description: "A reproducible ML research lab for pregame NFL win prediction. Feature-governed, leakage-safe, market-free."
 theme: jekyll-theme-cayman
 markdown: GFM
+show_downloads: false
+github:
+  is_project_page: true
+  owner_name: SecuritahGuy
+  owner_url: https://github.com/SecuritahGuy

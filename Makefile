@@ -4,7 +4,7 @@
 qb-gated-experience qb-depth-experiment turnover-experiment situational-micro \
 predict-week grade-week season-report prediction-audit rehearsal-season prediction-index publish-predictions \
 data-audit preseason-fire-drill live-preflight \
-build-qb-adjustments qb-adjusted-elo roster-strength
+build-qb-adjustments qb-adjusted-elo roster-strength regularized-logistic
 
 # ── Install ──
 install:
@@ -167,6 +167,18 @@ frozen-qb-overlay:
 
 frozen-qb-overlay-foldsafe:
 	sportslab frozen-qb-overlay-foldsafe
+
+learned-overlay:
+	sportslab learned-overlay
+
+gradient-boosting:
+	sportslab gradient-boosting
+
+gam-logistic:
+	sportslab gam-logistic
+
+regularized-logistic:
+	sportslab regularized-logistic
 
 roster-overlay:
 	sportslab roster-overlay

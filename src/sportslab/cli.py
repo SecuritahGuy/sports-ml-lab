@@ -5,7 +5,7 @@ from sportslab.evaluation.adaptive_k_experiment import run_adaptive_k_experiment
 from sportslab.evaluation.audit_artifacts import run_audit
 from sportslab.evaluation.autogluon_experiment import run_autogluon_experiment
 from sportslab.evaluation.backtest_2025 import run_backtest, run_backtest_2025
-from sportslab.evaluation.build_dashboard import build_all
+from sportslab.evaluation.build_dashboard import build_all_docs
 from sportslab.evaluation.calibration_improvements_experiment import (
     run_calibration_experiment,
 )
@@ -53,6 +53,16 @@ from sportslab.evaluation.qb_injury_experiment import run_qb_injury_experiment
 from sportslab.evaluation.qb_magnitude_experiment import run_qb_magnitude_experiment
 from sportslab.evaluation.qb_market_delta import run_qb_market_delta_experiment
 from sportslab.evaluation.qb_roster_interaction_experiment import run_qb_roster_interaction
+from sportslab.evaluation.gam_logistic_experiment import run_gam_logistic_experiment
+from sportslab.evaluation.gradient_boosting_diagnostic import (
+    run_gradient_boosting_diagnostic,
+)
+from sportslab.evaluation.learned_overlay_experiment import (
+    run_learned_overlay_experiment,
+)
+from sportslab.evaluation.regularized_logistic_experiment import (
+    run_regularized_logistic_experiment,
+)
 from sportslab.evaluation.rehearsal_season import rehearse_season
 from sportslab.evaluation.residual_blending_experiment import run_residual_blending_experiment
 from sportslab.evaluation.residual_diagnostics import run_residual_diagnostics
@@ -365,7 +375,7 @@ def audit_artifacts_cmd():
 @cli.command()
 def build_dashboard_cmd():
     """Build static GitHub Pages dashboard from benchmark registry and prediction artifacts."""
-    build_all()
+    build_all_docs()
 
 
 @cli.command()
@@ -459,19 +469,25 @@ def predict_future_cmd(input, output, qb_input, season, week):
 @click.option("--week", type=int, required=True, help="Week number (1-22)")
 @click.option("--qb-input", type=str, default=None,
               help="CSV with game_id,home_qb_id,away_qb_id for live-safe QB starters")
+@click.option("--auto-qb", is_flag=True, default=False,
+              help="Auto-source QB starters from nflreadpy depth charts")
 @click.option("--output", type=str, default=None, help="Override snapshot output path")
 @click.option("--mode", type=click.Choice(["live", "dry_run", "rehearsal"]),
               default="live", help="Snapshot mode (default: live)")
-def predict_week_cmd(season, week, qb_input, output, mode):
+def predict_week_cmd(season, week, qb_input, auto_qb, output, mode):
     """Generate predictions + snapshot + report for a single week.
 
     Fits Elo on all historical data (2021+), predicts the specified
     week, saves a timestamped snapshot and generates a weekly report.
 
-    In live mode (default), oracle QB data is blocked -- provide --qb-input.
+    In live mode (default), oracle QB data is blocked. Provide --qb-input
+    for a manual CSV, or --auto-qb to source starters from nflreadpy depth charts.
     """
+    if qb_input and auto_qb:
+        print("WARNING: Both --qb-input and --auto-qb provided. Using --qb-input.")
+        auto_qb = False
     predict_week(season=season, week=week, qb_input=qb_input,
-                 snapshot_path=output, mode=mode)
+                 snapshot_path=output, mode=mode, auto_qb=auto_qb)
 
 
 @cli.command(name="grade-week")
@@ -649,6 +665,55 @@ def frozen_qb_overlay_foldsafe_cmd(output):
         run_frozen_qb_overlay_foldsafe,
     )
     run_frozen_qb_overlay_foldsafe(output_csv=output)
+
+
+@cli.command(name="learned-overlay")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def learned_overlay_cmd(output):
+    """Run learned overlay experiment.
+
+    Tests whether a single regularized logistic model can learn better
+    weights for QB adjustment signals than the hand-tuned v3.0.0 overlay.
+    """
+    run_learned_overlay_experiment(output_csv=output)
+
+
+@cli.command(name="gradient-boosting")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def gradient_boosting_cmd(output):
+    """Run gradient boosting diagnostic experiment.
+
+    Tests whether a strictly regularized HistGradientBoostingClassifier
+    can match the v3.0.0 Frozen QB Overlay. Diagnostic only.
+    """
+    run_gradient_boosting_diagnostic(output_csv=output)
+
+
+@cli.command(name="gam-logistic")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def gam_logistic_cmd(output):
+    """Run GAM/spline logistic experiment.
+
+    Tests whether a nonlinear (spline) transformation of elo_prob improves
+    the v3.0.0 Frozen QB Overlay champion.
+    """
+    run_gam_logistic_experiment(output_csv=output)
+
+
+@cli.command(name="regularized-logistic")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def regularized_logistic_cmd(output):
+    """Run regularized logistic meta-model experiment.
+
+    Tests whether a regularized logistic regression on the v3.0.0 incumbent
+    logit plus additional pregame features (rest_diff, is_dome, div_game,
+    week, game_type) improves on the v3.0.0 Frozen QB Overlay champion.
+    """
+    run_regularized_logistic_experiment(output_csv=output)
 
 
 @cli.command(name="roster-overlay")
