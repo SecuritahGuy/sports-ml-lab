@@ -1935,3 +1935,48 @@ Test whether a better base Elo spine (broader K/HFA/reg/decay sweep: 840 combos)
 1. Any model must beat **Frozen QB Overlay (holdout LL 0.6200)** to become the new incumbent
 2. No untested overlay, interaction, or Elo-spine feature directions remain
 3. Consider enabling GitHub Pages from repo settings
+
+---
+
+## Session Summary: Week-over-week QB Tracker + Source Audit
+
+### Goal
+Replace the preseason depth chart snapshot (67% accurate) with a week-over-week QB tracker (88% accurate) that uses each team's prior-week actual starter. Build a per-game source audit to validate QB assumptions before locking predictions.
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `README.md` | **New** — project overview, quick start, weekly pipeline, key results |
+| `src/sportslab/features/qb_auto_source.py` | Added `build_weekly_qb_csv()` — week-over-week QB tracker using prior-week actual starters from feature table |
+| `src/sportslab/evaluation/weekly_pipeline.py` | `predict_week()` accepts `weekly_qb` flag, uses weekly tracker when set |
+| `src/sportslab/evaluation/weekly_qb_audit.py` | **New** — 3-source comparison (oracle, depth chart, weekly) with per-game QB identity, overlay gate, adjustment, and final probability |
+| `src/sportslab/cli.py` | Added `--weekly-qb` flag to `predict-week`, `weekly-qb-audit` command |
+| `Makefile` | Added `weekly-qb-audit` target |
+| `tests/test_qb_auto_source.py` | 9 new tests for `build_weekly_qb_csv()` |
+| `tests/test_weekly_qb_audit.py` | **New** — 9 tests for source audit |
+
+### Results
+
+| QB Source | 2025 Accuracy |
+|-----------|--------------|
+| Depth chart snapshot | 67.2% |
+| Weekly tracker | **87.7%** (+20.5pp) |
+
+### Key Decisions
+- `--weekly-qb` is the recommended flag for week 2+ predictions
+- `--auto-qb` (depth chart snapshot) kept for week 1 / backward compatibility
+- Source audit runs all 3 sources (oracle, depth chart, weekly) per game; shows gate changes, overlay deltas, and probability differences
+- Cold-start analysis: no early-season degradation pattern found (model actually performs best weeks 1-4)
+
+### Current State
+- 669 tests passing
+- 2 new files, 6 modified files, 1 README added
+- Incumbent unchanged (v3.0.0, holdout LL 0.6200)
+
+### Relevant Files
+- `src/sportslab/features/qb_auto_source.py` — `build_weekly_qb_csv()` (line 257)
+- `src/sportslab/evaluation/weekly_pipeline.py` — `predict_week()` with `weekly_qb` param
+- `src/sportslab/evaluation/weekly_qb_audit.py` — full 3-source audit module
+- `tests/test_weekly_qb_audit.py` — 9 tests
+- `README.md` — new project README
