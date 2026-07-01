@@ -77,6 +77,7 @@ from sportslab.evaluation.team_hfa_experiment import run_team_hfa_experiment
 from sportslab.evaluation.train_baseline import train_baseline
 from sportslab.evaluation.turnover_experiment import run_turnover_experiment
 from sportslab.evaluation.weather_features_experiment import run_weather_features_experiment
+from sportslab.evaluation.weekly_qb_audit import run_weekly_qb_audit
 from sportslab.evaluation.weekly_pipeline import grade_week, predict_week, season_report
 from sportslab.evaluation.weekly_report import generate_weekly_report
 from sportslab.features.build_features import build_feature_table
@@ -470,24 +471,33 @@ def predict_future_cmd(input, output, qb_input, season, week):
 @click.option("--qb-input", type=str, default=None,
               help="CSV with game_id,home_qb_id,away_qb_id for live-safe QB starters")
 @click.option("--auto-qb", is_flag=True, default=False,
-              help="Auto-source QB starters from nflreadpy depth charts")
+              help="Auto-source QB starters from nflreadpy depth charts (preseason snapshot)")
+@click.option("--weekly-qb", is_flag=True, default=False,
+              help="Auto-source QB starters using week-over-week tracking (more accurate mid-season)")
 @click.option("--output", type=str, default=None, help="Override snapshot output path")
 @click.option("--mode", type=click.Choice(["live", "dry_run", "rehearsal"]),
               default="live", help="Snapshot mode (default: live)")
-def predict_week_cmd(season, week, qb_input, auto_qb, output, mode):
+def predict_week_cmd(season, week, qb_input, auto_qb, weekly_qb, output, mode):
     """Generate predictions + snapshot + report for a single week.
 
     Fits Elo on all historical data (2021+), predicts the specified
     week, saves a timestamped snapshot and generates a weekly report.
 
     In live mode (default), oracle QB data is blocked. Provide --qb-input
-    for a manual CSV, or --auto-qb to source starters from nflreadpy depth charts.
+    for a manual CSV, --auto-qb for depth chart snapshot (67% accurate),
+    or --weekly-qb for week-over-week tracking (88% accurate).
+
+    --weekly-qb is recommended over --auto-qb for week 2+ predictions
+    because it catches mid-season QB changes missed by the preseason
+    snapshot.
     """
-    if qb_input and auto_qb:
-        print("WARNING: Both --qb-input and --auto-qb provided. Using --qb-input.")
+    if qb_input and (auto_qb or weekly_qb):
+        print("WARNING: Both --qb-input and --auto-qb/--weekly-qb provided. Using --qb-input.")
         auto_qb = False
+        weekly_qb = False
     predict_week(season=season, week=week, qb_input=qb_input,
-                 snapshot_path=output, mode=mode, auto_qb=auto_qb)
+                 snapshot_path=output, mode=mode, auto_qb=auto_qb,
+                 weekly_qb=weekly_qb)
 
 
 @cli.command(name="grade-week")
@@ -807,3 +817,18 @@ def roster_strength_cmd(output):
     df[avail].to_parquet(out_path, index=False)
     click.echo(f"Roster strength saved: {out_path} ({len(df)} games, {len(avail)} columns)")
     click.echo("  Note: V0 only populates QB points. OL/skill/DL/LB/coverage/ST are 0.")
+
+
+@cli.command(name="weekly-qb-audit")
+@click.option("--season", type=int, required=True, help="Season year")
+@click.option("--week", type=int, required=True, help="Week number (1-22)")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path")
+def weekly_qb_audit_cmd(season, week, output):
+    """Audit QB sourcing strategies for a single week.
+
+    Compares oracle, depth chart snapshot, and weekly tracker QB
+    sources — shows per-game QB identity, overlay gate status,
+    overlay delta, and final win probability under each source.
+    """
+    run_weekly_qb_audit(season=season, week=week, output_path=output)

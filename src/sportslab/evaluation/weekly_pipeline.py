@@ -198,6 +198,7 @@ def predict_week(
     snapshot_path: Optional[str] = None,
     mode: str = "live",
     auto_qb: bool = False,
+    weekly_qb: bool = False,
 ) -> Dict[str, str]:
     """Predict a single week, save snapshot + report + manifest entry.
 
@@ -209,23 +210,39 @@ def predict_week(
         mode: Snapshot mode — one of 'live', 'dry_run', 'rehearsal'.
             In 'live' mode, oracle QB data is blocked (--qb-input required).
         auto_qb: If True, auto-source QB data from nflreadpy depth_charts.
+        weekly_qb: If True, use week-over-week tracking (more accurate).
 
     Returns:
         Dict with snapshot and report paths.
     """
     _validate_mode(mode)
 
-    # Auto-source QB data from nflreadpy depth charts
-    if auto_qb and not qb_input:
-        from sportslab.features.qb_auto_source import build_auto_qb_csv
+    # Auto-source QB data (weekly tracking or depth chart snapshot)
+    if (auto_qb or weekly_qb) and not qb_input:
+        from sportslab.features.qb_auto_source import (
+            build_auto_qb_csv, build_weekly_qb_csv,
+        )
+
         try:
-            qb_df, auto_source_label = build_auto_qb_csv(
-                season, week=week,
-            )
-            tmp_qb = Path(f"/tmp/auto_qb_{season}_w{week:02d}_{mode}.csv")
+            if weekly_qb:
+                # Week-over-week tracking: uses prior-week actual starters
+                # Requires feature table with historical QB data.
+                # Falls back to depth chart for week 1 / missing teams.
+                qb_df, auto_source_label = build_weekly_qb_csv(
+                    season, week=week,
+                )
+                source_name = "weekly_qb"
+            else:
+                # Preseason depth chart snapshot
+                qb_df, auto_source_label = build_auto_qb_csv(
+                    season, week=week,
+                )
+                source_name = "auto_qb"
+
+            tmp_qb = Path(f"/tmp/{source_name}_{season}_w{week:02d}_{mode}.csv")
             qb_df.to_csv(tmp_qb, index=False)
             qb_input = str(tmp_qb)
-            print(f"  QB source: auto_qb (nflreadpy depth_charts, {tmp_qb})")
+            print(f"  QB source: {source_name} (nflreadpy, {tmp_qb})")
         except (ImportError, ValueError, FileNotFoundError) as e:
             print(f"  WARNING: Auto QB failed ({e}).")
             if mode in LIVE_MODES:

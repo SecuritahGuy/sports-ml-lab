@@ -22,7 +22,7 @@ Timing caveat:
 """
 
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
@@ -250,6 +250,120 @@ def build_auto_qb_csv(
     qb_source = "auto_qb"
     n_found = ft_games["home_qb_id_dc"].notna().sum()
     print(f"  Auto QB source: {n_found}/{len(ft_games)} games have QB data from depth charts")
+
+    return out_df, qb_source
+
+
+def build_weekly_qb_csv(
+    season: int,
+    week: int,
+    feature_table_path: str = "data/features/nfl/feature_table.parquet",
+    output_path: Optional[str] = None,
+) -> Tuple[pd.DataFrame, str]:
+    """Build QB input CSV using week-over-week tracking.
+
+    For each team playing in the target week, finds the actual QB
+    starter from their most recent completed game prior to that week.
+    Falls back to preseason depth chart snapshot for teams with no
+    prior game data (e.g., week 1).
+
+    This is more accurate than a single preseason snapshot because
+    it catches mid-season QB changes (injuries, benchings, etc.)
+    that the depth chart snapshot misses.
+
+    Works for rehearsal mode immediately (feature table has full
+    historical QB data). For live mode, requires backfilled feature
+    table after each completed week.
+
+    Args:
+        season: Target season.
+        week: Target week number.
+        feature_table_path: Path to feature table parquet.
+        output_path: Optional path to save CSV.
+
+    Returns:
+        Tuple of (DataFrame with home_qb_id/away_qb_id, qb_source label).
+    """
+    ft_path = Path(feature_table_path)
+    if not ft_path.exists():
+        raise FileNotFoundError(f"Feature table not found: {feature_table_path}")
+
+    ft = pd.read_parquet(ft_path)
+
+    # Get target week's games
+    target = ft[(ft["season"] == season) & (ft["week"] == week)].copy()
+    if len(target) == 0:
+        raise ValueError(f"No games found in feature table for {season} week {week}")
+
+    # Get prior completed games in same season
+    prior = ft[(ft["season"] == season) & (ft["week"] < week) & (ft["home_win"].notna())].copy()
+
+    # Build team→QB mapping from prior games using feature table's tracked QB ids
+    home_df = prior[["home_team", "week", "home_qb_id"]].dropna(subset=["home_qb_id"])
+    away_df = prior[["away_team", "week", "away_qb_id"]].dropna(subset=["away_qb_id"])
+    home_df.columns = ["team", "week", "qb_id"]
+    away_df.columns = ["team", "week", "qb_id"]
+
+    if len(home_df) == 0 and len(away_df) == 0:
+        # No prior data — always week 1
+        prior_qbs: Dict[str, str] = {}
+    else:
+        all_prior = pd.concat([home_df, away_df]).sort_values("week")
+        prior_qbs = all_prior.groupby("team").last()["qb_id"].to_dict()
+
+    # Load depth chart snapshot for fallback
+    dc_df = _load_depth_chart_qbs(season, week=week)
+    dc_df["team_code"] = dc_df["team_code"].apply(_map_team_code)
+    dc_qbs = dict(zip(dc_df["team_code"], dc_df["gsis_id"]))
+
+    # Determine each team's QB and source
+    all_teams = set(target["home_team"].tolist() + target["away_team"].tolist())
+
+    team_qbs: Dict[str, str] = {}
+    team_src: Dict[str, str] = {}
+    for team in sorted(all_teams):
+        if team in prior_qbs:
+            team_qbs[team] = prior_qbs[team]
+            team_src[team] = "prior_week"
+        elif team in dc_qbs:
+            team_qbs[team] = dc_qbs[team]
+            team_src[team] = "depth_chart"
+        else:
+            team_qbs[team] = pd.NA
+            team_src[team] = "missing"
+
+    # Build output
+    home_ids = [team_qbs[t] for t in target["home_team"]]
+    away_ids = [team_qbs[t] for t in target["away_team"]]
+    home_src = [team_src[t] for t in target["home_team"]]
+    away_src = [team_src[t] for t in target["away_team"]]
+
+    out_df = pd.DataFrame({
+        "game_id": target["game_id"].values,
+        "home_qb_id": home_ids,
+        "away_qb_id": away_ids,
+        "home_qb_source": home_src,
+        "away_qb_source": away_src,
+    })
+
+    n_games = len(target)
+    n_prior_home = sum(1 for s in home_src if s == "prior_week")
+    n_dc_home = sum(1 for s in home_src if s == "depth_chart")
+    n_missing_home = sum(1 for s in home_src if s == "missing")
+    n_prior_away = sum(1 for s in away_src if s == "prior_week")
+    n_dc_away = sum(1 for s in away_src if s == "depth_chart")
+
+    print(f"  Weekly QB ({season} w{week}):")
+    print(f"    Home: {n_prior_home}/{n_games} from prior week, {n_dc_home} depth chart, {n_missing_home} missing")
+    print(f"    Away: {n_prior_away}/{n_games} from prior week, {n_dc_away} depth chart")
+
+    # Save if requested
+    if output_path is not None:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        out_df.to_csv(output_path, index=False)
+        print(f"  Weekly QB CSV saved: {output_path}")
+
+    qb_source = "weekly_qb"
 
     return out_df, qb_source
 

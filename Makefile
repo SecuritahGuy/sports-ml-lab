@@ -121,6 +121,9 @@ rehearsal-season:
 rehearsal-2025:
 	sportslab rehearsal-season --season 2025
 
+weekly-qb-audit:
+	sportslab weekly-qb-audit --season $(SEASON) --week $(WEEK) --output reports/predictions/weekly_qb_audit_$(SEASON)_w$(WEEK).csv
+
 prediction-index:
 	sportslab build-prediction-index
 
