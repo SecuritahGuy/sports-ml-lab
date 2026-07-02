@@ -183,6 +183,9 @@ gam-logistic:
 regularized-logistic:
 	sportslab regularized-logistic
 
+regularized-logistic-meta:
+	sportslab regularized-logistic-meta
+
 roster-overlay:
 	sportslab roster-overlay
 

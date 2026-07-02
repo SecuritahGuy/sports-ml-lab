@@ -63,6 +63,9 @@ from sportslab.evaluation.qb_roster_interaction_experiment import run_qb_roster_
 from sportslab.evaluation.regularized_logistic_experiment import (
     run_regularized_logistic_experiment,
 )
+from sportslab.evaluation.regularized_logistic_meta import (
+    run_regularized_logistic_meta,
+)
 from sportslab.evaluation.rehearsal_season import rehearse_season
 from sportslab.evaluation.residual_blending_experiment import run_residual_blending_experiment
 from sportslab.evaluation.residual_diagnostics import run_residual_diagnostics
@@ -727,6 +730,22 @@ def regularized_logistic_cmd(output):
     week, game_type) improves on the v3.0.0 Frozen QB Overlay champion.
     """
     run_regularized_logistic_experiment(output_csv=output)
+
+
+@cli.command(name="regularized-logistic-meta")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def regularized_logistic_meta_cmd(output):
+    """Run regularized logistic meta-model experiment (fold-safe).
+
+    Tests whether a regularized logistic meta-model on the v3.0.0 incumbent
+    logit plus L2/L1/ElasticNet penalty tuning and small pregame feature
+    groups improves on the v3.0.0 Frozen QB Overlay champion.
+
+    Feature groups tested separately: week sin/cos, context (div_game,
+    is_dome, rest_diff), early season flag, QB team starts pre.
+    """
+    run_regularized_logistic_meta(output_csv=output)
 
 
 @cli.command(name="roster-overlay")
