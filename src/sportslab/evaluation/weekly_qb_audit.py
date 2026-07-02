@@ -134,7 +134,9 @@ def _extract_col(
 ) -> np.ndarray:
     if col in df.columns:
         return df.loc[pred_mask, col].values
-    return np.full(pred_mask.sum(), default) if default is not None else np.full(pred_mask.sum(), np.nan)
+    if default is not None:
+        return np.full(pred_mask.sum(), default)
+    return np.full(pred_mask.sum(), np.nan)
 
 
 def run_weekly_qb_audit(
@@ -235,7 +237,10 @@ def run_weekly_qb_audit(
             else np.empty((train_mask.sum(), 0))
         )
         train_y = df_src.loc[train_mask, "home_win"].astype(int).values
-        x_train = np.column_stack([train_elo, train_feat]) if train_feat.size else train_elo.reshape(-1, 1)
+        x_train = (
+            np.column_stack([train_elo, train_feat])
+            if train_feat.size else train_elo.reshape(-1, 1)
+        )
 
         pipe = _build_pipeline()
         pipe.fit(x_train, train_y)
@@ -245,7 +250,10 @@ def run_weekly_qb_audit(
             if has_feats
             else np.empty((n_pred, 0))
         )
-        x_pred = np.column_stack([elo_prob, pred_feat]) if pred_feat.size else elo_prob.reshape(-1, 1)
+        x_pred = (
+            np.column_stack([elo_prob, pred_feat])
+            if pred_feat.size else elo_prob.reshape(-1, 1)
+        )
         platt_prob = pipe.predict_proba(x_pred)[:, 1]
 
         # QB overlay
@@ -261,8 +269,12 @@ def run_weekly_qb_audit(
             "away_qb_id": _extract_col(df_src, "away_qb_id", pred_mask, ""),
             "home_qb_changed": _extract_col(df_src, "home_qb_changed", pred_mask, 0).astype(float),
             "away_qb_changed": _extract_col(df_src, "away_qb_changed", pred_mask, 0).astype(float),
-            "home_qb_starts": _extract_col(df_src, "home_qb_team_starts_pre", pred_mask, 0).astype(float),
-            "away_qb_starts": _extract_col(df_src, "away_qb_team_starts_pre", pred_mask, 0).astype(float),
+            "home_qb_starts": _extract_col(
+                df_src, "home_qb_team_starts_pre", pred_mask, 0,
+            ).astype(float),
+            "away_qb_starts": _extract_col(
+                df_src, "away_qb_team_starts_pre", pred_mask, 0,
+            ).astype(float),
             "gate_triggered": pred_gate.astype(int),
             "home_qb_adj": h_adj,
             "away_qb_adj": a_adj,
@@ -298,8 +310,10 @@ def run_weekly_qb_audit(
             row[f"{prefix}_away_qb_id"] = d["away_qb_id"][i]
             row[f"{prefix}_h_changed"] = int(d["home_qb_changed"][i])
             row[f"{prefix}_a_changed"] = int(d["away_qb_changed"][i])
-            row[f"{prefix}_h_starts"] = int(d["home_qb_starts"][i]) if not np.isnan(d["home_qb_starts"][i]) else pd.NA
-            row[f"{prefix}_a_starts"] = int(d["away_qb_starts"][i]) if not np.isnan(d["away_qb_starts"][i]) else pd.NA
+            val_hs = d["home_qb_starts"][i]
+            row[f"{prefix}_h_starts"] = int(val_hs) if not np.isnan(val_hs) else pd.NA
+            val_as = d["away_qb_starts"][i]
+            row[f"{prefix}_a_starts"] = int(val_as) if not np.isnan(val_as) else pd.NA
             row[f"{prefix}_gate"] = int(d["gate_triggered"][i])
             row[f"{prefix}_h_adj"] = round(d["home_qb_adj"][i], 2)
             row[f"{prefix}_a_adj"] = round(d["away_qb_adj"][i], 2)
@@ -338,13 +352,22 @@ def run_weekly_qb_audit(
         out_df["h_qb_wk_vs_dc"].fillna(False).astype(bool)
         | out_df["a_qb_wk_vs_dc"].fillna(False).astype(bool)
     ).sum()
-    n_wk_correct_h = out_df["h_qb_wk_vs_oracle"].sum() if "h_qb_wk_vs_oracle" in out_df.columns else 0
-    n_wk_correct_a = out_df["a_qb_wk_vs_oracle"].sum() if "a_qb_wk_vs_oracle" in out_df.columns else 0
+    n_wk_correct_h = (
+        out_df["h_qb_wk_vs_oracle"].sum()
+        if "h_qb_wk_vs_oracle" in out_df.columns else 0
+    )
+    n_wk_correct_a = (
+        out_df["a_qb_wk_vs_oracle"].sum()
+        if "a_qb_wk_vs_oracle" in out_df.columns else 0
+    )
     n_wk_known = len(out_df) if "h_qb_wk_vs_oracle" in out_df.columns else 0
 
     print(f"  Games where QB differs (weekly vs snapshot): {n_qb_diff}/{n}")
     print(f"  Games where gate changes (weekly vs snapshot): {n_gate_change}/{n}")
-    print(f"  Weekly QB matches oracle: {n_wk_correct_h}/{n_wk_known} home, {n_wk_correct_a}/{n_wk_known} away")
+    print(
+        f"  Weekly QB matches oracle: {n_wk_correct_h}/{n_wk_known} home,"
+        f" {n_wk_correct_a}/{n_wk_known} away"
+    )
 
     max_prob_diff = out_df["prob_diff_wk_vs_dc"].abs().max()
     mean_abs_prob_diff = out_df["prob_diff_wk_vs_dc"].abs().mean()

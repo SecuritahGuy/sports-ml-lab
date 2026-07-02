@@ -84,7 +84,9 @@ QB_CHANGED_MINIMAL = ["home_qb_changed", "away_qb_changed"]
 MOV3_MINIMAL = ["home_rolling_mov_3", "away_rolling_mov_3"]
 
 
-def _build_weather_from_raw(df: pd.DataFrame, raw_path: str = "data/raw/nfl/schedules.parquet") -> pd.DataFrame:
+def _build_weather_from_raw(
+    df: pd.DataFrame, raw_path: str = "data/raw/nfl/schedules.parquet"
+) -> pd.DataFrame:
     """Build weather features from raw schedules' temp/wind columns."""
     raw = pd.read_parquet(raw_path)[["game_id", "temp", "wind"]]
     out = df.merge(raw, on="game_id", how="left")
@@ -95,9 +97,16 @@ def _build_weather_from_raw(df: pd.DataFrame, raw_path: str = "data/raw/nfl/sche
     out["precipitation_flag"] = 0
     out["cold_flag"] = (temp_f.notna() & (temp_f <= 32)).astype(int)
     out["windy_flag"] = (wind_mph.notna() & (wind_mph >= 15)).astype(int)
-    out["bad_weather_flag"] = ((out["cold_flag"] == 1) | (out["windy_flag"] == 1) | (out["precipitation_flag"] == 1)).astype(int)
-    out["outdoor_game_flag"] = (~df["roof"].astype(str).str.lower().isin({"dome", "closed"})).astype(int)
-    out["is_dome"] = df["is_dome"] if "is_dome" in df.columns else out["roof"].astype(str).str.lower().isin({"dome", "closed"}).astype(int)
+    out["bad_weather_flag"] = (
+        (out["cold_flag"] == 1) | (out["windy_flag"] == 1) | (out["precipitation_flag"] == 1)
+    ).astype(int)
+    out["outdoor_game_flag"] = (
+        ~df["roof"].astype(str).str.lower().isin({"dome", "closed"})
+    ).astype(int)
+    if "is_dome" in df.columns:
+        out["is_dome"] = df["is_dome"]
+    else:
+        out["is_dome"] = out["roof"].astype(str).str.lower().isin({"dome", "closed"}).astype(int)
     dome_mask = out["is_dome"] == 1
     out.loc[dome_mask, "temperature_f"] = 70.0
     out.loc[dome_mask, "wind_mph"] = 0.0
@@ -226,7 +235,9 @@ def _build_epa_features(df_games: pd.DataFrame) -> pd.DataFrame:
     ts["game_id"] = ts.apply(
         lambda r: f"{r['season']}_{r['week']:02d}_{r['team']}_{r['opponent_team']}", axis=1
     )
-    ts["off_epa_per_play"] = ts["passing_epa"].fillna(0) + ts["rushing_epa"].fillna(0) + ts["receiving_epa"].fillna(0)
+    ts["off_epa_per_play"] = (
+        ts["passing_epa"].fillna(0) + ts["rushing_epa"].fillna(0) + ts["receiving_epa"].fillna(0)
+    )
     tg = ts[["game_id", "season", "week", "team", "off_epa_per_play"]].copy()
     tg = tg.sort_values(["season", "week", "game_id"])
 
@@ -273,7 +284,8 @@ def _build_epa_features(df_games: pd.DataFrame) -> pd.DataFrame:
     tg = tg.merge(opp_epa, on=["game_id"], how="left")
     # The game_id includes opponent name, so we extract it
     # Actually, let's just use the defensive rolling from the offensive rolling of opponents
-    # For simplicity, we proxy "defensive EPA" as the offense EPA of the opponent they faced last week
+    # For simplicity, we proxy "defensive EPA" as the offense EPA of the opponent
+    # they faced last week
     # But for pregame, we don't know who the opponent will be. Instead, we track
     # what the team's opponents averaged over their recent games.
     # This is complex. For now, we'll just use offensive EPA.
@@ -357,7 +369,9 @@ def _run_l1_rolling(
         x_va = np.column_stack([elo_prob[va]] + [df_all.loc[va, c].values for c in feat_cols])
         pipe = Pipeline([
             ("scaler", StandardScaler()),
-            ("lr", LogisticRegression(penalty="l1", solver="saga", C=C, max_iter=2000, random_state=42)),
+            ("lr", LogisticRegression(
+                penalty="l1", solver="saga", C=C, max_iter=2000, random_state=42,
+            )),
         ])
         pipe.fit(x_tr, y[tr].astype(int))
         proba = pipe.predict_proba(x_va)[:, 1]
@@ -394,8 +408,16 @@ def _holdout_eval(
 ) -> dict:
     is_hold = df_all["season"] == HOLDOUT_SEASON
     is_train = df_all["season"].isin(SEASONS_TRAIN).values
-    x_tr = np.column_stack([elo_prob[is_train]] + [df_all.loc[is_train, c].values for c in feat_cols]) if feat_cols else elo_prob[is_train].reshape(-1, 1)
-    x_ho = np.column_stack([elo_prob[is_hold]] + [df_all.loc[is_hold, c].values for c in feat_cols]) if feat_cols else elo_prob[is_hold].reshape(-1, 1)
+    if feat_cols:
+        x_tr = np.column_stack(
+            [elo_prob[is_train]] + [df_all.loc[is_train, c].values for c in feat_cols]
+        )
+        x_ho = np.column_stack(
+            [elo_prob[is_hold]] + [df_all.loc[is_hold, c].values for c in feat_cols]
+        )
+    else:
+        x_tr = elo_prob[is_train].reshape(-1, 1)
+        x_ho = elo_prob[is_hold].reshape(-1, 1)
     pipe = Pipeline([
         ("scaler", StandardScaler()),
         ("lr", LogisticRegression(max_iter=1000, random_state=42)),
@@ -597,18 +619,24 @@ def run_elo_feature_selection_redo(
         _w()
         _w("## Executive Summary")
         _w()
-        _w("**Current incumbent (before this experiment):** Standard Elo + qb_changed + rolling_mov_3 + Platt")
+        _w(("**Current incumbent (before this experiment):** Standard Elo + "
+            "qb_changed + rolling_mov_3 + Platt"))
         _w("- Validation LL: 0.6334")
         _w("- Holdout LL: 0.6262")
         _w()
-        _w(f"**Experiment scope:** {len(family_cols)} feature families tested via single-family ablations,")
+        _w(f"**Experiment scope:** {len(family_cols)} feature families tested via"
+           " single-family ablations,")
         _w("forward selection, and L1-regularized logistic regression.")
         _w()
-        _w("**Key design choice:** Single-family ablations test each family as a whole (14–15 columns),")
-        _w("not the curated 2–4 column subsets in the incumbent. A family can be rejected at the full-family")
-        _w("level even though a curated subset of it (e.g., `qb_changed`, `rolling_mov_3`) carries signal.")
+        _w("**Key design choice:** Single-family ablations test each family as a whole"
+           " (14–15 columns),")
+        _w("not the curated 2–4 column subsets in the incumbent. A family can be rejected"
+           " at the full-family")
+        _w("level even though a curated subset of it (e.g., `qb_changed`,"
+           " `rolling_mov_3`) carries signal.")
         _w("Two baselines are used throughout: Elo-only (0.6406) for ablation comparisons, and the")
-        _w("full incumbent (0.6334) as the forward selection starting point. See the Baseline Clarification section.")
+        _w("full incumbent (0.6334) as the forward selection starting point."
+           " See the Baseline Clarification section.")
         _w()
         _w("---")
         _w()
@@ -619,12 +647,17 @@ def run_elo_feature_selection_redo(
         _w("| Family | Columns | Description | Status |")
         _w("|--------|---------|-------------|--------|")
         _w("| Elo probability | `elo_prob` | Elo-implied home win probability | Core backbone |")
-        _w("| QB continuity | qb_changed, starts, win_pct, games since change | QB identity/turnover signal | Tested |")
-        _w("| Rolling form | MOV 3/5, pts for/against, win streak, YTD win% | Recent team performance | Tested |")
-        _w("| Scheduling | rest_diff, short week, bye, thr/mon, intl, consec road | Game context | Tested |")
-        _w("| Weather | temp, wind, precip, dome, cold/windy flags | Environmental context | Tested |")
+        _w("| QB continuity | qb_changed, starts, win_pct, games since change"
+           " | QB identity/turnover signal | Tested |")
+        _w("| Rolling form | MOV 3/5, pts for/against, win streak, YTD win%"
+           " | Recent team performance | Tested |")
+        _w("| Scheduling | rest_diff, short week, bye, thr/mon, intl, consec road"
+           " | Game context | Tested |")
+        _w("| Weather | temp, wind, precip, dome, cold/windy flags"
+           " | Environmental context | Tested |")
         _w("| Coach | tenure, career wins, win% | Coaching experience | Tested |")
-        _w("| Turnovers | giveaways, takeaways, TO diff rolling 3/5 | Ball security / creation | Tested |")
+        _w("| Turnovers | giveaways, takeaways, TO diff rolling 3/5"
+           " | Ball security / creation | Tested |")
         _w("| EPA | off_epa/play rolling 3/5 | Team efficiency | Tested |")
         _w()
         _w("### B. Diagnostic-Only Features (Market)")
@@ -653,7 +686,8 @@ def run_elo_feature_selection_redo(
         _w()
         _w("| Check | Implementation |")
         _w("|-------|---------------|")
-        _w("| No same-game features | All rolling features use `shift(1)` or chronological prior-game lookup |")
+        _w("| No same-game features | All rolling features use `shift(1)` or"
+           " chronological prior-game lookup |")
         _w("| Season boundary resets | Team statistics reset each season |")
         _w("| Holdout isolation | 2025 not accessed during any selection step |")
         _w("| Rolling-origin validation | 3-fold walk-forward prevents target leakage |")
@@ -670,16 +704,22 @@ def run_elo_feature_selection_redo(
         _w()
         _w("| Baseline | Val LL | Description | Used In |")
         _w("|----------|--------|-------------|---------|")
-        _w(f"| Elo only (Platt) | {baseline_ll:.4f} | Platt logistic regression on `elo_prob` alone. No engineered features. | Single-family ablations, L1 regression |")
-        _w(f"| Incumbent (qb+mov3) | {actual_inc_val_ll:.4f} | Platt on `elo_prob + home_qb_changed + away_qb_changed + home_rolling_mov_3 + away_rolling_mov_3`. | Forward selection (starting point) |")
+        _w(f"| Elo only (Platt) | {baseline_ll:.4f} | Platt logistic regression"
+           " on `elo_prob` alone. No engineered features. | Single-family ablations,"
+           " L1 regression |")
+        _w(f"| Incumbent (qb+mov3) | {actual_inc_val_ll:.4f} | Platt on"
+           " `elo_prob + home_qb_changed + away_qb_changed + home_rolling_mov_3"
+           " + away_rolling_mov_3`. | Forward selection (starting point) |")
         _w()
         _w("**Why are they different?** The incumbent features (qb_changed binary + rolling_mov_3)")
         _w("improve validation log loss by ~0.007 over Elo alone. This improvement has been")
-        _w("confirmed across multiple experiments (see combined_features.md, rolling_mov_sensitivity.md).")
+        _w("confirmed across multiple experiments (see combined_features.md,"
+           " rolling_mov_sensitivity.md).")
         _w()
         _w("**Critical methodology note:** Single-family ablations test each family as a whole")
         _w("(14–15 columns for QB continuity, 12 for Rolling form, etc.), not the curated 2–4")
-        _w("column subsets discovered by forward selection. A family can be rejected in full-family")
+        _w("column subsets discovered by forward selection. A family can be rejected"
+           " in full-family")
         _w("testing even though a carefully selected subset of it is in the incumbent.")
         _w("The forward selection section (starting from the incumbent's curated subset) is the")
         _w("proper test for whether additional features improve on the current model.")
@@ -700,7 +740,11 @@ def run_elo_feature_selection_redo(
         sorted_abl = sorted(ablation_results.items(), key=lambda x: x[1]["val_ll"])
         for name, r in sorted_abl:
             diff_str = f"{r.get('diff', 0.0):+.4f}" if "diff" in r else "—"
-            _w(f"| {name} | {r['val_ll']:.4f} | {diff_str} | {r['fold_lls'][0]:.4f} | {r['fold_lls'][1]:.4f} | {r['fold_lls'][2]:.4f} |")
+            _w(
+                f"| {name} | {r['val_ll']:.4f} | {diff_str}"
+                f" | {r['fold_lls'][0]:.4f} | {r['fold_lls'][1]:.4f}"
+                f" | {r['fold_lls'][2]:.4f} |"
+            )
 
         _w()
         _w("### 2. Forward Selection")
@@ -711,7 +755,8 @@ def run_elo_feature_selection_redo(
         _w("|------|--------|---|")
         for step in forward_steps:
             _w(f"| {step['step']} | {step['val_ll']:.4f} | — |")
-        _w(f"| **Final** | **{final_forward_ll:.4f}** | **{final_forward_ll - baseline_ll:+.4f}** |")
+        _w(f"| **Final** | **{final_forward_ll:.4f}** |"
+           f" **{final_forward_ll - baseline_ll:+.4f}** |")
         _w()
         _w(f"**Final forward-selected features ({len(final_forward_cols)} total):**")
         _w()
@@ -733,10 +778,16 @@ def run_elo_feature_selection_redo(
         _w()
         _w("| Feature | Fold1 Coef | Fold2 Coef | Fold3 Coef | Mean | Sign Stable |")
         _w("|---------|-----------|-----------|-----------|------|-------------|")
-        for name, coefs in sorted(nonzero_stable.items(), key=lambda x: abs(np.mean(x[1])), reverse=True):
+        for name, coefs in sorted(
+            nonzero_stable.items(), key=lambda x: abs(np.mean(x[1])), reverse=True,
+        ):
             mean_c = float(np.mean(coefs))
             sign_stable = all(c > 0 for c in coefs) or all(c < 0 for c in coefs)
-            _w(f"| {name} | {coefs[0]:+.6f} | {coefs[1]:+.6f} | {coefs[2]:+.6f} | {mean_c:+.6f} | {'✓' if sign_stable else '✗'} |")
+            _w(
+                f"| {name} | {coefs[0]:+.6f} | {coefs[1]:+.6f}"
+                f" | {coefs[2]:+.6f} | {mean_c:+.6f}"
+                f" | {'✓' if sign_stable else '✗'} |"
+            )
         _w()
         _w("---")
         _w()
@@ -781,7 +832,10 @@ def run_elo_feature_selection_redo(
 
         _w("### L1 coefficient sign stability")
         _w()
-        stable_count = sum(1 for c in nonzero_stable.values() if all(v > 0 for v in c) or all(v < 0 for v in c))
+        stable_count = sum(
+            1 for c in nonzero_stable.values()
+            if all(v > 0 for v in c) or all(v < 0 for v in c)
+        )
         _w(f"- Sign-stable features: {stable_count} / {len(nonzero_stable)}")
         _w()
 
@@ -808,10 +862,12 @@ def run_elo_feature_selection_redo(
             _w("The incumbent subset is confirmed optimal among all tested families.")
         elif ties_val and ties_hold:
             _w("**Forward selection matches incumbent on both validation and holdout.**")
-            _w("No improvement found. The incumbent subset is confirmed optimal among tested families.")
+            _w("No improvement found. The incumbent subset is confirmed optimal"
+               " among tested families.")
         elif beats_val and beats_hold:
             _w("**Challenger beats incumbent on both validation and holdout.**")
-            _w(f"Forward selection: val LL {final_forward_ll:.4f} vs incumbent {actual_inc_val_ll:.4f}")
+            _w(f"Forward selection: val LL {final_forward_ll:.4f} vs incumbent"
+               f" {actual_inc_val_ll:.4f}")
             _w(f"Forward selection: hold LL {fs_hold_ll:.4f} vs incumbent {actual_inc_hold_ll:.4f}")
             _w()
             _w("### → PROMOTE new incumbent")
@@ -825,9 +881,13 @@ def run_elo_feature_selection_redo(
             else:
                 _w("**No challenger beats the incumbent on both validation and holdout.**")
             _w()
-            _w(f"Current incumbent: val LL {actual_inc_val_ll:.4f}, hold LL {actual_inc_hold_ll:.4f}")
-            _w(f"Best challenger (forward selection): val LL {final_forward_ll:.4f}, hold LL {fs_hold_ll:.4f}")
-            _w(f"Best challenger (L1): val LL {best_l1_ll:.4f}, hold LL {holdout_results.get('L1 selected', {}).get('log_loss', 0):.4f}")
+            _w(f"Current incumbent: val LL {actual_inc_val_ll:.4f},"
+               f" hold LL {actual_inc_hold_ll:.4f}")
+            _w(f"Best challenger (forward selection): val LL {final_forward_ll:.4f},"
+               f" hold LL {fs_hold_ll:.4f}")
+            l1_hold = holdout_results.get('L1 selected', {}).get('log_loss', 0)
+            _w(f"Best challenger (L1): val LL {best_l1_ll:.4f},"
+               f" hold LL {l1_hold:.4f}")
 
         _w()
         _w("---")
@@ -876,7 +936,9 @@ def run_elo_feature_selection_redo(
         _w()
         _w("## Final Recommendation")
         _w()
-        _w("**Incumbent unchanged.**" if not (beats_val and beats_hold) else "**Incumbent promoted.**")
+        unch_text = "**Incumbent unchanged.**"
+        prom_text = "**Incumbent promoted.**"
+        _w(unch_text if not (beats_val and beats_hold) else prom_text)
         _w()
         _w("### What worked")
         _w()
@@ -891,12 +953,14 @@ def run_elo_feature_selection_redo(
         _w("**Note:** \"QB continuity\" and \"Rolling form\" are listed as rejected because")
         _w("their full families (14–15 columns each) add noise. However, curated 2-column")
         _w("subsets of each (`qb_changed`, `rolling_mov_3`) are in the incumbent and")
-        _w("improve validation. Full-family rejection does not contradict the curated subset's value.")
+        _w("improve validation. Full-family rejection does not contradict"
+           " the curated subset's value.")
         _w()
         _w("- **Weather**: Worsens validation across all folds. Consistent with prior findings.")
         _w("- **EPA**: Rolling offensive EPA adds noise, not signal. Consistent with prior EPA")
         _w("  and comprehensive efficiency experiments.")
-        _w("- **Coach tenure**: All variants worsen validation. Consistent with combined_features.md.")
+        _w("- **Coach tenure**: All variants worsen validation. Consistent with"
+           " combined_features.md.")
         _w("- **Scheduling**: Short week, off bye, Thursday/Monday all add noise.")
         _w("- **Turnovers**: Very small signal; L1 selected turnover_diff_net_3 at C=0.1 with")
         _w("  sign-stable negative (good) coefficient, but the improvement is noise-level.")
@@ -926,9 +990,34 @@ def run_elo_feature_selection_redo(
         _w()
         _w("| Family | Rationale | Why It Failed |")
         _w("|--------|----------|---------------|")
-        _w("| **Rolling form** (MOV 3/5, pts for/against, streaks, YTD win%) | Recent performance should supplement Elo's long-term rating | Elo already captures game outcomes via point differential. Rolling MOV is a lagging subset of Elo's recent updates. The 3-game window carries signal when isolated (mov_3 at Δ=−0.0005 vs Elo-only) but the full 12-column family adds noise. Feature selection correctly found mov_3 as the only useful column. |")
-        _w("| **Turnovers** (rolling giveaways, takeaways, TO diff) | Turnover margin predicts wins independently of yardage | Elo is trained on point differential, which already captures turnover impact (turnovers → points). Residual analysis confirmed Elo residuals are independent of turnover differential. L1 selected turnover_diff_net_3 with a small negative (good) coefficient but the improvement was noise-level (+0.0050 val). |")
-        _w("| **EPA** (offensive EPA/play rolling 3/5) | Efficiency metrics should predict future scoring better than raw points | Offensive EPA per play is the single-play-expected-points version of what Elo already learns from game outcomes. At the team-game level (~570 rows/season), EPA is a noisy proxy for the point differential that Elo already sees directly. The rolling window further dilutes the already-weak signal (+0.0017 val). |")
+        _w(
+            "| **Rolling form** (MOV 3/5, pts for/against, streaks, YTD win%)"
+            " | Recent performance should supplement Elo's long-term rating"
+            " | Elo already captures game outcomes via point differential."
+            " Rolling MOV is a lagging subset of Elo's recent updates."
+            " The 3-game window carries signal when isolated (mov_3 at"
+            " Δ=−0.0005 vs Elo-only) but the full 12-column family adds"
+            " noise. Feature selection correctly found mov_3 as the only"
+            " useful column. |"
+        )
+        _w(
+            "| **Turnovers** (rolling giveaways, takeaways, TO diff)"
+            " | Turnover margin predicts wins independently of yardage"
+            " | Elo is trained on point differential, which already captures"
+            " turnover impact (turnovers → points). Residual analysis confirmed"
+            " Elo residuals are independent of turnover differential."
+            " L1 selected turnover_diff_net_3 with a small negative (good)"
+            " coefficient but the improvement was noise-level (+0.0050 val). |"
+        )
+        _w(
+            "| **EPA** (offensive EPA/play rolling 3/5)"
+            " | Efficiency metrics should predict future scoring better than raw points"
+            " | Offensive EPA per play is the single-play-expected-points version"
+            " of what Elo already learns from game outcomes. At the team-game level"
+            " (~570 rows/season), EPA is a noisy proxy for the point differential"
+            " that Elo already sees directly. The rolling window further dilutes"
+            " the already-weak signal (+0.0017 val). |"
+        )
         _w()
         _w("### 2. Too Sparse / Low Event Rate")
         _w()
@@ -936,36 +1025,87 @@ def run_elo_feature_selection_redo(
         _w()
         _w("| Family | Rationale | Why It Failed |")
         _w("|--------|----------|---------------|")
-        _w("| **Scheduling** (short week, off bye, Thursday/Monday, international, consecutive road) | Rest differential and travel should affect performance | Short-week games (~10% of sample) and international games (~2%) have too few examples for the model to learn consistent effects. The rest_diff continuous variable is nearly zero-centered and noisy. Every scheduling column added noise (+0.0194 val overall). |")
-        _w("| **Weather** (cold, wind, precipitation, dome) | Extreme weather should affect scoring and win probability | Only ~15% of games have meaningful cold/wind/precip. Dome neutralization removes signal from the majority of games. The weather-only model (0.6941 val) is barely above random. Cold-weather subset (n=26 on holdout) showed interesting raw Elo performance (0.5777) but with no systematic effect large enough to generalize. |")
+        _w(
+            "| **Scheduling** (short week, off bye, Thursday/Monday,"
+            " international, consecutive road)"
+            " | Rest differential and travel should affect performance"
+            " | Short-week games (~10% of sample) and international games (~2%)"
+            " have too few examples for the model to learn consistent effects."
+            " The rest_diff continuous variable is nearly zero-centered and noisy."
+            " Every scheduling column added noise (+0.0194 val overall). |"
+        )
+        _w(
+            "| **Weather** (cold, wind, precipitation, dome)"
+            " | Extreme weather should affect scoring and win probability"
+            " | Only ~15% of games have meaningful cold/wind/precip."
+            " Dome neutralization removes signal from the majority of games."
+            " The weather-only model (0.6941 val) is barely above random."
+            " Cold-weather subset (n=26 on holdout) showed interesting"
+            " raw Elo performance (0.5777) but with no systematic effect"
+            " large enough to generalize. |"
+        )
         _w()
         _w("### 3. Continuous Noise Overwhelms Discrete Signal")
         _w()
-        _w("Features where a small number of discrete columns carry signal but the full family is rejected because continuous columns add noise.")
+        _w("Features where a small number of discrete columns carry signal but"
+           " the full family is rejected because continuous columns add noise.")
         _w()
         _w("| Family | Rationale | Why It Failed |")
         _w("|--------|----------|---------------|")
-        _w("| **QB continuity** (qb_changed, starts, win_pct, games since change, new_qb_flag) | QB changes are the single largest game-to-game variance factor | The binary `qb_changed` columns carry the signal. The continuous correlates (starts, win_pct, games_since_change) introduce noise at this sample size. Full family Δ=+0.0014 vs Elo-only, but the curated qb_changed subset Δ=−0.0072 vs Elo-only. Full families punish the signal with noise; curated subsets win. |")
-        _w("| **Coach** (tenure, career wins, win%) | Coaching experience should correlate with team quality | Coach quality is already baked into Elo ratings (good coaches → better results → higher Elo). Coach features are highly correlated with team identity (same coach = same team). Adding 8 continuous coach columns adds collinearity (+0.0136 val). No coach-only variant beat the incumbent. |")
+        _w(
+            "| **QB continuity** (qb_changed, starts, win_pct, games since change,"
+            " new_qb_flag)"
+            " | QB changes are the single largest game-to-game variance factor"
+            " | The binary `qb_changed` columns carry the signal."
+            " The continuous correlates (starts, win_pct, games_since_change)"
+            " introduce noise at this sample size."
+            " Full family Δ=+0.0014 vs Elo-only, but the curated qb_changed"
+            " subset Δ=−0.0072 vs Elo-only. Full families punish the signal"
+            " with noise; curated subsets win. |"
+        )
+        _w(
+            "| **Coach** (tenure, career wins, win%)"
+            " | Coaching experience should correlate with team quality"
+            " | Coach quality is already baked into Elo ratings"
+            " (good coaches → better results → higher Elo)."
+            " Coach features are highly correlated with team identity"
+            " (same coach = same team). Adding 8 continuous coach columns"
+            " adds collinearity (+0.0136 val). No coach-only variant"
+            " beat the incumbent. |"
+        )
         _w()
         _w("### 4. Better Suited as Postgame Elo Update Signals")
         _w()
         _w("Some features may be better used to modulate Elo's K-factor (learning rate)")
-        _w("rather than as standalone Platt features. This experiment tested additive Platt features;")
+        _w("rather than as standalone Platt features. This experiment tested"
+           " additive Platt features;")
         _w("an alternative approach would use these to adjust Elo's update magnitude postgame.")
         _w()
         _w("| Family | Rationale | Alternative Approach |")
         _w("|--------|----------|---------------------|")
-        _w("| **Turnovers** | Turnover differential in a game could justify a larger Elo update | Use TO_diff as a MOV multiplier (already exists as capped_linear MOV in the incumbent's Elo engine) |")
-        _w("| **EPA** | Blowout efficiency suggests a team is better/worse than score indicates | Use EPA differential as an alternative MOV metric instead of point differential |")
-        _w("| **Weather** | Bad weather increases randomness, reducing confidence | Use weather flags to widen Elo's K-factor or increase regression toward mean for weather-affected games |")
+        _w(
+            "| **Turnovers** | Turnover differential in a game could justify"
+            " a larger Elo update | Use TO_diff as a MOV multiplier"
+            " (already exists as capped_linear MOV in the incumbent's Elo engine) |"
+        )
+        _w(
+            "| **EPA** | Blowout efficiency suggests a team is better/worse"
+            " than score indicates | Use EPA differential as an alternative MOV"
+            " metric instead of point differential |"
+        )
+        _w(
+            "| **Weather** | Bad weather increases randomness, reducing confidence"
+            " | Use weather flags to widen Elo's K-factor or increase regression"
+            " toward mean for weather-affected games |"
+        )
         _w()
         _w("---")
         _w()
         _w("## Subgroup / Residual Diagnostic Recommendations")
         _w()
         _w("The incumbent's residual diagnostics (see residual_diagnostics.md) identified")
-        _w("several systematic failure modes. These are the highest-leverage follow-up experiments:")
+        _w("several systematic failure modes. These are the highest-leverage"
+           " follow-up experiments:")
         _w()
         _w("### Priority 1: QB-Change Market Delta (Highest Impact)")
         _w()
@@ -975,7 +1115,14 @@ def run_elo_feature_selection_redo(
         _w("| QB-change games: market holdout LL | 0.6662 (gap of 0.1025) |")
         _w("| Sample | ~30 games/season with a QB change |")
         _w("| Gap interpretation | Market prices QB changes 0.10 better than Elo |")
-        _w("| Recommendation | Build a pregame feature that estimates the QB-change probability impact independent of market. Possible approaches: backup-QB career stats, weeks-since-change decay, or coach tenure interaction. The `qb_market_delta` experiment already confirmed market prices this fully. The challenge is predicting the delta pregame (before market moves). |")
+        _w(
+            "| Recommendation | Build a pregame feature that estimates the"
+            " QB-change probability impact independent of market."
+            " Possible approaches: backup-QB career stats, weeks-since-change"
+            " decay, or coach tenure interaction. The `qb_market_delta`"
+            " experiment already confirmed market prices this fully."
+            " The challenge is predicting the delta pregame (before market moves). |"
+        )
         _w()
         _w("### Priority 2: Very High Confidence Calibration")
         _w()
@@ -983,7 +1130,13 @@ def run_elo_feature_selection_redo(
         _w("|---------|---------|")
         _w("| Games with confidence >0.9 | ~10% of holdout |")
         _w("| Calibration error in >0.9 bucket | 0.2487 (model overconfident on away longshots) |")
-        _w("| Recommendation | Investigate Platt calibration with a confidence-weighted loss, or fit separate calibrators for high-confidence bins. Risk: overfit on small high-confidence samples (~28 games/holdout). Alternative: clip extreme probabilities or apply a soft Platt prior. |")
+        _w(
+            "| Recommendation | Investigate Platt calibration with a"
+            " confidence-weighted loss, or fit separate calibrators for"
+            " high-confidence bins. Risk: overfit on small high-confidence"
+            " samples (~28 games/holdout). Alternative: clip extreme"
+            " probabilities or apply a soft Platt prior. |"
+        )
         _w()
         _w("### Priority 3: Early-Season Performance")
         _w()
@@ -991,8 +1144,15 @@ def run_elo_feature_selection_redo(
         _w("|---------|---------|")
         _w("| Weeks 1–4 holdout LL | 0.6744 (vs 0.6373 overall) |")
         _w("| Weeks 5+ holdout LL | 0.6315 |")
-        _w("| Hypothesis | Elo regression (preseason mean reversion) may be too aggressive or too conservative for early-season games |")
-        _w("| Recommendation | Test season-specific regression parameters for early weeks (W1–4 get different reg or K-factor). Risk: very small early-season sample per fold (~30 games). |")
+        _w(
+            "| Hypothesis | Elo regression (preseason mean reversion) may be"
+            " too aggressive or too conservative for early-season games |"
+        )
+        _w(
+            "| Recommendation | Test season-specific regression parameters for"
+            " early weeks (W1–4 get different reg or K-factor). Risk: very small"
+            " early-season sample per fold (~30 games). |"
+        )
         _w()
         _w("### Priority 4: Roof Type / Stadium Environment")
         _w()
@@ -1000,8 +1160,16 @@ def run_elo_feature_selection_redo(
         _w("|---------|---------|")
         _w("| Open/retractable roof holdout LL | 0.7206 (vs dome 0.6373) |")
         _w("| Sample | ~40% of games in open/retractable stadiums |")
-        _w("| Hypothesis | Stadium-specific factors (altitude, turf type, crowd noise) may systematically affect certain teams. Home field advantage is currently a single global HFA parameter. |")
-        _w("| Recommendation | Test stadium-specific HFA adjustments, or stadium altitude/turf features. Previous team-specific HFA experiment (team_hfa.md) failed, but stadium-level features may be more stable. |")
+        _w(
+            "| Hypothesis | Stadium-specific factors (altitude, turf type,"
+            " crowd noise) may systematically affect certain teams. Home field"
+            " advantage is currently a single global HFA parameter. |"
+        )
+        _w(
+            "| Recommendation | Test stadium-specific HFA adjustments, or stadium"
+            " altitude/turf features. Previous team-specific HFA experiment"
+            " (team_hfa.md) failed, but stadium-level features may be more stable. |"
+        )
         _w()
         _w("### Priority 5: Monday Night Games")
         _w()
@@ -1009,7 +1177,11 @@ def run_elo_feature_selection_redo(
         _w("|---------|---------|")
         _w("| Monday games holdout LL | 0.6935 (vs Sunday 0.6453) |")
         _w("| Sample | ~15 games/season |")
-        _w("| Recommendation | Likely noise (small sample). Monitor if pattern persists as more seasons are added. If sample grows, test a prime-time flag that distinguishes MNF/SNF/TNF from Sunday day games. |")
+        _w(
+            "| Recommendation | Likely noise (small sample). Monitor if pattern"
+            " persists as more seasons are added. If sample grows, test a"
+            " prime-time flag that distinguishes MNF/SNF/TNF from Sunday day games. |"
+        )
         _w()
         _w("### Priority 6: Season-Over-Season Stability")
         _w()
@@ -1017,16 +1189,25 @@ def run_elo_feature_selection_redo(
         _w("|---------|---------|")
         _w("| 2024 holdout LL | 0.6042 (best season) |")
         _w("| 2021 holdout LL | 0.6744 (worst season) |")
-        _w("| Trend | Performance improves each season (more training data, better Elo estimates) |")
-        _w("| Recommendation | The model naturally improves with more data. Adding 2026 data (when available) should continue this trend. No action needed. |")
+        _w("| Trend | Performance improves each season (more training data,"
+           " better Elo estimates) |")
+        _w(
+            "| Recommendation | The model naturally improves with more data."
+            " Adding 2026 data (when available) should continue this trend."
+            " No action needed. |"
+        )
         _w()
         _w("---")
         _w()
         _w("### Next experiments")
         _w()
-        _w("1. **QB-change probability impact**: Build a pregame feature for QB-change effect independent of market. See Priority 1 above.")
-        _w("2. **Early-season regression tuning**: Test whether W1–4 benefit from different K-factor or regression. See Priority 3 above.")
-        _w("3. **Opening-line ingestion**: Current market benchmark uses closing lines (near-kickoff). Opening lines would give a fairer pregame comparison.")
+        _w("1. **QB-change probability impact**: Build a pregame feature for"
+           " QB-change effect independent of market. See Priority 1 above.")
+        _w("2. **Early-season regression tuning**: Test whether W1–4 benefit from"
+           " different K-factor or regression. See Priority 3 above.")
+        _w("3. **Opening-line ingestion**: Current market benchmark uses closing"
+           " lines (near-kickoff). Opening lines would give a fairer pregame"
+           " comparison.")
 
     print(f"\nReport: {rp}")
     return str(rp)

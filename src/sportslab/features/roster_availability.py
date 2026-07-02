@@ -74,6 +74,8 @@ def compute_roster_availability(df: pd.DataFrame) -> pd.DataFrame:
 
         group_cols = [f"{prefix}{g}_availability" for g in POSITION_GROUP_DEPTH]
         present = [c for c in group_cols if c in out.columns]
-        out[f"{prefix}overall_availability"] = out[present].mean(axis=1).round(4) if present else 1.0
+        out[f"{prefix}overall_availability"] = (
+            out[present].mean(axis=1).round(4) if present else 1.0
+        )
 
     return out

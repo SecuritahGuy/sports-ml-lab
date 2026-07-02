@@ -25,7 +25,9 @@ HOLDOUT_SEASON = 2025
 ROLLING_FOLDS = [([2021], 2022), ([2021, 2022], 2023), ([2021, 2022, 2023], 2024)]
 BEST_HFA, BEST_REG, BEST_DECAY, BEST_QB_BONUS = 40, 0.1, 32, 0.2
 INCUMBENT_HOLDOUT_LL = 0.6262
-INCUMBENT_FEATURES = ["home_qb_changed", "away_qb_changed", "home_rolling_mov_3", "away_rolling_mov_3"]
+INCUMBENT_FEATURES = [
+    "home_qb_changed", "away_qb_changed", "home_rolling_mov_3", "away_rolling_mov_3",
+]
 
 # Grid search over base_K and boost
 K_GRID = [20, 28, 36, 44, 52]
@@ -91,7 +93,13 @@ def run_adaptive_k_experiment(
     base_avg = float(np.mean(base_folds))
     print(f"  Baseline (K=36, boost=0):  val={base_avg:.4f}  hold={base_hold:.4f}")
 
-    results = {"Baseline K=36": {"folds": [round(v, 4) for v in base_folds], "avg_val_ll": round(base_avg, 4), "holdout_ll": round(base_hold, 4)}}
+    results = {
+        "Baseline K=36": {
+            "folds": [round(v, 4) for v in base_folds],
+            "avg_val_ll": round(base_avg, 4),
+            "holdout_ll": round(base_hold, 4),
+        },
+    }
 
     for k in K_GRID:
         for boost in BOOST_GRID:
@@ -109,7 +117,11 @@ def run_adaptive_k_experiment(
             folds, hold = _run_model(df, feats, elo, y)
             avg = float(np.mean(folds))
             name = f"K={k}, boost={boost}"
-            results[name] = {"folds": [round(v, 4) for v in folds], "avg_val_ll": round(avg, 4), "holdout_ll": round(hold, 4)}
+            results[name] = {
+                "folds": [round(v, 4) for v in folds],
+                "avg_val_ll": round(avg, 4),
+                "holdout_ll": round(hold, 4),
+            }
             print(f"  {name:25s}  val={avg:.4f}  hold={hold:.4f}")
 
     lines = []
@@ -148,10 +160,16 @@ def run_adaptive_k_experiment(
         bv = r["avg_val_ll"] < inc_val
         bh = r["holdout_ll"] < inc_hold
         if bv and bh:
-            _w(f"**{name}**: val {r['avg_val_ll']:.4f} ({'✓'}) hold {r['holdout_ll']:.4f} ({'✓'}) → **PROMOTED**")
+            _w(
+                f"**{name}**: val {r['avg_val_ll']:.4f} ({'✓'}) "
+                f"hold {r['holdout_ll']:.4f} ({'✓'}) → **PROMOTED**"
+            )
             promoted = True
         elif bv or bh:
-            _w(f"{name}: val {r['avg_val_ll']:.4f} ({'✓' if bv else '✗'}) hold {r['holdout_ll']:.4f} ({'✓' if bh else '✗'}) → Partial")
+            _w(
+                f"{name}: val {r['avg_val_ll']:.4f} ({'✓' if bv else '✗'}) "
+                f"hold {r['holdout_ll']:.4f} ({'✓' if bh else '✗'}) → Partial"
+            )
     if not promoted:
         _w("No adaptive K variant beats baseline on both val and holdout.")
     _w("")

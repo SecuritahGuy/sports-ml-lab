@@ -42,7 +42,9 @@ INCIDENT_FEATURES = ["home_qb_changed", "away_qb_changed"]
 REST_FEATURES = ["home_rolling_mov_3", "away_rolling_mov_3"]
 
 
-def _run_rolling_ll(df_all: pd.DataFrame, feat_cols: list[str], elo_prob: np.ndarray, y: np.ndarray) -> list[float]:
+def _run_rolling_ll(
+    df_all: pd.DataFrame, feat_cols: list[str], elo_prob: np.ndarray, y: np.ndarray
+) -> list[float]:
     fold_lls = []
     for train_s, val_s in ROLLING_FOLDS:
         tr = df_all["season"].isin(train_s).values
@@ -69,7 +71,9 @@ def _run_rolling_ll(df_all: pd.DataFrame, feat_cols: list[str], elo_prob: np.nda
     return fold_lls
 
 
-def _holdout_ll(df_all: pd.DataFrame, feat_cols: list[str], elo_prob: np.ndarray, y: np.ndarray) -> float:
+def _holdout_ll(
+    df_all: pd.DataFrame, feat_cols: list[str], elo_prob: np.ndarray, y: np.ndarray
+) -> float:
     tr = (df_all["season"] < HOLDOUT_SEASON).values
     va = (df_all["season"] == HOLDOUT_SEASON).values
     x_tr = (
@@ -133,7 +137,11 @@ def run_qb_magnitude_experiment(
         folds = _run_rolling_ll(df, feats, elo, y)
         avg = float(np.mean(folds))
         hold = _holdout_ll(df, feats, elo, y)
-        results[name] = {"folds": [round(v, 4) for v in folds], "avg_val_ll": round(avg, 4), "holdout_ll": round(hold, 4)}
+        results[name] = {
+            "folds": [round(v, 4) for v in folds],
+            "avg_val_ll": round(avg, 4),
+            "holdout_ll": round(hold, 4),
+        }
         print(f"  {name:30s}  val={avg:.4f}  hold={hold:.4f}  folds={[round(v,4) for v in folds]}")
 
     # Generate report
@@ -149,10 +157,22 @@ def run_qb_magnitude_experiment(
 
     _w("## Setup")
     _w("")
-    _w(f"- **Elo params**: K={BEST_K}, HFA={BEST_HFA}, reg={BEST_REG}, decay={BEST_DECAY}, qb_bonus={BEST_QB_BONUS}")
-    _w(f"- **Incumbent**: Elo prob + qb_changed + rolling_mov_3 + Platt (reported holdout LL {INCUMBENT_HOLDOUT_LL})")
-    _w(f"- **Magnitude features ({len(MAGNITUDE_FEATURES)})**: rolling_epa, change_magnitude (abs+signed), epa_diff, missing flags")
-    _w("- **Magnitude computation**: 5-game rolling avg of passing_epa per QB, leakage-safe (shift(1))")
+    _w(
+        f"- **Elo params**: K={BEST_K}, HFA={BEST_HFA}, reg={BEST_REG}, "
+        f"decay={BEST_DECAY}, qb_bonus={BEST_QB_BONUS}"
+    )
+    _w(
+        "- **Incumbent**: Elo prob + qb_changed + rolling_mov_3 + Platt "
+        f"(reported holdout LL {INCUMBENT_HOLDOUT_LL})"
+    )
+    _w(
+        f"- **Magnitude features ({len(MAGNITUDE_FEATURES)})**: "
+        "rolling_epa, change_magnitude (abs+signed), epa_diff, missing flags"
+    )
+    _w(
+        "- **Magnitude computation**: 5-game rolling avg of passing_epa per QB, "
+        "leakage-safe (shift(1))"
+    )
     _w("- **Rolling folds**: 2021→2022, 2021-2022→2023, 2021-2023→2024")
     _w(f"- **Holdout**: {HOLDOUT_SEASON} season")
     _w("")
@@ -179,7 +199,11 @@ def run_qb_magnitude_experiment(
 
     _w("## Promotion Check")
     _w("")
-    _w(f"To be promoted, a challenger must beat the full incumbent (qb_changed + rolling_mov_3) on BOTH validation ({incumbent_val:.4f}) AND holdout ({incumbent_hold:.4f}).")
+    _w(
+        "To be promoted, a challenger must beat the full incumbent "
+        "(qb_changed + rolling_mov_3) on BOTH validation "
+        f"({incumbent_val:.4f}) AND holdout ({incumbent_hold:.4f})."
+    )
     _w("")
     promoted = []
     for name, r in sorted(results.items(), key=lambda x: x[1]["avg_val_ll"]):
@@ -188,7 +212,12 @@ def run_qb_magnitude_experiment(
         beats_val = r["avg_val_ll"] < incumbent_val
         beats_hold = r["holdout_ll"] < incumbent_hold
         tag = "**PROMOTED**" if (beats_val and beats_hold) else "Rejected"
-        _w(f"| {name} | {r['avg_val_ll']:.4f} vs {incumbent_val:.4f} ({'✓' if beats_val else '✗'}) | {r['holdout_ll']:.4f} vs {incumbent_hold:.4f} ({'✓' if beats_hold else '✗'}) | {tag} |")
+        val_str = f"{r['avg_val_ll']:.4f} vs {incumbent_val:.4f} ({'✓' if beats_val else '✗'})"
+        hold_str = (
+            f"{r['holdout_ll']:.4f} vs {incumbent_hold:.4f} "
+            f"({'✓' if beats_hold else '✗'})"
+        )
+        _w(f"| {name} | {val_str} | {hold_str} | {tag} |")
         if beats_val and beats_hold:
             promoted.append(name)
     _w("")
@@ -206,13 +235,25 @@ def run_qb_magnitude_experiment(
             key=lambda x: x[1]["avg_val_ll"],
         )
         if best_challenger:
-            _w(f"Closest challenger: **{best_challenger[0][0]}** (val {best_challenger[0][1]['avg_val_ll']:.4f}, hold {best_challenger[0][1]['holdout_ll']:.4f})")
+            chall_name = best_challenger[0][0]
+            chall_val = best_challenger[0][1]["avg_val_ll"]
+            chall_hold = best_challenger[0][1]["holdout_ll"]
+            _w(
+                f"Closest challenger: **{chall_name}** "
+                f"(val {chall_val:.4f}, hold {chall_hold:.4f})"
+            )
         _w("")
 
     _w("## Analysis")
     _w("")
-    _w("- **Magnitude on its own** — how much QB quality-drop signal exists outside Elo + binary qb_changed")
-    _w("- **Platt + magnitude** — magnitude replaces binary qb_changed (tests if continuous > binary)")
+    _w(
+        "- **Magnitude on its own** — how much QB quality-drop signal exists "
+        "outside Elo + binary qb_changed"
+    )
+    _w(
+        "- **Platt + magnitude** — magnitude replaces binary qb_changed "
+        "(tests if continuous > binary)"
+    )
     _w("- **Incumbent + magnitude** — magnitude added on top of existing feature set")
     _w("")
 
@@ -239,7 +280,10 @@ def run_qb_magnitude_experiment(
     _w("")
 
     _w("---")
-    _w(f"*Report generated by `sportslab qb-magnitude`. Incumbent holdout LL: {INCUMBENT_HOLDOUT_LL}.*")
+    _w(
+        "*Report generated by `sportslab qb-magnitude`. "
+        f"Incumbent holdout LL: {INCUMBENT_HOLDOUT_LL}.*"
+    )
     _w("")
 
     rp = Path(report_path)

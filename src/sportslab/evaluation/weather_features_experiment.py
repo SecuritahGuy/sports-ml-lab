@@ -386,7 +386,10 @@ def run_weather_features_experiment(
             nulls = df_raw[c].isna().sum()
             pct = (1 - nulls / len(df_raw)) * 100
             dtype = str(df_raw[c].dtype)
-            f.write(f"| `{c}` | {dtype} | {nulls}/{len(df_raw)} | {pct:.1f}% | nflreadpy schedules |\n")
+            f.write(
+                f"| `{c}` | {dtype} | {nulls}/{len(df_raw)}"
+                f" | {pct:.1f}% | nflreadpy schedules |\n"
+            )
         f.write("\n")
         f.write(f"Total games: {len(df_raw)}.\n\n")
 
@@ -426,7 +429,10 @@ def run_weather_features_experiment(
         f.write("|---------|--------|-------------|\n")
         f.write("| `temperature_f` | nflreadpy `temp` (°F) | Game-time temperature |\n")
         f.write("| `wind_mph` | nflreadpy `wind` (mph) | Wind speed |\n")
-        f.write("| `precipitation_flag` | nflreadpy `temp`/`wind` available | Any adverse weather indicator |\n")
+        f.write(
+            "| `precipitation_flag` | nflreadpy `temp`/`wind` available"
+            " | Any adverse weather indicator |\n"
+        )
         f.write("| `cold_flag` | temperature_f ≤ 32°F | Freezing or below |\n")
         f.write("| `very_cold_flag` | temperature_f ≤ 20°F | Extremely cold |\n")
         f.write("| `hot_flag` | temperature_f ≥ 85°F | Hot conditions |\n")

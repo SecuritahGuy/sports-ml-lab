@@ -208,23 +208,25 @@ def predict_future(
     df_feat = compute_market_features(df_feat)
 
     feat_cols = [c for c in FEATURE_COLS if c in df_feat.columns]
-
-    known_mask = df_feat["home_win"].notna().values
     elo_prob_all = df_feat["elo_prob"].values
     feat_all = df_feat[feat_cols].values if feat_cols else np.empty((len(df_feat), 0))
-
     has_feats = len(feat_cols) > 0
+
+    has_scores = df_feat["home_score"].notna().values
+    eligible = df_feat[MODEL_ELIGIBLE_COLUMN].fillna(False).values
+    trainable = has_scores & eligible
+
     x_known = np.column_stack(
-        [elo_prob_all[known_mask],
-         feat_all[known_mask]] if has_feats else [elo_prob_all[known_mask]]
+        [elo_prob_all[trainable],
+         feat_all[trainable]] if has_feats else [elo_prob_all[trainable]]
     )
-    y_known = df_feat.loc[known_mask, "home_win"].astype(int).values
+    y_known = df_feat.loc[trainable, "home_win"].astype(int).values
 
     pipe = _build_pipeline()
     pipe.fit(x_known, y_known)
     print("  Platt calibration fitted on historical games")
 
-    future_mask = ~known_mask & ~df_feat["is_neutral"].fillna(False).values
+    future_mask = ~has_scores & ~df_feat["is_neutral"].fillna(False).values
     x_future = np.column_stack(
         [elo_prob_all[future_mask],
          feat_all[future_mask]] if has_feats else [elo_prob_all[future_mask]]

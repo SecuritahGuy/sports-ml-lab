@@ -45,7 +45,10 @@ def compute_coach_qb_tenure_features(df: pd.DataFrame) -> pd.DataFrame:
             coach = row.get(coach_col)
             season = row["season"]
 
-            if pd.isna(qb_id) or pd.isna(coach) or str(qb_id).strip() == "" or str(coach).strip() == "":
+            if (
+                pd.isna(qb_id) or pd.isna(coach)
+                or str(qb_id).strip() == "" or str(coach).strip() == ""
+            ):
                 features[f"{side}_coach_qb_games"].append(0)
                 features[f"{side}_coach_qb_log_games"].append(0.0)
                 continue

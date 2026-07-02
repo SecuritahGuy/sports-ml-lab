@@ -473,7 +473,10 @@ def predict_future_cmd(input, output, qb_input, season, week):
 @click.option("--auto-qb", is_flag=True, default=False,
               help="Auto-source QB starters from nflreadpy depth charts (preseason snapshot)")
 @click.option("--weekly-qb", is_flag=True, default=False,
-              help="Auto-source QB starters using week-over-week tracking (more accurate mid-season)")
+              help=(
+                  "Auto-source QB starters using week-over-week tracking "
+                  "(more accurate mid-season)"
+              ))
 @click.option("--output", type=str, default=None, help="Override snapshot output path")
 @click.option("--mode", type=click.Choice(["live", "dry_run", "rehearsal"]),
               default="live", help="Snapshot mode (default: live)")

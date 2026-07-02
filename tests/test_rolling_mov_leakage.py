@@ -31,7 +31,9 @@ def _make_schedule_with_scores(home_scores, away_scores, home_teams=None, away_t
         "away_team": away_teams[:n],
         "home_score": home_scores,
         "away_score": away_scores,
-        "home_win": [1 if h > a else (0 if h < a else pd.NA) for h, a in zip(home_scores, away_scores)],
+        "home_win": [
+            1 if h > a else (0 if h < a else pd.NA) for h, a in zip(home_scores, away_scores)
+        ],
         "result": [h - a for h, a in zip(home_scores, away_scores)],
         "surface": ["grass"] * n,
         "stadium": ["stadium"] * n,

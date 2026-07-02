@@ -354,7 +354,10 @@ def build_weekly_qb_csv(
     n_dc_away = sum(1 for s in away_src if s == "depth_chart")
 
     print(f"  Weekly QB ({season} w{week}):")
-    print(f"    Home: {n_prior_home}/{n_games} from prior week, {n_dc_home} depth chart, {n_missing_home} missing")
+    print(
+        f"    Home: {n_prior_home}/{n_games} from prior week, "
+        f"{n_dc_home} depth chart, {n_missing_home} missing"
+    )
     print(f"    Away: {n_prior_away}/{n_games} from prior week, {n_dc_away} depth chart")
 
     # Save if requested

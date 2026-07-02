@@ -98,7 +98,10 @@ def test_elo_third_game_independent(sample_schedule):
     )
 
     # Game 3: CHI @ ATL. ATL has played 2 games, CHI none.
-    np.testing.assert_almost_equal(df.loc[2, "away_elo_pre"], 1500.0, decimal=4, err_msg="CHI should start at 1500")
+    np.testing.assert_almost_equal(
+        df.loc[2, "away_elo_pre"], 1500.0, decimal=4,
+        err_msg="CHI should start at 1500",
+    )
     assert df.loc[2, "home_elo_pre"] != 1500, "ATL should not be 1500 after 2 games"
 
 
@@ -144,7 +147,9 @@ def test_elo_no_future_data_leakage():
         "away_score": [0, 0],
         "home_win": [1, 1],
     })
-    result = compute_elo_features(df, k_factor=36, home_advantage=40, mov_type="none", decay_half_life=None)
+    result = compute_elo_features(
+        df, k_factor=36, home_advantage=40, mov_type="none", decay_half_life=None
+    )
     assert result.loc[0, "home_elo_pre"] == 1500.0
     assert result.loc[0, "away_elo_pre"] == 1500.0
 

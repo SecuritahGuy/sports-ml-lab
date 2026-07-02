@@ -34,6 +34,7 @@ mlruns/
 
 # Rehearsal snapshots (auto-generated, hundreds per session)
 reports/predictions/rehearsal/
+reports/predictions/snapshots/
 
 # Misc
 *.parquet

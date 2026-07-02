@@ -110,16 +110,19 @@ def compute_qb_magnitude_features(df: pd.DataFrame) -> pd.DataFrame:
 
             magnitude = 0.0
             signed_mag = 0.0
-            if changed and not qb_missing and state["last_epa"] is not None and not np.isnan(cur_epa):
-                prev_epa = state["last_epa"]
-                if not np.isnan(prev_epa):
-                    magnitude = float(abs(prev_epa - cur_epa))
-                    signed_mag = float(prev_epa - cur_epa)
+            if changed and not qb_missing and state["last_epa"] is not None:
+                if not np.isnan(cur_epa):
+                    prev_epa = state["last_epa"]
+                    if not np.isnan(prev_epa):
+                        magnitude = float(abs(prev_epa - cur_epa))
+                        signed_mag = float(prev_epa - cur_epa)
 
             features[f"{side}_qb_rolling_epa"].append(cur_epa if not np.isnan(cur_epa) else 0.0)
             features[f"{side}_qb_change_magnitude"].append(magnitude)
             features[f"{side}_qb_change_magnitude_signed"].append(signed_mag)
-            features[f"{side}_qb_rolling_epa_missing"].append(1 if qb_missing or np.isnan(cur_epa) else 0)
+            features[f"{side}_qb_rolling_epa_missing"].append(
+                1 if qb_missing or np.isnan(cur_epa) else 0
+            )
 
             state["last_qb_id"] = qb_id
             if not np.isnan(cur_epa if not qb_missing else np.nan):
@@ -128,8 +131,9 @@ def compute_qb_magnitude_features(df: pd.DataFrame) -> pd.DataFrame:
     features["qb_epa_diff"] = np.array(features["home_qb_rolling_epa"]) - np.array(
         features["away_qb_rolling_epa"]
     )
-    features["qb_change_magnitude_diff"] = np.array(features["home_qb_change_magnitude"]) - np.array(
-        features["away_qb_change_magnitude"]
+    features["qb_change_magnitude_diff"] = (
+        np.array(features["home_qb_change_magnitude"])
+        - np.array(features["away_qb_change_magnitude"])
     )
 
     for col_name, values in features.items():

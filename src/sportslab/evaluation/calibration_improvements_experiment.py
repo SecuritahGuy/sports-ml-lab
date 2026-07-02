@@ -25,7 +25,10 @@ HOLDOUT_SEASON = 2025
 ROLLING_FOLDS = [([2021], 2022), ([2021, 2022], 2023), ([2021, 2022, 2023], 2024)]
 BEST_K, BEST_HFA, BEST_REG, BEST_DECAY, BEST_QB_BONUS = 36, 40, 0.1, 32, 0.2
 INCUMBENT_HOLDOUT_LL = 0.6262
-INCUMBENT_FEATURES = ["home_qb_changed", "away_qb_changed", "home_rolling_mov_3", "away_rolling_mov_3"]
+INCUMBENT_FEATURES = [
+    "home_qb_changed", "away_qb_changed",
+    "home_rolling_mov_3", "away_rolling_mov_3",
+]
 
 
 def _shrink(p: np.ndarray, temp: float = 0.8, threshold: float = 0.80) -> np.ndarray:
@@ -99,11 +102,19 @@ def _split_era_fold_ll(
         # Fit two Platt models
         tr_early = tr & (weeks <= 4)
         tr_late = tr & (weeks > 4)
-        x_tr_early = np.column_stack([elo_prob[tr_early]] + [df_all.loc[tr_early, c].values for c in feat_cols])
-        x_tr_late = np.column_stack([elo_prob[tr_late]] + [df_all.loc[tr_late, c].values for c in feat_cols])
+        early_feats = [df_all.loc[tr_early, c].values for c in feat_cols]
+        late_feats = [df_all.loc[tr_late, c].values for c in feat_cols]
+        x_tr_early = np.column_stack([elo_prob[tr_early]] + early_feats)
+        x_tr_late = np.column_stack([elo_prob[tr_late]] + late_feats)
 
-        pipe_early = Pipeline([("scaler", StandardScaler()), ("lr", LogisticRegression(max_iter=1000, random_state=42))])
-        pipe_late = Pipeline([("scaler", StandardScaler()), ("lr", LogisticRegression(max_iter=1000, random_state=42))])
+        pipe_early = Pipeline([
+            ("scaler", StandardScaler()),
+            ("lr", LogisticRegression(max_iter=1000, random_state=42)),
+        ])
+        pipe_late = Pipeline([
+            ("scaler", StandardScaler()),
+            ("lr", LogisticRegression(max_iter=1000, random_state=42)),
+        ])
 
         if tr_early.sum() > 0:
             pipe_early.fit(x_tr_early, y[tr_early].astype(int))
@@ -118,10 +129,12 @@ def _split_era_fold_ll(
         idx_late = np.where(va_late[va])[0]
 
         if len(idx_early) > 0 and tr_early.sum() > 0:
-            x_va_early = np.column_stack([elo_prob[va_early]] + [df_all.loc[va_early, c].values for c in feat_cols])
+            va_early_feats = [df_all.loc[va_early, c].values for c in feat_cols]
+            x_va_early = np.column_stack([elo_prob[va_early]] + va_early_feats)
             proba[idx_early] = pipe_early.predict_proba(x_va_early)[:, 1]
         if len(idx_late) > 0 and tr_late.sum() > 0:
-            x_va_late = np.column_stack([elo_prob[va_late]] + [df_all.loc[va_late, c].values for c in feat_cols])
+            va_late_feats = [df_all.loc[va_late, c].values for c in feat_cols]
+            x_va_late = np.column_stack([elo_prob[va_late]] + va_late_feats)
             proba[idx_late] = pipe_late.predict_proba(x_va_late)[:, 1]
 
         if shrink:
@@ -140,10 +153,18 @@ def _split_era_holdout_ll(
     weeks = df_all["week"].values
     tr_early = tr & (weeks <= 4)
     tr_late = tr & (weeks > 4)
-    x_tr_early = np.column_stack([elo_prob[tr_early]] + [df_all.loc[tr_early, c].values for c in feat_cols])
-    x_tr_late = np.column_stack([elo_prob[tr_late]] + [df_all.loc[tr_late, c].values for c in feat_cols])
-    pipe_early = Pipeline([("scaler", StandardScaler()), ("lr", LogisticRegression(max_iter=1000, random_state=42))])
-    pipe_late = Pipeline([("scaler", StandardScaler()), ("lr", LogisticRegression(max_iter=1000, random_state=42))])
+    tr_early_feats = [df_all.loc[tr_early, c].values for c in feat_cols]
+    tr_late_feats = [df_all.loc[tr_late, c].values for c in feat_cols]
+    x_tr_early = np.column_stack([elo_prob[tr_early]] + tr_early_feats)
+    x_tr_late = np.column_stack([elo_prob[tr_late]] + tr_late_feats)
+    pipe_early = Pipeline([
+        ("scaler", StandardScaler()),
+        ("lr", LogisticRegression(max_iter=1000, random_state=42)),
+    ])
+    pipe_late = Pipeline([
+        ("scaler", StandardScaler()),
+        ("lr", LogisticRegression(max_iter=1000, random_state=42)),
+    ])
     if tr_early.sum() > 0:
         pipe_early.fit(x_tr_early, y[tr_early].astype(int))
     if tr_late.sum() > 0:
@@ -155,10 +176,12 @@ def _split_era_holdout_ll(
     idx_early = np.where(va_early[va])[0]
     idx_late = np.where(va_late[va])[0]
     if len(idx_early) > 0 and tr_early.sum() > 0:
-        x_va_early = np.column_stack([elo_prob[va_early]] + [df_all.loc[va_early, c].values for c in feat_cols])
+        va_early_feats = [df_all.loc[va_early, c].values for c in feat_cols]
+        x_va_early = np.column_stack([elo_prob[va_early]] + va_early_feats)
         proba[idx_early] = pipe_early.predict_proba(x_va_early)[:, 1]
     if len(idx_late) > 0 and tr_late.sum() > 0:
-        x_va_late = np.column_stack([elo_prob[va_late]] + [df_all.loc[va_late, c].values for c in feat_cols])
+        va_late_feats = [df_all.loc[va_late, c].values for c in feat_cols]
+        x_va_late = np.column_stack([elo_prob[va_late]] + va_late_feats)
         proba[idx_late] = pipe_late.predict_proba(x_va_late)[:, 1]
     if shrink:
         proba = _shrink(proba)
@@ -205,7 +228,11 @@ def run_calibration_experiment(
             folds = _split_era_fold_ll(df, feats, elo, y, shrink=shrink)
             hold = _split_era_holdout_ll(df, feats, elo, y, shrink=shrink)
         avg = float(np.mean(folds))
-        results[name] = {"folds": [round(v, 4) for v in folds], "avg_val_ll": round(avg, 4), "holdout_ll": round(hold, 4)}
+        results[name] = {
+            "folds": [round(v, 4) for v in folds],
+            "avg_val_ll": round(avg, 4),
+            "holdout_ll": round(hold, 4),
+        }
         print(f"  {name:30s}  val={avg:.4f}  hold={hold:.4f}")
 
     lines = []
@@ -251,12 +278,18 @@ def run_calibration_experiment(
         bv = r["avg_val_ll"] < inc_val
         bh = r["holdout_ll"] < inc_hold
         tag = "**PROMOTED**" if (bv and bh) else "Rejected"
-        _w(f"| {name} | val {r['avg_val_ll']:.4f} ({'✓' if bv else '✗'}) | hold {r['holdout_ll']:.4f} ({'✓' if bh else '✗'}) | {tag} |")
+        val_mark = "✓" if bv else "✗"
+        hold_mark = "✓" if bh else "✗"
+        _w(f"| {name} | val {r['avg_val_ll']:.4f} ({val_mark})"
+           f" | hold {r['holdout_ll']:.4f} ({hold_mark}) | {tag} |")
         if bv and bh:
             promoted.append(name)
     _w("")
     _w("---")
-    _w(f"*Report generated by `sportslab calibration-improvements`. Incumbent holdout: {INCUMBENT_HOLDOUT_LL}.*")
+    _w(
+        f"*Report generated by `sportslab calibration-improvements`."
+        f" Incumbent holdout: {INCUMBENT_HOLDOUT_LL}.*"
+    )
     _w("")
 
     rp = Path(report_path)

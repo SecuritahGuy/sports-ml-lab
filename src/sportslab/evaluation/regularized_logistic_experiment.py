@@ -463,29 +463,45 @@ def run_regularized_logistic_experiment(
         _w("## Validation Results\n\n")
         _w("| Model | Avg Val LL | Fold1 | Fold2 | Fold3 |\n")
         _w("|-------|-----------|-------|-------|-------|\n")
-        _w(f"| v3.0.0 Incumbent | {inc_avg_val_ll:.4f} | {inc_fold_lls[0]:.4f} | {inc_fold_lls[1]:.4f} | {inc_fold_lls[2]:.4f} |\n")
+        _w(f"| v3.0.0 Incumbent | {inc_avg_val_ll:.4f} | {inc_fold_lls[0]:.4f} "
+           f"| {inc_fold_lls[1]:.4f} | {inc_fold_lls[2]:.4f} |\n")
         for r in results:
-            _w(f"| {r['name']} | {r['avg_val_ll']:.4f} | {r['fold_lls'][0]:.4f} | {r['fold_lls'][1]:.4f} | {r['fold_lls'][2]:.4f} |\n")
+            _w(f"| {r['name']} | {r['avg_val_ll']:.4f} | {r['fold_lls'][0]:.4f} "
+               f"| {r['fold_lls'][1]:.4f} | {r['fold_lls'][2]:.4f} |\n")
 
         _w("\n## 2025 Holdout Results\n\n")
         _w("| Model | Log Loss | Brier | AUC | Accuracy | Selection |\n")
         _w("|-------|----------|-------|-----|----------|-----------|\n")
-        _w(f"| v3.0.0 Incumbent | {inc_hold_ll:.4f} | {inc_hold_m['brier_score']:.4f} | {inc_hold_m['roc_auc']:.4f} | {inc_hold_m['accuracy']:.4f} | baseline |\n")
-        _w(f"| Best meta-model ({best['name']}) | {sel_hold_ll:.4f} | {sel_hold_m['brier_score']:.4f} | {sel_hold_m['roc_auc']:.4f} | {sel_hold_m['accuracy']:.4f} | validation-selected |\n")
+        _w(f"| v3.0.0 Incumbent | {inc_hold_ll:.4f} | {inc_hold_m['brier_score']:.4f} "
+           f"| {inc_hold_m['roc_auc']:.4f} | {inc_hold_m['accuracy']:.4f} | baseline |\n")
+        _w(f"| Best meta-model ({best['name']}) | {sel_hold_ll:.4f} "
+           f"| {sel_hold_m['brier_score']:.4f} | {sel_hold_m['roc_auc']:.4f} "
+           f"| {sel_hold_m['accuracy']:.4f} | validation-selected |\n")
 
         if best_hold_name != best["name"]:
             bh_m = hold_results[best_hold_name]
-            _w(f"| {best_hold_name} | {bh_m['log_loss']:.4f} | {bh_m['brier_score']:.4f} | {bh_m['roc_auc']:.4f} | {bh_m['accuracy']:.4f} | diagnostic (best holdout) |\n")
+            _w(f"| {best_hold_name} | {bh_m['log_loss']:.4f} "
+               f"| {bh_m['brier_score']:.4f} | {bh_m['roc_auc']:.4f} "
+               f"| {bh_m['accuracy']:.4f} | diagnostic (best holdout) |\n")
 
         _w("\n## QB-Change Slices\n\n")
         _w("| Variant | QB-Change LL | No-QB-Change LL | QC Δ | NoQC Δ |\n")
         _w("|--------|-------------|-----------------|------|--------|\n")
-        qc_delta = (sel_qc_ll - inc_qc_ll) if (sel_qc_ll is not None and inc_qc_ll is not None) else None
-        nqc_delta = (sel_nqc_ll - inc_nqc_ll) if (sel_nqc_ll is not None and inc_nqc_ll is not None) else None
+        qc_delta = (
+            (sel_qc_ll - inc_qc_ll)
+            if (sel_qc_ll is not None and inc_qc_ll is not None)
+            else None
+        )
+        nqc_delta = (
+            (sel_nqc_ll - inc_nqc_ll)
+            if (sel_nqc_ll is not None and inc_nqc_ll is not None)
+            else None
+        )
         qc_str = f"{qc_delta:+.4f}" if qc_delta is not None else "N/A"
         nqc_str = f"{nqc_delta:+.4f}" if nqc_delta is not None else "N/A"
         _w(f"| v3.0.0 Incumbent | {inc_qc_ll or 'N/A':.4f} | {inc_nqc_ll or 'N/A':.4f} | — | — |\n")
-        _w(f"| Best meta-model | {sel_qc_ll or 'N/A':.4f} | {sel_nqc_ll or 'N/A':.4f} | {qc_str} | {nqc_str} |\n")
+        _w(f"| Best meta-model | {sel_qc_ll or 'N/A':.4f} "
+           f"| {sel_nqc_ll or 'N/A':.4f} | {qc_str} | {nqc_str} |\n")
 
         _w("\n## Coefficients (Holdout Fit)\n\n")
         _w("| Feature | Coefficient |\n")
@@ -512,8 +528,10 @@ def run_regularized_logistic_experiment(
             hold_delta = inc_hold_ll - sel_hold_ll
             v_check = "✅" if beats_val else "❌"
             h_check = "✅" if beats_hold else "❌"
-            _w(f"| Beats incumbent on val LL by >= {MIN_PROMOTION_DELTA} | {v_check} | Δ = {val_delta:.4f} |\n")
-            _w(f"| Beats incumbent on holdout LL by >= {MIN_PROMOTION_DELTA} | {h_check} | Δ = {hold_delta:.4f} |\n")
+            _w(f"| Beats incumbent on val LL by >= {MIN_PROMOTION_DELTA} "
+               f"| {v_check} | Δ = {val_delta:.4f} |\n")
+            _w(f"| Beats incumbent on holdout LL by >= {MIN_PROMOTION_DELTA} "
+               f"| {h_check} | Δ = {hold_delta:.4f} |\n")
 
         _w("\n### Validation Delta\n\n")
         _w(f"Best meta-model val LL: {best['avg_val_ll']:.4f}\n")
