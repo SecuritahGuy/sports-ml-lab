@@ -337,6 +337,7 @@ def compute_elo_features(
             actual_home = float(home_won)
 
         expected_home = _effective_expected(h_elo, a_elo, hfa=effective_hfa)
+
         mov_mult = _mov_multiplier(
             row.get("home_score", 0),
             row.get("away_score", 0),

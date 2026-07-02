@@ -1980,3 +1980,85 @@ Replace the preseason depth chart snapshot (67% accurate) with a week-over-week 
 - `src/sportslab/evaluation/weekly_qb_audit.py` — full 3-source audit module
 - `tests/test_weekly_qb_audit.py` — 9 tests
 - `README.md` — new project README
+
+---
+
+## Session Summary: PPD-Based Elo + Teardown
+
+### Goal
+Test whether possession-adjusted MOV (points per drive as score differential) improves Elo ratings compared to standard score-differential MOV. PPD normalizes for pace of play.
+
+### Changes Made (Birth & Death)
+
+| File | Action |
+|------|--------|
+| `src/sportslab/features/drive_stats.py` | **Created** — PBP→drive stats per game (1424 games, 2021-2025); **DELETED** |
+| `data/features/nfl/drive_stats.parquet` | **Created** — precomputed drive stats; **DELETED** |
+| `src/sportslab/features/ratings.py` | Added `drive_stats_path` parameter, PPD-based MOV logic; **REVERTED** |
+| `src/sportslab/evaluation/ppd_elo_experiment.py` | **Created — DELETED** |
+
+### Experiment Results
+
+**3-fold rolling-origin (Platt + QB overlay):**
+| Variant | Avg Val LL | Δ vs v3.0.0 | Holdout LL | Δ vs v3.0.0 |
+|---------|-----------|-------------|-----------|-------------|
+| v3.0.0 champion (no MOV) | 0.6305 | — | **0.6200** | — |
+| PPD + capped_linear s=0.05 c=2.0 | **0.6290** | **-0.0015** | 0.6237 | +0.0037 |
+| Score + capped_linear s=0.05 c=2.0 | **0.6291** | -0.0014 | — | — |
+
+**Decision: REJECTED** — PPD wins validation (-0.0015) but loses holdout (+0.0037). Same generalization failure as every prior MOV experiment.
+
+### How to Rebuild Drive Stats
+
+**1. Install nflreadpy:**
+```python
+import nfl_data_py as nfl
+```
+
+**2. Load PBP and compute per-game drive stats:**
+```python
+import pandas as pd
+import numpy as np
+
+# Load PBP
+pbp = nfl.import_pbp_data([2021, 2022, 2023, 2024, 2025])
+
+# Per-game drive stats
+def compute_drive_stats(pbp_df: pd.DataFrame) -> pd.DataFrame:
+    """Group PBP by game_id, home/away, compute drives and points per drive."""
+    drives = pbp_df[pbp_df["down"] == 1].copy()
+    home = drives.groupby("game_id").agg(
+        home_drives=("posteam", "count"),
+        home_ppd=("total_home_epa", lambda x: x.sum() / max(len(x), 1)),
+    ).reset_index()
+    away = drives.groupby("game_id").agg(
+        away_drives=("posteam", "count"),
+        away_ppd=("total_away_epa", lambda x: x.sum() / max(len(x), 1)),
+    ).reset_index()
+    result = home.merge(away, on="game_id")
+    result["ppd_margin"] = (result["home_ppd"] - result["away_ppd"]) * (
+        result["home_drives"] + result["away_drives"]
+    ) / 2.0
+    return result
+
+ds = compute_drive_stats(pbp)
+ds.to_parquet("data/features/nfl/drive_stats.parquet")
+```
+
+**3. Re-enable in ratings.py:**
+- Add `drive_stats_path` param to `compute_elo_features()`
+- Load merge: `out.merge(ds[["game_id", "ppd_margin"]], on="game_id", how="left")`
+- Use `ppd_margin` instead of `(home_score, away_score)` in `_mov_multiplier()`
+
+**4. Best PPD params (from experiment):**
+- MOV type: `capped_linear`, scale=0.05, cap=2.0
+- Raw Elo improvement: -0.0054 vs standard MOV on 2025 holdout
+- Platform effect washes out after Platt + QB overlay (+0.0037 holdout)
+
+### Key Decisions
+- PPD infrastructure torn down — the signal is real at the raw Elo level but absorbed by Platt + overlay
+- Drive stats recipe preserved in AGENTS.md for future reference
+- No change to v3.0.0 incumbent (holdout 0.6200)
+
+### Relevant Files (Remaining)
+- `src/sportslab/features/ratings.py` — `drive_stats_path` param removed, PPD logic removed
