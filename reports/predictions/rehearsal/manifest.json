@@ -2,13 +2,13 @@
   "manifest_version": 1,
   "snapshots": [
     {
-      "snapshot_id": "week_2025_01_20260702_140622_rehearsal",
-      "path": "reports/predictions/rehearsal/snapshots/week_2025_01_20260702_140622_rehearsal.csv",
+      "snapshot_id": "week_2025_01_20260702_141307_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_01_20260702_141307_rehearsal.csv",
       "season": 2025,
       "week": 1,
       "mode": "live",
       "status": "graded",
-      "created_at": "2026-07-02T14:05:53Z",
+      "created_at": "2026-07-02T14:12:32Z",
       "model_version": "v3.0.0",
       "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
       "calibration": "Platt (logistic on Elo prob + features)",
@@ -16,7 +16,7 @@
       "qb_source": "oracle",
       "n_games": 15,
       "checksum": "sha256:f1a6ed7c95dc0803",
-      "data_cutoff": "2026-07-02T14:05:53Z",
+      "data_cutoff": "2026-07-02T14:12:32Z",
       "elo_params": {
         "k": 36,
         "hfa": 40,
@@ -32,16 +32,16 @@
         "accuracy": 0.8,
         "auc": 0.8393
       },
-      "graded_at": "2026-07-02T14:05:53Z"
+      "graded_at": "2026-07-02T14:12:32Z"
     },
     {
-      "snapshot_id": "week_2025_02_20260702_140622_rehearsal",
-      "path": "reports/predictions/rehearsal/snapshots/week_2025_02_20260702_140622_rehearsal.csv",
+      "snapshot_id": "week_2025_02_20260702_141307_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_02_20260702_141307_rehearsal.csv",
       "season": 2025,
       "week": 2,
       "mode": "live",
       "status": "graded",
-      "created_at": "2026-07-02T14:05:53Z",
+      "created_at": "2026-07-02T14:12:32Z",
       "model_version": "v3.0.0",
       "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
       "calibration": "Platt (logistic on Elo prob + features)",
@@ -49,7 +49,7 @@
       "qb_source": "oracle",
       "n_games": 16,
       "checksum": "sha256:61d2184f5528843f",
-      "data_cutoff": "2026-07-02T14:05:53Z",
+      "data_cutoff": "2026-07-02T14:12:32Z",
       "elo_params": {
         "k": 36,
         "hfa": 40,
@@ -65,16 +65,16 @@
         "accuracy": 0.75,
         "auc": 0.8254
       },
-      "graded_at": "2026-07-02T14:05:53Z"
+      "graded_at": "2026-07-02T14:12:32Z"
     },
     {
-      "snapshot_id": "week_2025_03_20260702_140623_rehearsal",
-      "path": "reports/predictions/rehearsal/snapshots/week_2025_03_20260702_140623_rehearsal.csv",
+      "snapshot_id": "week_2025_03_20260702_141307_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_03_20260702_141307_rehearsal.csv",
       "season": 2025,
       "week": 3,
       "mode": "live",
       "status": "graded",
-      "created_at": "2026-07-02T14:05:53Z",
+      "created_at": "2026-07-02T14:12:32Z",
       "model_version": "v3.0.0",
       "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
       "calibration": "Platt (logistic on Elo prob + features)",
@@ -82,7 +82,7 @@
       "qb_source": "oracle",
       "n_games": 16,
       "checksum": "sha256:5c5d9f837b757a32",
-      "data_cutoff": "2026-07-02T14:05:53Z",
+      "data_cutoff": "2026-07-02T14:12:32Z",
       "elo_params": {
         "k": 36,
         "hfa": 40,
@@ -98,16 +98,16 @@
         "accuracy": 0.75,
         "auc": 0.8333
       },
-      "graded_at": "2026-07-02T14:05:53Z"
+      "graded_at": "2026-07-02T14:12:32Z"
     },
     {
-      "snapshot_id": "week_2025_04_20260702_140623_rehearsal",
-      "path": "reports/predictions/rehearsal/snapshots/week_2025_04_20260702_140623_rehearsal.csv",
+      "snapshot_id": "week_2025_04_20260702_141307_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_04_20260702_141307_rehearsal.csv",
       "season": 2025,
       "week": 4,
       "mode": "live",
       "status": "graded",
-      "created_at": "2026-07-02T14:05:53Z",
+      "created_at": "2026-07-02T14:12:32Z",
       "model_version": "v3.0.0",
       "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
       "calibration": "Platt (logistic on Elo prob + features)",
@@ -115,7 +115,7 @@
       "qb_source": "oracle",
       "n_games": 14,
       "checksum": "sha256:c835db84231bbccb",
-      "data_cutoff": "2026-07-02T14:05:53Z",
+      "data_cutoff": "2026-07-02T14:12:32Z",
       "elo_params": {
         "k": 36,
         "hfa": 40,
@@ -131,16 +131,16 @@
         "accuracy": 0.7857,
         "auc": 0.75
       },
-      "graded_at": "2026-07-02T14:05:53Z"
+      "graded_at": "2026-07-02T14:12:32Z"
     },
     {
-      "snapshot_id": "week_2025_05_20260702_140623_rehearsal",
-      "path": "reports/predictions/rehearsal/snapshots/week_2025_05_20260702_140623_rehearsal.csv",
+      "snapshot_id": "week_2025_05_20260702_141308_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_05_20260702_141308_rehearsal.csv",
       "season": 2025,
       "week": 5,
       "mode": "live",
       "status": "graded",
-      "created_at": "2026-07-02T14:05:53Z",
+      "created_at": "2026-07-02T14:12:32Z",
       "model_version": "v3.0.0",
       "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
       "calibration": "Platt (logistic on Elo prob + features)",
@@ -148,7 +148,7 @@
       "qb_source": "oracle",
       "n_games": 13,
       "checksum": "sha256:2bc2d20076d21e2b",
-      "data_cutoff": "2026-07-02T14:05:53Z",
+      "data_cutoff": "2026-07-02T14:12:32Z",
       "elo_params": {
         "k": 36,
         "hfa": 40,
@@ -164,16 +164,16 @@
         "accuracy": 0.2308,
         "auc": 0.2778
       },
-      "graded_at": "2026-07-02T14:05:53Z"
+      "graded_at": "2026-07-02T14:12:32Z"
     },
     {
-      "snapshot_id": "week_2025_06_20260702_140623_rehearsal",
-      "path": "reports/predictions/rehearsal/snapshots/week_2025_06_20260702_140623_rehearsal.csv",
+      "snapshot_id": "week_2025_06_20260702_141308_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_06_20260702_141308_rehearsal.csv",
       "season": 2025,
       "week": 6,
       "mode": "live",
       "status": "graded",
-      "created_at": "2026-07-02T14:05:53Z",
+      "created_at": "2026-07-02T14:12:32Z",
       "model_version": "v3.0.0",
       "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
       "calibration": "Platt (logistic on Elo prob + features)",
@@ -181,7 +181,7 @@
       "qb_source": "oracle",
       "n_games": 14,
       "checksum": "sha256:2e7608ac0720fb43",
-      "data_cutoff": "2026-07-02T14:05:53Z",
+      "data_cutoff": "2026-07-02T14:12:32Z",
       "elo_params": {
         "k": 36,
         "hfa": 40,
@@ -197,7 +197,502 @@
         "accuracy": 0.6429,
         "auc": 0.6444
       },
-      "graded_at": "2026-07-02T14:05:53Z"
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_07_20260702_141308_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_07_20260702_141308_rehearsal.csv",
+      "season": 2025,
+      "week": 7,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 14,
+      "checksum": "sha256:ac901b27b06da8d6",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 14,
+        "log_loss": 0.5417,
+        "brier": 0.1783,
+        "accuracy": 0.7143,
+        "auc": 0.8889
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_08_20260702_141308_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_08_20260702_141308_rehearsal.csv",
+      "season": 2025,
+      "week": 8,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 13,
+      "checksum": "sha256:382a1c7b77765dc5",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 13,
+        "log_loss": 0.5767,
+        "brier": 0.1963,
+        "accuracy": 0.6923,
+        "auc": 0.725
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_09_20260702_141308_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_09_20260702_141308_rehearsal.csv",
+      "season": 2025,
+      "week": 9,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 14,
+      "checksum": "sha256:df71e563e57888d6",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 14,
+        "log_loss": 0.7296,
+        "brier": 0.2634,
+        "accuracy": 0.5714,
+        "auc": 0.7
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_10_20260702_141308_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_10_20260702_141308_rehearsal.csv",
+      "season": 2025,
+      "week": 10,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 13,
+      "checksum": "sha256:f77e3f620d2bac06",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 13,
+        "log_loss": 0.6726,
+        "brier": 0.2406,
+        "accuracy": 0.5385,
+        "auc": 0.6429
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_11_20260702_141308_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_11_20260702_141308_rehearsal.csv",
+      "season": 2025,
+      "week": 11,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 14,
+      "checksum": "sha256:a50348656d95054d",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 14,
+        "log_loss": 0.5454,
+        "brier": 0.18,
+        "accuracy": 0.7857,
+        "auc": 0.8571
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_12_20260702_141309_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_12_20260702_141309_rehearsal.csv",
+      "season": 2025,
+      "week": 12,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 14,
+      "checksum": "sha256:9a22b53c226ff584",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 14,
+        "log_loss": 0.5923,
+        "brier": 0.2028,
+        "accuracy": 0.7143,
+        "auc": 0.7333
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_13_20260702_141309_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_13_20260702_141309_rehearsal.csv",
+      "season": 2025,
+      "week": 13,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 16,
+      "checksum": "sha256:9cd27f1f2f1325a5",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 16,
+        "log_loss": 0.7049,
+        "brier": 0.2524,
+        "accuracy": 0.5625,
+        "auc": 0.6406
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_14_20260702_141309_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_14_20260702_141309_rehearsal.csv",
+      "season": 2025,
+      "week": 14,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 14,
+      "checksum": "sha256:2a97b5b4b81d3a92",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 14,
+        "log_loss": 0.6267,
+        "brier": 0.2203,
+        "accuracy": 0.6429,
+        "auc": 0.6667
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_15_20260702_141309_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_15_20260702_141309_rehearsal.csv",
+      "season": 2025,
+      "week": 15,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 16,
+      "checksum": "sha256:f12aa7ae14e97de5",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 16,
+        "log_loss": 0.5095,
+        "brier": 0.1704,
+        "accuracy": 0.6875,
+        "auc": 0.8333
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_16_20260702_141309_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_16_20260702_141309_rehearsal.csv",
+      "season": 2025,
+      "week": 16,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 16,
+      "checksum": "sha256:76321994af03a82c",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 16,
+        "log_loss": 0.5729,
+        "brier": 0.1969,
+        "accuracy": 0.6875,
+        "auc": 0.7833
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_17_20260702_141309_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_17_20260702_141309_rehearsal.csv",
+      "season": 2025,
+      "week": 17,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 16,
+      "checksum": "sha256:24bc4a3141e8a3b0",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 16,
+        "log_loss": 0.6942,
+        "brier": 0.2481,
+        "accuracy": 0.6875,
+        "auc": 0.5833
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_18_20260702_141309_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_18_20260702_141309_rehearsal.csv",
+      "season": 2025,
+      "week": 18,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 16,
+      "checksum": "sha256:f5bb6c3dda2b5cff",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 16,
+        "log_loss": 0.6387,
+        "brier": 0.2263,
+        "accuracy": 0.5625,
+        "auc": 0.6042
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_19_20260702_141309_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_19_20260702_141309_rehearsal.csv",
+      "season": 2025,
+      "week": 19,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 6,
+      "checksum": "sha256:8dbd8c3554ad5dbf",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 6,
+        "log_loss": 0.5996,
+        "brier": 0.2056,
+        "accuracy": 0.6667,
+        "auc": 0.875
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_20_20260702_141310_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_20_20260702_141310_rehearsal.csv",
+      "season": 2025,
+      "week": 20,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 4,
+      "checksum": "sha256:16d87c3afbe11c06",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 4,
+        "log_loss": 0.5399,
+        "brier": 0.1748,
+        "accuracy": 1.0,
+        "auc": 1.0
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
+    },
+    {
+      "snapshot_id": "week_2025_21_20260702_141310_rehearsal",
+      "path": "reports/predictions/rehearsal/snapshots/week_2025_21_20260702_141310_rehearsal.csv",
+      "season": 2025,
+      "week": 21,
+      "mode": "live",
+      "status": "graded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 2,
+      "checksum": "sha256:ca9ffa5d83996358",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": true,
+      "grade_metrics": {
+        "n": 2,
+        "log_loss": 0.5965,
+        "brier": 0.2048,
+        "accuracy": 0.5,
+        "auc": 1.0
+      },
+      "graded_at": "2026-07-02T14:12:32Z"
     }
   ]
 }

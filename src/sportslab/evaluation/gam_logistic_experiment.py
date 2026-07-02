@@ -210,7 +210,7 @@ def run_gam_logistic_experiment(
 
     for n_knots in N_KNOTS_VALUES:
         for degree in DEGREE_VALUES:
-            for C in C_VALUES:
+            for C in C_VALUES:  # noqa: N806
                 fold_lls = []
 
                 for fold_idx in range(len(ROLLING_FOLDS)):
@@ -361,7 +361,7 @@ def run_gam_logistic_experiment(
 
     sorted_hold = sorted(hold_results.items(), key=lambda x: x[1]["log_loss"])
     best_hold_name = sorted_hold[0][0]
-    best_hold_ll = hold_results[best_hold_name]["log_loss"]
+    hold_results[best_hold_name]["log_loss"]
 
     # ── 6. Promotion check ──
     promotes = beats_val and beats_hold

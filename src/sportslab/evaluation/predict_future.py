@@ -127,8 +127,8 @@ def _load_historical_and_future(
 
 
 def _split_by_availability(df: pd.DataFrame):
-    """Split into known (has home_win) and unknown (no home_win) games."""
-    has_result = df["home_win"].notna().values
+    """Split into known (has scores) and future (no scores) games."""
+    has_result = df["home_score"].notna().values
     df_known = df[has_result].copy().reset_index(drop=True)
     df_future = df[~has_result].copy().reset_index(drop=True)
     return df_known, df_future, has_result

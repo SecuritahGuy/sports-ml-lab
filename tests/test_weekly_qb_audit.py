@@ -22,7 +22,7 @@ def test_weekly_qb_audit_returns_dict():
 
 def test_weekly_qb_audit_output_file(tmp_path):
     out = str(tmp_path / "audit.csv")
-    result = run_weekly_qb_audit(season=2025, week=2, output_path=out)
+    run_weekly_qb_audit(season=2025, week=2, output_path=out)
     assert Path(out).exists()
     df = pd.read_csv(out)
     assert "game_id" in df.columns
@@ -42,7 +42,7 @@ def test_weekly_qb_audit_output_file(tmp_path):
 
 def test_weekly_qb_audit_all_three_sources_present():
     out = "/tmp/test_weekly_qb_audit_sources.csv"
-    result = run_weekly_qb_audit(season=2025, week=5, output_path=out)
+    run_weekly_qb_audit(season=2025, week=5, output_path=out)
     df = pd.read_csv(out)
     assert df["oracle_final_prob"].notna().sum() > 0
     assert df["dc_final_prob"].notna().sum() > 0

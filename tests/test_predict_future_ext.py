@@ -12,6 +12,8 @@ def test_split_by_availability():
     df = pd.DataFrame({
         "game_id": ["g1", "g2", "g3"],
         "home_win": [1.0, 0.0, np.nan],
+        "home_score": [24.0, 17.0, np.nan],
+        "away_score": [10.0, 31.0, np.nan],
     })
     known, future, mask = _split_by_availability(df)
     assert len(known) == 2

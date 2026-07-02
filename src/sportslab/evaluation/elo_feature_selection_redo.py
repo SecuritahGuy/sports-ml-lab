@@ -347,7 +347,7 @@ def _run_l1_rolling(
     feat_cols: List[str],
     elo_prob: np.ndarray,
     y: np.ndarray,
-    C: float = 0.1,
+    C: float = 0.1,  # noqa: N803
 ) -> List[float]:
     fold_lls = []
     for train_s, val_s in ROLLING_FOLDS:
@@ -370,7 +370,7 @@ def _get_coefs_l1(
     feat_cols: List[str],
     elo_prob: np.ndarray,
     y: np.ndarray,
-    C: float = 0.1,
+    C: float = 0.1,  # noqa: N803
 ) -> Dict[str, List[float]]:
     coefs: Dict[str, List[float]] = {c: [] for c in ["elo_prob"] + feat_cols}
     for train_s, _ in ROLLING_FOLDS:
@@ -522,18 +522,18 @@ def run_elo_feature_selection_redo(
     all_candidate_cols = list(dict.fromkeys(all_candidate_cols))  # dedup preserving order
 
     l1_results = {}
-    for C in [1.0, 0.5, 0.1, 0.05, 0.01]:
+    for C in [1.0, 0.5, 0.1, 0.05, 0.01]:  # noqa: N806
         fold_lls = _run_l1_rolling(df, all_candidate_cols, elo, y, C=C)
         val_ll = float(np.mean(fold_lls))
         l1_results[f"C={C}"] = {"fold_lls": fold_lls, "val_ll": val_ll}
         print(f"  L1 C={C:.2f}: {val_ll:.4f}")
 
-    best_l1_C = min(l1_results, key=lambda k: l1_results[k]["val_ll"])
+    best_l1_C = min(l1_results, key=lambda k: l1_results[k]["val_ll"])  # noqa: N806
     best_l1_ll = l1_results[best_l1_C]["val_ll"]
     print(f"  Best L1: {best_l1_C} ({best_l1_ll:.4f})")
 
     # L1 coefficient stability
-    l1_C_val = float(best_l1_C.split("=")[1])
+    l1_C_val = float(best_l1_C.split("=")[1])  # noqa: N806
     coef_stability = _get_coefs_l1(df, all_candidate_cols, elo, y, C=l1_C_val)
     nonzero_stable: Dict[str, List[float]] = {}
     for name, coefs in coef_stability.items():

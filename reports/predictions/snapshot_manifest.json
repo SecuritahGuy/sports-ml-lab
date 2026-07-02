@@ -1,4 +1,86 @@
 {
   "manifest_version": "1.0",
-  "snapshots": []
+  "snapshots": [
+    {
+      "snapshot_id": "week_2026_01_dry_run_20260702_141232",
+      "path": "reports/predictions/snapshots/week_2026_01_dry_run_20260702_141232.csv",
+      "season": 2026,
+      "week": 1,
+      "mode": "dry_run",
+      "status": "superseded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 15,
+      "checksum": "sha256:bed1ed3d64802f75",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": false,
+      "grade_metrics": null,
+      "graded_at": null
+    },
+    {
+      "snapshot_id": "week_2026_01_dry_run_20260702_141232",
+      "path": "reports/predictions/snapshots/week_2026_01_dry_run_20260702_141232.csv",
+      "season": 2026,
+      "week": 1,
+      "mode": "dry_run",
+      "status": "superseded",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 15,
+      "checksum": "sha256:bed1ed3d64802f75",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": false,
+      "grade_metrics": null,
+      "graded_at": null
+    },
+    {
+      "snapshot_id": "week_2026_01_dry_run_20260702_141232",
+      "path": "reports/predictions/snapshots/week_2026_01_dry_run_20260702_141232.csv",
+      "season": 2026,
+      "week": 1,
+      "mode": "dry_run",
+      "status": "initial",
+      "created_at": "2026-07-02T14:12:32Z",
+      "model_version": "v3.0.0",
+      "feature_set": "qb_changed + rolling_mov_3 + frozen QB overlay",
+      "calibration": "Platt (logistic on Elo prob + features)",
+      "training_seasons": "2021-2024",
+      "qb_source": "oracle",
+      "n_games": 15,
+      "checksum": "sha256:bed1ed3d64802f75",
+      "data_cutoff": "2026-07-02T14:12:32Z",
+      "elo_params": {
+        "k": 36,
+        "hfa": 40,
+        "reg": 0.1,
+        "decay": 32,
+        "qb_bonus": 0.2
+      },
+      "graded": false,
+      "grade_metrics": null,
+      "graded_at": null
+    }
+  ]
 }

@@ -489,13 +489,12 @@ def run_residual_diagnostics(
             corr_spread = pd.Series(spread_hold).fillna(0)
             r_val, p_val = pearsonr(corr_res, corr_spread)
             f.write(f"- Correlation(residual, spread_line): r={r_val:.3f}, p={p_val:.4f}\n")
-            f.write(
-                f"- Interpretation: {
-                    'Residuals are independent of market spread'
-                    if p_val > 0.05
-                    else 'Residuals correlate with market spread'
-                }\n\n"
+            interpretation = (
+                "Residuals are independent of market spread"
+                if p_val > 0.05
+                else "Residuals correlate with market spread"
             )
+            f.write(f"- Interpretation: {interpretation}\n\n")
 
         # ── 10. Summary ──
         f.write("## 10. Summary & Recommendations\n\n")

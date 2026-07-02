@@ -47,9 +47,9 @@ def test_tie_marked_not_eligible(sample_schedule_with_tie):
     result[TIE_COLUMN] = result["home_score"] == result["away_score"]
     result[MODEL_ELIGIBLE_COLUMN] = result[TARGET_COLUMN].notna()
 
-    assert result.loc[0, MODEL_ELIGIBLE_COLUMN] == True, "Non-tie should be eligible"
-    assert result.loc[1, MODEL_ELIGIBLE_COLUMN] == False, "Tie should not be eligible"
-    assert result.loc[1, TIE_COLUMN] == True, "Tie should be flagged"
+    assert result.loc[0, MODEL_ELIGIBLE_COLUMN], "Non-tie should be eligible"
+    assert not result.loc[1, MODEL_ELIGIBLE_COLUMN], "Tie should not be eligible"
+    assert result.loc[1, TIE_COLUMN], "Tie should be flagged"
 
 
 def test_elo_update_on_tie(sample_schedule_with_tie):
