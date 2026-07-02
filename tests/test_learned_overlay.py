@@ -7,6 +7,15 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from sportslab.evaluation.experiment_config import (
+    ALL_SEASONS,
+)
+from sportslab.evaluation.experiment_config import (
+    HOLDOUT_SEASON as CH,
+)
+from sportslab.evaluation.experiment_config import (
+    ROLLING_FOLDS as CF,
+)
 from sportslab.evaluation.learned_overlay_experiment import (
     C_VALUES,
     FEATURE_SETS,
@@ -14,11 +23,6 @@ from sportslab.evaluation.learned_overlay_experiment import (
     PENALTIES,
     _logit,
     _sigmoid,
-)
-from sportslab.evaluation.experiment_config import (
-    ALL_SEASONS,
-    HOLDOUT_SEASON as CH,
-    ROLLING_FOLDS as CF,
 )
 
 
@@ -106,7 +110,8 @@ def test_logistic_with_saga():
 
 def test_experiment_uses_experiment_config():
     from sportslab.evaluation.learned_overlay_experiment import (
-        HOLDOUT_SEASON, ROLLING_FOLDS,
+        HOLDOUT_SEASON,
+        ROLLING_FOLDS,
     )
     assert HOLDOUT_SEASON == CH
     assert ROLLING_FOLDS == CF
@@ -114,7 +119,8 @@ def test_experiment_uses_experiment_config():
 
 def test_holdout_not_in_folds():
     from sportslab.evaluation.learned_overlay_experiment import (
-        HOLDOUT_SEASON, ROLLING_FOLDS,
+        HOLDOUT_SEASON,
+        ROLLING_FOLDS,
     )
     for _, val_season in ROLLING_FOLDS:
         assert val_season != HOLDOUT_SEASON

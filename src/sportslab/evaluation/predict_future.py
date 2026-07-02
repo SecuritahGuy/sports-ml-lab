@@ -12,13 +12,13 @@ How it works:
   3. Fits Elo on known games only, chronologically
   4. For each prediction game, emits pregame features (elo_prob, qb_changed,
      rolling_mov_3) without updating Elo (since no result is known)
-  5. Applies incumbent Platt calibration to produce final probabilities
-  6. Saves prediction CSV
+  5. Applies incumbent Platt calibration to produce base probabilities
+  6. Applies frozen QB overlay (same gate/logic as v3.0.0 champion)
+  7. Saves prediction CSV with all overlay metadata and caution flags
 
 Two QB modes:
   - oracle: Uses final actual starter data from nflreadpy schedules (backtest
-    only — NOT fully live-pregame-safe, because the schedule's qb_id is set
-    after injury reports are finalized).
+    only — NOT fully live-pregame-safe).
   - live_pregame: Uses user-supplied QB starter info via --qb-input CSV.
     Overrides oracle data with pregame-announced starters.
 
@@ -42,19 +42,27 @@ from sportslab.evaluation.predict_incumbent import (
     BEST_QB_BONUS,
     BEST_REG,
     FEATURE_COLS,
+    INCUMBENT_CALIBRATION,
     INCUMBENT_DATE,
     INCUMBENT_FEATURE_SET,
     INCUMBENT_HOLDOUT_LL,
     INCUMBENT_VAL_LL,
     INCUMBENT_VERSION,
+    OVERLAY_CAP,
+    OVERLAY_GAMMA,
+    _add_caution_flags,
+    _apply_frozen_overlay,
     _assign_confidence_bucket,
+    _build_gate_mask,
     _build_pipeline,
 )
 from sportslab.evaluation.season_regression_experiment import (
     build_team_regression_overrides,
 )
 from sportslab.features.build_features import MODEL_ELIGIBLE_COLUMN
+from sportslab.features.market import compute_market_features
 from sportslab.features.qb import compute_qb_features
+from sportslab.features.qb_adjustment import compute_qb_adjustments
 from sportslab.features.qb_input import apply_qb_input, parse_qb_input_csv
 from sportslab.features.ratings import compute_elo_features
 from sportslab.features.situational import compute_situational_features
@@ -90,7 +98,6 @@ def _load_historical_and_future(
 
     if input_path:
         future = pd.read_csv(input_path)
-        # Merge future rows with feature table pregame columns
         id_cols = [c for c in ["game_id", "season", "week", "gameday",
                                 "home_team", "away_team"] if c in future.columns]
         if not id_cols:
@@ -100,22 +107,18 @@ def _load_historical_and_future(
                       ["home_score", "away_score", "home_win", "result",
                        "is_tie", MODEL_ELIGIBLE_COLUMN]]
         merged = future.merge(df[merge_cols], on=id_cols, how="left")
-        # Future games have no score/target
         merged["home_win"] = pd.NA
-        # Append to historical
         df_hist = df[df[MODEL_ELIGIBLE_COLUMN]].copy()
         df_out = pd.concat([df_hist, merged], ignore_index=True)
         df_out = df_out.sort_values(["season", "week", "gameday"]).reset_index(drop=True)
         return df_out
 
-    # Use all rows in feature table; future games have no home_win
     df_out = df.copy()
     if season is not None:
         df_out = df_out[df_out["season"] == season].copy()
     if week is not None:
         df_out = df_out[df_out["week"] == week].copy()
     if season is not None or week is not None:
-        # Still need historical data for Elo fitting
         df_hist = df[df[MODEL_ELIGIBLE_COLUMN]].copy()
         df_out = pd.concat([df_hist, df_out], ignore_index=True)
         df_out = df_out.drop_duplicates(subset=["game_id"]).reset_index(drop=True)
@@ -160,7 +163,6 @@ def predict_future(
     from sportslab.evaluation.weekly_pipeline import _validate_mode
     _validate_mode(mode)
 
-    # Live mode: block oracle QB data
     if mode in LIVE_MODES and not qb_input_path:
         raise ValueError(
             f"Oracle QB data not allowed in live mode ({mode}). "
@@ -170,7 +172,6 @@ def predict_future(
 
     print(f"=== Future Prediction Mode ({mode}) ===")
 
-    # Load data
     df_all = _load_historical_and_future(input_path, season=season, week=week)
     df_known, df_future, has_result = _split_by_availability(df_all)
 
@@ -181,7 +182,6 @@ def predict_future(
     print(f"  Historical games (with scores): {len(df_known)}")
     print(f"  Future games (to predict):       {len(df_future)}")
 
-    # Apply live-safe QB input override if provided
     qb_source = "oracle"
     if qb_input_path:
         qb_input_df = parse_qb_input_csv(qb_input_path)
@@ -189,27 +189,26 @@ def predict_future(
         qb_source = "live_pregame"
         print(f"  QB source: live_pregame (overrode oracle data for {len(qb_input_df)} games)")
 
-    # Build features on full sorted dataset
     overrides = build_team_regression_overrides(
         df_all,
-        preseason_regression=0.1,
-        qb_change_bonus=0.2,
+        preseason_regression=BEST_REG,
+        qb_change_bonus=BEST_QB_BONUS,
     )
     df_feat = compute_elo_features(
         df_all,
-        k_factor=36,
-        home_advantage=40,
-        preseason_regression=0.1,
+        k_factor=BEST_K,
+        home_advantage=BEST_HFA,
+        preseason_regression=BEST_REG,
         team_regression_overrides=overrides,
-        decay_half_life=32,
+        decay_half_life=BEST_DECAY,
     )
     df_feat = compute_qb_features(df_feat)
+    df_feat = compute_qb_adjustments(df_feat)
     df_feat = compute_situational_features(df_feat)
+    df_feat = compute_market_features(df_feat)
 
-    # Feature columns for Platt
     feat_cols = [c for c in FEATURE_COLS if c in df_feat.columns]
 
-    # Fit Platt on known games only
     known_mask = df_feat["home_win"].notna().values
     elo_prob_all = df_feat["elo_prob"].values
     feat_all = df_feat[feat_cols].values if feat_cols else np.empty((len(df_feat), 0))
@@ -225,18 +224,25 @@ def predict_future(
     pipe.fit(x_known, y_known)
     print("  Platt calibration fitted on historical games")
 
-    # Predict on future games
     future_mask = ~known_mask & ~df_feat["is_neutral"].fillna(False).values
     x_future = np.column_stack(
         [elo_prob_all[future_mask],
          feat_all[future_mask]] if has_feats else [elo_prob_all[future_mask]]
     )
-    prob = pipe.predict_proba(x_future)[:, 1]
+    base_prob = pipe.predict_proba(x_future)[:, 1]
+
+    home_qb_adj = df_feat.loc[future_mask, "home_qb_adj"].values.astype(float)
+    away_qb_adj = df_feat.loc[future_mask, "away_qb_adj"].values.astype(float)
+    gate_mask = _build_gate_mask(df_feat)
+    pred_gate = gate_mask[future_mask]
+    prob = _apply_frozen_overlay(base_prob, home_qb_adj, away_qb_adj, pred_gate)
+    n_gated = int(pred_gate.sum())
+    print(f"  Frozen QB overlay active: {n_gated}/{len(df_future)} games")
+
     pred_winner = np.where(prob >= 0.5,
                            df_feat.loc[future_mask, "home_team"].values,
                            df_feat.loc[future_mask, "away_team"].values)
 
-    # Build output DataFrame
     df_out = pd.DataFrame({
         "game_id": df_feat.loc[future_mask, "game_id"].values,
         "season": df_feat.loc[future_mask, "season"].values,
@@ -245,13 +251,14 @@ def predict_future(
         "away_team": df_feat.loc[future_mask, "away_team"].values,
         "home_team": df_feat.loc[future_mask, "home_team"].values,
         "incumbent_home_win_prob": prob,
+        "base_incumbent_prob": base_prob,
         "predicted_winner": pred_winner,
         "confidence_bucket": [_assign_confidence_bucket(p) for p in prob],
         "model_version": INCUMBENT_VERSION,
         "model_date": INCUMBENT_DATE,
         "training_seasons": "2021-2024",
         "feature_set": INCUMBENT_FEATURE_SET,
-        "calibration_method": "Platt (logistic on Elo prob + features)",
+        "calibration_method": INCUMBENT_CALIBRATION,
         "model_val_ll": INCUMBENT_VAL_LL,
         "model_holdout_ll": INCUMBENT_HOLDOUT_LL,
         "elo_k": BEST_K,
@@ -259,24 +266,33 @@ def predict_future(
         "elo_reg": BEST_REG,
         "elo_decay": BEST_DECAY,
         "elo_qb_bonus": BEST_QB_BONUS,
+        "overlay_gamma": OVERLAY_GAMMA,
+        "overlay_cap": OVERLAY_CAP,
+        "overlay_gate_active": pred_gate.astype(int),
+        "home_qb_adj": home_qb_adj.round(1),
+        "away_qb_adj": away_qb_adj.round(1),
         "qb_source": qb_source,
         "home_qb_id": df_feat.loc[future_mask, "home_qb_id"].values,
         "away_qb_id": df_feat.loc[future_mask, "away_qb_id"].values,
     })
 
-    # Add caution flags
-    qb_cols = [c for c in ["home_qb_changed", "away_qb_changed"] if c in df_feat.columns]
-    if qb_cols:
-        df_out["caution_qb_change"] = (
-            df_feat.loc[future_mask, qb_cols].any(axis=1).astype(int).values
-        )
+    df_out = _add_caution_flags(df_out, df_feat.loc[future_mask], prob)
+
+    if "market_home_prob_novig" in df_feat.columns:
+        future_mkt = df_feat.loc[future_mask, "market_home_prob_novig"].values
+        df_out["market_prob_diagnostic"] = future_mkt.round(4)
+        df_out["market_minus_model_diagnostic"] = (future_mkt - prob).round(4)
     else:
-        df_out["caution_qb_change"] = 0
+        df_out["market_prob_diagnostic"] = np.nan
+        df_out["market_minus_model_diagnostic"] = np.nan
 
-    weeks = df_feat.loc[future_mask, "week"].values
-    df_out["caution_early_season"] = (weeks <= 4).astype(int)
+    if "home_qb_changed" in df_feat.columns:
+        qb_home = df_feat.loc[future_mask, "home_qb_changed"].astype(int).values
+        qb_away = df_feat.loc[future_mask, "away_qb_changed"].astype(int).values
+        df_out["qb_change_flag"] = (qb_home | qb_away)
+    else:
+        df_out["qb_change_flag"] = 0
 
-    # Save
     out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     df_out.to_csv(out_path, index=False)

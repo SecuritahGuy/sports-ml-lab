@@ -6,7 +6,6 @@ updates ratings, and that the Elo formula is correctly implemented.
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from sportslab.features.ratings import compute_elo_features
 

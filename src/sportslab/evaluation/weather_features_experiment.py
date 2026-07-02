@@ -111,9 +111,9 @@ def run_weather_features_experiment(
             by_roof = df_raw.groupby("roof")[c].apply(lambda x: x.isna().sum())
             print(f"    {c}: {dict(by_roof)}")
 
-    print(f"\n  Source: nflreadpy `temp` (°F) and `wind` (mph)")
-    print(f"  Dome/indoor games get neutralized (70°F, 0 mph)")
-    print(f"  Remaining NaN imputed with dataset medians")
+    print("\n  Source: nflreadpy `temp` (°F) and `wind` (mph)")
+    print("  Dome/indoor games get neutralized (70°F, 0 mph)")
+    print("  Remaining NaN imputed with dataset medians")
 
     # ── Compute MOV Elo with frozen incumbent params ──
     print("\n=== Computing MOV Elo features (incumbent params) ===")

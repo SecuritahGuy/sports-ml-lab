@@ -329,33 +329,35 @@ def compute_elo_features(
         elo_diff.append(h_elo - a_elo)
         elo_prob.append(_effective_expected(h_elo, a_elo, hfa=effective_hfa))
 
-        # Update ratings (ties count as 0.5 for each team)
+        # Update ratings (ties count as 0.5 for each team; skip future/unplayed)
         home_won = row["home_win"]
-        if pd.isna(home_won):
-            actual_home = 0.5
-        else:
-            actual_home = float(home_won)
+        is_future = pd.isna(home_won) and pd.isna(row.get("home_score"))
+        if not is_future:
+            if pd.isna(home_won):
+                actual_home = 0.5
+            else:
+                actual_home = float(home_won)
 
-        expected_home = _effective_expected(h_elo, a_elo, hfa=effective_hfa)
+            expected_home = _effective_expected(h_elo, a_elo, hfa=effective_hfa)
 
-        mov_mult = _mov_multiplier(
-            row.get("home_score", 0),
-            row.get("away_score", 0),
-            mov_type=mov_type,
-            mov_scale=mov_scale,
-            mov_cap=mov_cap,
-        )
-        week_num = int(row.get("week", 1))
-        week_scale = max(0.0, 1.0 - (week_num - 1) / max_week)
-        effective_k = k_factor * (1.0 + adaptive_k_boost * week_scale)
-        update = effective_k * (actual_home - expected_home) * mov_mult
-        ratings[home_team] = h_elo + update
-        ratings[away_team] = a_elo - update
+            mov_mult = _mov_multiplier(
+                row.get("home_score", 0),
+                row.get("away_score", 0),
+                mov_type=mov_type,
+                mov_scale=mov_scale,
+                mov_cap=mov_cap,
+            )
+            week_num = int(row.get("week", 1))
+            week_scale = max(0.0, 1.0 - (week_num - 1) / max_week)
+            effective_k = k_factor * (1.0 + adaptive_k_boost * week_scale)
+            update = effective_k * (actual_home - expected_home) * mov_mult
+            ratings[home_team] = h_elo + update
+            ratings[away_team] = a_elo - update
 
-        # Exponential decay toward mean after each game
-        if decay_factor is not None:
-            ratings[home_team] = default_elo + (ratings[home_team] - default_elo) * decay_factor
-            ratings[away_team] = default_elo + (ratings[away_team] - default_elo) * decay_factor
+            # Exponential decay toward mean after each game
+            if decay_factor is not None:
+                ratings[home_team] = default_elo + (ratings[home_team] - default_elo) * decay_factor
+                ratings[away_team] = default_elo + (ratings[away_team] - default_elo) * decay_factor
 
     out["home_elo_pre"] = home_elo
     out["away_elo_pre"] = away_elo

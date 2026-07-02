@@ -12,7 +12,7 @@ These techniques and design decisions survived strict rolling-origin validation 
 
 | Technique | Evidence |
 |-----------|----------|
-| **Elo/rating spine** | Tuned point-differential Elo (K=36, HFA=40, capped_linear MOV) forms the core signal. Outperformed Glicko and naive logistic regression. |
+| **Elo/rating spine** | Standard point-differential Elo (K=36, HFA=40) forms the core signal. Outperformed Glicko and naive logistic regression. |
 | **Season regression / decay** | Preseason regression toward mean (reg=0.1) + exponential decay (half-life=32 games) + QB-change bonus regression (0.2). Each improved validation log loss. |
 | **qb_changed binary feature** | Largest single-feature gain: −0.0072 validation LL. Captures injury/benching shocks that Elo undershoots. |
 | **rolling_mov_3** | 3-game rolling average margin of victory. Best window size after sensitivity testing (mov_1 won val but lost holdout). |
@@ -69,4 +69,4 @@ Every rejected experiment below was tested on rolling-origin validation and 2025
 
 ---
 
-*This roadmap is updated after each major experiment. Current incumbent: v2.0.0 (holdout LL 0.6262).*
+*This roadmap is updated after each major experiment. Current incumbent: v3.0.0 (holdout LL 0.6200).*

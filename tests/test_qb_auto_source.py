@@ -71,16 +71,18 @@ def test_build_auto_qb_csv_output_file(tmp_path):
 
 def test_auto_qb_integration_with_pipeline():
     """Verify predict_week accepts auto_qb flag."""
-    from sportslab.evaluation.weekly_pipeline import predict_week
     import inspect
+
+    from sportslab.evaluation.weekly_pipeline import predict_week
     sig = inspect.signature(predict_week)
     assert "auto_qb" in sig.parameters
 
 
 def test_auto_qb_flag_in_cli():
     """Verify CLI has --auto-qb flag."""
-    from sportslab.cli import predict_week_cmd
     import click
+
+    from sportslab.cli import predict_week_cmd
     for param in predict_week_cmd.params:
         if param.name == "auto_qb":
             assert isinstance(param, click.Option)
@@ -186,16 +188,18 @@ def test_weekly_qb_no_prior_data_season():
 
 def test_weekly_qb_integration_with_pipeline():
     """Verify predict_week accepts weekly_qb flag."""
-    from sportslab.evaluation.weekly_pipeline import predict_week
     import inspect
+
+    from sportslab.evaluation.weekly_pipeline import predict_week
     sig = inspect.signature(predict_week)
     assert "weekly_qb" in sig.parameters
 
 
 def test_weekly_qb_flag_in_cli():
     """Verify CLI has --weekly-qb flag."""
-    from sportslab.cli import predict_week_cmd
     import click
+
+    from sportslab.cli import predict_week_cmd
     for param in predict_week_cmd.params:
         if param.name == "weekly_qb":
             assert isinstance(param, click.Option)

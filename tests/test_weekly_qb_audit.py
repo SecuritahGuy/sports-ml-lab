@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 from sportslab.evaluation.weekly_qb_audit import (
     run_weekly_qb_audit,

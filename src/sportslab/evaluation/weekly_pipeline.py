@@ -220,7 +220,8 @@ def predict_week(
     # Auto-source QB data (weekly tracking or depth chart snapshot)
     if (auto_qb or weekly_qb) and not qb_input:
         from sportslab.features.qb_auto_source import (
-            build_auto_qb_csv, build_weekly_qb_csv,
+            build_auto_qb_csv,
+            build_weekly_qb_csv,
         )
 
         try:

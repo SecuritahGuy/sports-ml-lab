@@ -9,7 +9,6 @@ and 2026 schedule snapshot. Run before each prediction week.
 """
 
 import csv
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 

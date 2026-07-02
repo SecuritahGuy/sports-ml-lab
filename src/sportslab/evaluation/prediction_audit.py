@@ -22,7 +22,7 @@ DOCS_DIR = Path("docs/predictions")
 
 INCUMBENT_NAME = "Standard Elo + qb_changed + rolling_mov_3 + Platt"
 INCUMBENT_FEATURES = "qb_changed + rolling_mov_3"
-INCUMBENT_VAL_LL = "0.6334"
+INCUMBENT_VAL_LL = "0.6305"
 
 
 def _load_graded_snapshots(season: int) -> pd.DataFrame:

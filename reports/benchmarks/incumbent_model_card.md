@@ -72,7 +72,7 @@ final_prob = sigmoid(final_logit)
 | Base preseason regression | 0.1 | Fraction toward league mean each offseason |
 | QB-change bonus | 0.2 | Additional regression fraction for teams with a new starting QB |
 | Decay half-life | 32 games | Exponential decay toward prior ratings |
-| MOV type | `capped_linear` | Scale=0.05, cap=2.0 — caps blowout influence |
+| Elo MOV multiplier | None | Standard point-differential Elo (no MOV transform); rolling_mov_3 is a separate pregame feature |
 | Selection method | Rolling-origin 3-fold validation | Train [2021]→val 2022, train [2021-2022]→val 2023, train [2021-2023]→val 2024 |
 
 ## Calibration

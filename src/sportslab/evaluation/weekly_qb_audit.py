@@ -27,7 +27,6 @@ from sportslab.evaluation.predict_incumbent import (
     BEST_REG,
     ELO_TO_LOGIT,
     FEATURE_COLS,
-    INCUMBENT_VERSION,
     OVERLAY_CAP,
     OVERLAY_GAMMA,
     _build_pipeline,
@@ -177,7 +176,7 @@ def run_weekly_qb_audit(
     pred_game_ids = set(target["game_id"].values)
     n = len(target)
     print(f"  Target games: {n}")
-    print(f"  QB sources to compare: oracle, depth_chart, weekly_qb\n")
+    print("  QB sources to compare: oracle, depth_chart, weekly_qb\n")
 
     # Build combined dataframe once (same training for all sources)
     df_pred = target.copy()

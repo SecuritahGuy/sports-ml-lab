@@ -174,3 +174,61 @@ class TestFunctionsExist:
 
     def test_season_report_is_callable(self):
         assert callable(season_report)
+
+
+class TestV3OverlayColumns:
+    """Regression test: predict-week --mode dry_run output includes v3 overlay."""
+
+    def test_dry_run_has_overlay_columns(self):
+        """Verify dry_run snapshot contains all v3 overlay columns."""
+        result = predict_week(season=2026, week=1, mode="dry_run")
+        assert "snapshot" in result, "predict_week must return a snapshot path"
+        snap_path = result["snapshot"]
+        df = pd.read_csv(snap_path)
+
+        expected_overlay_cols = [
+            "overlay_gate_active",
+            "overlay_gamma",
+            "overlay_cap",
+            "home_qb_adj",
+            "away_qb_adj",
+            "base_incumbent_prob",
+        ]
+        for col in expected_overlay_cols:
+            assert col in df.columns, f"Missing v3 overlay column: {col}"
+
+        assert df["overlay_gate_active"].dropna().isin([0, 1]).all(), \
+            "overlay_gate_active must be 0 or 1"
+        assert (df["overlay_gamma"] == 1.0).all(), \
+            "overlay_gamma must be 1.0"
+        assert (df["overlay_cap"] == 40).all(), \
+            "overlay_cap must be 40"
+
+    def test_overlay_changes_prob_when_gate_and_adj_nonzero(self):
+        """When gate is active AND adjustments are non-zero, prob must differ."""
+        result = predict_week(season=2026, week=1, mode="dry_run")
+        df = pd.read_csv(result["snapshot"])
+
+        gated_with_adj = df[
+            (df["overlay_gate_active"] == 1)
+            & ((df["home_qb_adj"] != 0) | (df["away_qb_adj"] != 0))
+        ]
+        if len(gated_with_adj) == 0:
+            return
+        diff = (gated_with_adj["incumbent_home_win_prob"]
+                - gated_with_adj["base_incumbent_prob"]).abs()
+        assert (diff > 1e-10).all(), \
+            f"All {len(gated_with_adj)} gated+adjusted games have identical probs"
+
+    def test_overlay_preserves_prob_when_gate_inactive(self):
+        """When gate is inactive, final prob must equal base prob."""
+        result = predict_week(season=2026, week=1, mode="dry_run")
+        df = pd.read_csv(result["snapshot"])
+
+        ungated = df[df["overlay_gate_active"] == 0]
+        if len(ungated) == 0:
+            return
+        diff = (ungated["incumbent_home_win_prob"]
+                - ungated["base_incumbent_prob"]).abs()
+        assert (diff < 1e-10).all(), \
+            "Ungated games should have identical base and final prob"

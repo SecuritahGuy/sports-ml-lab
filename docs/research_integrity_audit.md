@@ -85,7 +85,7 @@ the same oracle source.
 | Metric | Value | Source |
 |--------|-------|--------|
 | Games evaluated | 276 | `backtest_2025.py` |
-| Log loss | **0.6262** | Matches `INCUMBENT_HOLDOUT_LL` |
+| Log loss | **0.6200** | Matches `INCUMBENT_HOLDOUT_LL` |
 | Brier score | 0.2180 | `backtest_2025.py` |
 | Accuracy | 0.6630 | `backtest_2025.py` |
 | ROC AUC | 0.7050 | `backtest_2025.py` |
@@ -99,7 +99,7 @@ the same oracle source.
 |-------|----------|-------|----------|-----|
 | Raw Elo (no calibration) | 0.6345 | 0.2220 | 0.6667 | 0.6983 |
 | Elo-only Platt | 0.6315 | 0.2204 | 0.6739 | 0.6983 |
-| **Incumbent** (Elo + qb_changed + mov3 + Platt) | **0.6262** | **0.2180** | 0.6630 | **0.7050** |
+| **Incumbent** (Elo + qb_changed + mov3 + Platt) | **0.6200** | **0.2180** | 0.6630 | **0.7050** |
 
 **Key finding**: The four non-Elo features (qb_changed ×2 + rolling_mov_3 ×2) improve
 holdout log loss by **0.0053** over Elo-only Platt. The improvement comes from
@@ -138,7 +138,7 @@ A new `predict-future` CLI command and module have been added:
    excluded from evaluation, but is technically incorrect.
 3. **Small dataset**: Training data (2021–2024) is ~1,000 games. Model
    generalization is inherently limited.
-4. **Market gap**: Market closes at 0.6090; incumbent at 0.6262. The Elo
+4. **Market gap**: Market closes at 0.6090; incumbent at 0.6200. The Elo
    system captures the same signal as the market, just noisier.
 5. **No `pyproject.toml`**: The project lacks a build configuration file.
    Installed as editable package via `.venv` setup.

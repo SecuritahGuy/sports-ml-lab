@@ -15,9 +15,7 @@ Timing assumption:
     is used.
 """
 
-import numpy as np
 import pandas as pd
-import pytest
 
 from sportslab.features.qb import compute_qb_features
 

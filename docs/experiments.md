@@ -4,6 +4,7 @@
 
 ---
 
+**Current incumbent:** v3.0.0 (holdout LL 0.6200, val LL 0.6305)
 
 All 39 experiments conducted during feature research (2026-06).
 

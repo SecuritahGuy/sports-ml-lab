@@ -23,18 +23,16 @@ Current behavior (verified against source code):
    - Ties are excluded from all metrics
 """
 
-import numpy as np
 import pandas as pd
 import pytest
 
+from sportslab.evaluation.predict_incumbent import _build_feature_pipeline, _fit_base_incumbent
 from sportslab.features.build_features import (
     MODEL_ELIGIBLE_COLUMN,
     TARGET_COLUMN,
     TIE_COLUMN,
-    build_feature_table,
 )
 from sportslab.features.ratings import compute_elo_features
-from sportslab.evaluation.predict_incumbent import _fit_base_incumbent, _build_feature_pipeline
 
 
 def test_tie_marked_not_eligible(sample_schedule_with_tie):

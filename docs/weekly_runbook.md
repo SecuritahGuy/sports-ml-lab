@@ -1,11 +1,11 @@
-# Weekly Prediction Runbook — v2
+# Weekly Prediction Runbook — v3
 
 ## Overview
 
 Weekly workflow for generating, saving, and grading NFL predictions using the research incumbent model.
 
-**Model:** Elo + qb_changed + rolling_mov_3 + Platt (v2.0.0)
-**Validated on:** 2021-2024, holdout LL 0.6262 (2025)
+**Model:** Elo + qb_changed + rolling_mov_3 + Platt (v3.0.0)
+**Validated on:** 2021-2024, holdout LL 0.6200 (2025)
 **Mode safety:** Live mode blocks oracle QB. Dry-run accepts oracle. Rehearsal fully isolated.
 
 ---
@@ -98,13 +98,13 @@ sportslab season-report --season 2026
 | `incumbent_home_win_prob` | Model prediction (0-1) |
 | `predicted_winner` | Team with prob ≥ 0.5 |
 | `confidence_bucket` | Probability range label |
-| `model_version` | `v2.0.0` |
+| `model_version` | `v3.0.0` |
 | `model_date` | Incumbent freeze date |
 | `training_seasons` | `2021-2024` |
 | `feature_set` | `qb_changed + rolling_mov_3` |
 | `calibration_method` | Platt logistic |
-| `model_val_ll` | 0.6334 |
-| `model_holdout_ll` | 0.6262 |
+| `model_val_ll` | 0.6305 |
+| `model_holdout_ll` | 0.6200 |
 | `elo_k`, `elo_hfa`, `elo_reg`, `elo_decay`, `elo_qb_bonus` | Elo parameters |
 | `qb_source` | `oracle` or `live_pregame` |
 | `home_qb_id`, `away_qb_id` | QB identifiers |
@@ -398,14 +398,14 @@ the pipeline is launch-ready:
 - [ ] **Feature table built**: `make build-features` — confirms data up to 2025 season
 - [ ] **Full test suite**: `make test` — 364+ tests passing
 - [ ] **Lint clean**: `make lint` — no new errors
-- [ ] **Rehearsal passes**: `make rehearsal-2025` — 21 weeks, LL matches 0.6262
+- [ ] **Rehearsal passes**: `make rehearsal-2025` — 21 weeks, LL matches 0.6200
 - [ ] **Audit generates cleanly**: `sportslab prediction-audit --season 2025` — no nan metrics
 - [ ] **Prediction index built**: `make prediction-index` — `docs/predictions/index.md` generated
 - [ ] **GitHub Pages configured**: Settings → Pages → Deploy from `main` `/docs`
 - [ ] **Pages renders**: Visit `https://<user>.github.io/sports-ml-lab/predictions/`
 - [ ] **Runbook printed**: This doc is the reference for weekly operations
 - [ ] **QB starter CSV template ready**: 3-column CSV with game_id, home_qb_id, away_qb_id
-- [ ] **Incumbent frozen**: v2.0.0, holdout LL 0.6262 — no model changes planned
+- [ ] **Incumbent frozen**: v3.0.0, holdout LL 0.6200 — no model changes planned
 - [ ] **Preseason fire drill passes**: `make preseason-fire-drill` — full dry-run cycle
 - [ ] **Data audit clean**: `make data-audit` — all scheduled seasons present
 - [ ] **Ingest safety confirmed**: `sportslab ingest-nfl 2026` does not drop 2021-2025

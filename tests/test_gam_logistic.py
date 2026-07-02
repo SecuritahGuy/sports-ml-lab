@@ -4,13 +4,13 @@ import numpy as np
 from sklearn.preprocessing import SplineTransformer
 
 from sportslab.evaluation.gam_logistic_experiment import (
-    N_KNOTS_VALUES,
-    DEGREE_VALUES,
     C_VALUES,
+    DEGREE_VALUES,
     LINEAR_FEATURE_COLS,
-    _sigmoid,
-    _logit,
+    N_KNOTS_VALUES,
     _build_gate_mask,
+    _logit,
+    _sigmoid,
 )
 
 
@@ -81,12 +81,15 @@ def test_gate_mask():
 
 
 def test_experiment_uses_experiment_config():
-    from sportslab.evaluation.gam_logistic_experiment import (
-        HOLDOUT_SEASON, ROLLING_FOLDS,
-    )
     from sportslab.evaluation.experiment_config import (
         HOLDOUT_SEASON as CONFIG_H,
+    )
+    from sportslab.evaluation.experiment_config import (
         ROLLING_FOLDS as CONFIG_F,
+    )
+    from sportslab.evaluation.gam_logistic_experiment import (
+        HOLDOUT_SEASON,
+        ROLLING_FOLDS,
     )
     assert HOLDOUT_SEASON == CONFIG_H
     assert ROLLING_FOLDS == CONFIG_F
@@ -94,17 +97,19 @@ def test_experiment_uses_experiment_config():
 
 def test_holdout_not_in_folds():
     from sportslab.evaluation.gam_logistic_experiment import (
-        HOLDOUT_SEASON, ROLLING_FOLDS,
+        HOLDOUT_SEASON,
+        ROLLING_FOLDS,
     )
     for _, val_season in ROLLING_FOLDS:
         assert val_season != HOLDOUT_SEASON
 
 
 def test_experiment_function_signature():
+    import inspect
+
     from sportslab.evaluation.gam_logistic_experiment import (
         run_gam_logistic_experiment,
     )
-    import inspect
     sig = inspect.signature(run_gam_logistic_experiment)
     assert "ft_path" in sig.parameters
     assert "report_path" in sig.parameters
@@ -118,7 +123,8 @@ def test_no_pre_2021_seasons():
 
 def test_v3_0_0_constants_preserved():
     from sportslab.evaluation.gam_logistic_experiment import (
-        V3_VAL_LL, V3_HOLDOUT_LL,
+        V3_HOLDOUT_LL,
+        V3_VAL_LL,
     )
     assert V3_VAL_LL == 0.6305
     assert V3_HOLDOUT_LL == 0.6200

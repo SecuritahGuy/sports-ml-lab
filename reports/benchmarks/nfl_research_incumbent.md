@@ -6,7 +6,7 @@
 
 ## Football-Only Research Incumbent
 
-**Model:** Standard Elo (K=36, HFA=40, reg=0.1, decay=32, qb_bonus=0.2, MOV capped_linear) + Platt calibration + qb_changed + rolling_mov_3 + frozen QB overlay gated on `qb_changed OR starts<17` with cap=40 (gamma=1.0)
+**Model:** Standard Elo (K=36, HFA=40, reg=0.1, decay=32, qb_bonus=0.2) + rolling_mov_3 + qb_changed + Platt calibration + frozen QB overlay gated on `qb_changed OR starts<17` with cap=40 (gamma=1.0)
 
 *The frozen QB overlay applies a logit-space adjustment on top of the incumbent probability when the pregame gate is active. Non-gated games are identical to the base incumbent (equality check PASSED). All parameters selected by fold-safe rolling origin validation (3 folds: 2021→2022, 2021-2022→2023, 2021-2023→2024). No 2025 holdout data used for selection.*
 
@@ -17,7 +17,7 @@
 | **K-factor** | 36 |
 | **HFA** | 40 |
 | **Preseason regression** | 0.1 (base) + 0.2 for teams with QB change |
-| **MOV type** | `capped_linear` (scale=0.05, cap=2.0) |
+| **Elo MOV multiplier** | None (standard point-differential) |
 | **Decay half-life** | 32 games |
 | **Base features** | `home_qb_changed`, `away_qb_changed` (binary), `home_rolling_mov_3`, `away_rolling_mov_3` (avg MOV last 3 games) |
 | **Overlay gamma** | 1.0 |
@@ -86,12 +86,12 @@ pregame). See `reports/experiments/market_benchmark.md`.
 | Market (no-vig) | **0.6090** |
 | Spread→prob | **0.6092** |
 | Elo + Market (logit) | 0.6119 |
-| **Football-only incumbent (Elo + qb_changed + mov3 + Platt)** | **0.6262** |
+| **Football-only incumbent (Elo + qb_changed + mov3 + Platt + frozen QB overlay)** | **0.6200** |
 | **Holdout-informed diagnostic (O/D Elo + Platt)** | **0.6258** |
 
 ## Promotion Rules
 
-1. Promotion: a challenger must beat **0.6262** holdout log loss to become the new football-only incumbent, AND have better average rolling validation log loss than the incumbent.
+1. Promotion: a challenger must beat **0.6200** holdout log loss to become the new football-only incumbent, AND have better average rolling validation log loss than the incumbent.
 2. Selection must use average rolling validation log loss only. Holdout data is for final evaluation only, never for model selection.
 3. 2025 holdout must remain untouched during model selection.
 4. Every feature must be pregame-safe and explainable.

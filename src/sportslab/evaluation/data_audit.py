@@ -249,16 +249,19 @@ def run_data_audit(seasons: Optional[List[int]] = None) -> List[str]:
     # ── Data integrity ──
     print("\n## Data Integrity\n")
 
-    # Future/mode-ineligible games (no home_win) should not have scores
-    # (except tie games which are model-ineligible but have scores)
-    future = df_ft[df_ft[TARGET_COLUMN].isna()]
+    # Separate model-ineligible ties from unscheduled future games
+    # Ties have home_win = NA (model-ineligible) but have scores and is_tie=True
+    no_target = df_ft[df_ft[TARGET_COLUMN].isna()]
+    if "is_tie" in df_ft.columns:
+        ties = no_target[no_target["is_tie"].fillna(False)]
+        future = no_target[~no_target["is_tie"].fillna(False)]
+    else:
+        ties = pd.DataFrame()
+        future = no_target
+
     if len(future) > 0:
         if "home_score" in df_ft.columns and "away_score" in df_ft.columns:
-            if "is_tie" in df_ft.columns:
-                future_non_tie = future[~future["is_tie"].fillna(False)]
-            else:
-                future_non_tie = future
-            future_scores = future_non_tie[future_non_tie["home_score"].notna()]
+            future_scores = future[future["home_score"].notna()]
             if len(future_scores) > 0:
                 _check(False,
                        "Non-tie future games have scores",
@@ -266,10 +269,14 @@ def run_data_audit(seasons: Optional[List[int]] = None) -> List[str]:
                 print(f"    Non-tie games with scores: {len(future_scores)}")
             else:
                 _check(True, "Future games correctly lack scores", issues)
-        print(f"  Future games (no target): {len(future)}")
+        print(f"  Future games (unscheduled/unplayed, no target): {len(future)}")
         print(f"  Future seasons: {sorted(future['season'].unique())}")
     else:
         _check(True, "No future games (all have targets)", issues)
+
+    if len(ties) > 0:
+        print(f"  Model-ineligible ties: {len(ties)}")
+        print(f"  Tie seasons: {sorted(ties['season'].unique())}")
 
     # Completed games should have scores
     completed = df_ft[df_ft[TARGET_COLUMN].notna()]

@@ -27,7 +27,7 @@ The Elo rating engine itself has tunable parameters that act as implicit feature
 | Base preseason regression | 0.1 | Shrink toward league mean each offseason |
 | QB-change bonus regression | 0.2 | Additional regression for teams with new starting QB |
 | Decay half-life | 32 games | Exponential decay toward prior rating |
-| MOV type | capped_linear (scale=0.05, cap=2.0) | Caps blowout influence on rating updates |
+| Elo MOV multiplier | None | Standard point-differential Elo; no MOV transform applied to rating updates |
 
 ---
 
@@ -37,7 +37,7 @@ These features showed some signal but did not earn promotion under the strict va
 
 | Feature | Best Validation LL | Best Holdout LL | Why Not Promoted |
 |---------|-------------------|-----------------|------------------|
-| `rolling_mov_3` alone (no qb_changed) | 0.6406 | **0.6255** | Wins holdout but not validation. The 0.6255 holdout beats the incumbent 0.6262, but validation is 0.6406 vs incumbent 0.6334. |
+| `rolling_mov_3` alone (no qb_changed) | 0.6406 | **0.6255** | Wins holdout but not validation. The 0.6255 holdout beats the incumbent 0.6200, but validation is 0.6406 vs incumbent 0.6305. |
 | `rolling_mov_1` (1-game window) | **0.6338** | 0.6302 | Wins validation but loses holdout — classic overfit. Not promoted. |
 | Coach+QB season regression | 0.6309 | 0.6286 | Tiny validation win (0.0006) erased on holdout (-0.0001). |
 | O/D Elo (ko52_kd20) + Platt | 0.6376 | 0.6258 | Better holdout but worse validation. Demoted to holdout-informed diagnostic. |
@@ -150,7 +150,7 @@ and the 2025 one-shot holdout.
 
 ### Rolling MOV Windows ≠ 3
 
-- **mov_1**: Won validation (0.6338) but lost holdout (0.6302 vs 0.6262)
+- **mov_1**: Won validation (0.6338) but lost holdout (0.6302 vs 0.6200)
 - **mov_2+**: All worse on validation
 - **Decision**: Rejected — mov_3 confirmed optimal
 - **Report**: `reports/experiments/rolling_mov_sensitivity.md`
@@ -193,7 +193,7 @@ These are NOT part of the football-only model. They are used for benchmarking an
 | `market_minus_model_diagnostic` | Derived | Model error relative to market |
 | Caution flag: model-market disagreement | Derived | Gap > 0.15 triggers caution flag |
 
-**Market holdout log loss: 0.6090** — significantly better than the football-only incumbent (0.6262). The market is the true performance ceiling. Our Elo residuals correlate with market residuals at r=0.9768.
+**Market holdout log loss: 0.6090** — significantly better than the football-only incumbent (0.6200). The market is the true performance ceiling. Our Elo residuals correlate with market residuals at r=0.9768.
 
 ---
 

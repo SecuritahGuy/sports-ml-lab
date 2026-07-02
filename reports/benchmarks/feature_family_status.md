@@ -12,11 +12,11 @@ This document is the **master inventory** of every feature family tested against
 
 ```
 Model:        Elo + qb_changed + rolling_mov_3 + Platt
-Val LL:       0.6334
-Holdout LL:   0.6262
+Val LL:       0.6305
+Holdout LL:   0.6200
 Holdout Brier: 0.2180
 Holdout AUC:   0.7050
-Version:      v2.0.0
+Version:      v3.0.0
 ```
 
 ### Live-Safe Fallback (No Oracle QB)

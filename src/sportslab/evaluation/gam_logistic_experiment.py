@@ -141,7 +141,7 @@ def run_gam_logistic_experiment(
     gate_mask = _build_gate_mask(df)
 
     print(f"  Linear features: {LINEAR_FEATURE_COLS}")
-    print(f"  Spline feature: elo_prob")
+    print("  Spline feature: elo_prob")
 
     # ── 2. Rolling-origin validation ──
     print("\n=== Rolling-Origin Validation ===")
@@ -464,8 +464,8 @@ def run_gam_logistic_experiment(
             _w("**❌ REJECTED**\n\n")
             v_delta = inc_avg_val_ll - best["avg_val_ll"]
             h_delta = inc_hold_ll - sel_hold_ll
-            _w(f"| Criterion | Met? | Details |\n")
-            _w(f"|-----------|------|--------|\n")
+            _w("| Criterion | Met? | Details |\n")
+            _w("|-----------|------|--------|\n")
             _w(f"| Beats val by >= {MIN_PROMOTION_DELTA} | ")
             _w(f"{'✅' if beats_val else '❌'} | Δ = {v_delta:.4f} |\n")
             _w(f"| Beats holdout by >= {MIN_PROMOTION_DELTA} | ")

@@ -5,16 +5,18 @@ import inspect
 import numpy as np
 from sklearn.ensemble import HistGradientBoostingClassifier
 
+from sportslab.evaluation.experiment_config import (
+    HOLDOUT_SEASON as CH,
+)
+from sportslab.evaluation.experiment_config import (
+    ROLLING_FOLDS as CF,
+)
 from sportslab.evaluation.gradient_boosting_diagnostic import (
     FEATURE_COLS,
     LEARNING_RATE_VALUES,
     MAX_BINS_VALUES,
     MAX_DEPTH_VALUES,
     MIN_SAMPLES_LEAF_VALUES,
-)
-from sportslab.evaluation.experiment_config import (
-    HOLDOUT_SEASON as CH,
-    ROLLING_FOLDS as CF,
 )
 
 
@@ -80,7 +82,8 @@ def test_hgb_conservative_params():
 
 def test_experiment_uses_experiment_config():
     from sportslab.evaluation.gradient_boosting_diagnostic import (
-        HOLDOUT_SEASON, ROLLING_FOLDS,
+        HOLDOUT_SEASON,
+        ROLLING_FOLDS,
     )
     assert HOLDOUT_SEASON == CH
     assert ROLLING_FOLDS == CF
@@ -88,7 +91,8 @@ def test_experiment_uses_experiment_config():
 
 def test_holdout_not_in_folds():
     from sportslab.evaluation.gradient_boosting_diagnostic import (
-        HOLDOUT_SEASON, ROLLING_FOLDS,
+        HOLDOUT_SEASON,
+        ROLLING_FOLDS,
     )
     for _, val_season in ROLLING_FOLDS:
         assert val_season != HOLDOUT_SEASON

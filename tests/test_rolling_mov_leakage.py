@@ -6,7 +6,6 @@ prior games and do not include the current game's margin.
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from sportslab.features.situational import compute_situational_features
 

@@ -4,10 +4,9 @@ Computes per-QB rolling passing_epa averages and engineers magnitude
 features that quantify how much QB quality drops when a change occurs.
 """
 
+import nflreadpy as nfl
 import numpy as np
 import pandas as pd
-
-import nflreadpy as nfl
 
 QB_MAGNITUDE_COLUMNS = [
     "home_qb_rolling_epa",

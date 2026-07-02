@@ -150,6 +150,9 @@ def compute_qb_adjustments(df: pd.DataFrame) -> pd.DataFrame:
             expected = _expected_win_prob(team_elo, opp_elo, hfa)
 
             home_won = row.get("home_win")
+            is_future = pd.isna(home_won) and pd.isna(row.get("home_score"))
+            if is_future:
+                continue
             if pd.isna(home_won):
                 actual = 0.5
             else:

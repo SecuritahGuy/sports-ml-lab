@@ -148,40 +148,42 @@ def compute_situational_features(df: pd.DataFrame) -> pd.DataFrame:
             ytd = state["wins"] / gp if state["games_played"] > 0 else 0.5
             features[f"{side}_ytd_win_pct"].append(ytd)
 
-        # ── Post-game state update ──
-        is_tie = pd.isna(home_win)
-        for team, is_home in [(home, True), (away, False)]:
-            state = _get_state(team, season)
-            scored = home_score if is_home else away_score
-            allowed = away_score if is_home else home_score
-            team_mov = result if is_home else -result
-            if is_tie:
-                won = False
-            else:
-                won = bool(home_win == 1) if is_home else bool(home_win == 0)
+        # ── Post-game state update (skip future/unplayed games) ──
+        is_future = pd.isna(home_win) and pd.isna(row.get("home_score"))
+        if not is_future:
+            is_tie = pd.isna(home_win)
+            for team, is_home in [(home, True), (away, False)]:
+                state = _get_state(team, season)
+                scored = home_score if is_home else away_score
+                allowed = away_score if is_home else home_score
+                team_mov = result if is_home else -result
+                if is_tie:
+                    won = False
+                else:
+                    won = bool(home_win == 1) if is_home else bool(home_win == 0)
 
-            # Update rolling MOV windows (all games including ties)
-            state["last_movs_3"].append(team_mov)
-            if len(state["last_movs_3"]) > 3:
-                state["last_movs_3"].pop(0)
-            state["last_movs_5"].append(team_mov)
-            if len(state["last_movs_5"]) > 5:
-                state["last_movs_5"].pop(0)
+                # Update rolling MOV windows (all games including ties)
+                state["last_movs_3"].append(team_mov)
+                if len(state["last_movs_3"]) > 3:
+                    state["last_movs_3"].pop(0)
+                state["last_movs_5"].append(team_mov)
+                if len(state["last_movs_5"]) > 5:
+                    state["last_movs_5"].pop(0)
 
-            state["pts_for_season"] += scored
-            state["pts_against_season"] += allowed
-            state["games_played"] += 1
+                state["pts_for_season"] += scored
+                state["pts_against_season"] += allowed
+                state["games_played"] += 1
 
-            if is_tie:
-                state["win_streak"] = 0
-            elif won:
-                state["wins"] += 1
-                state["win_streak"] = max(state["win_streak"], 0) + 1
-            else:
-                state["losses"] += 1
-                state["win_streak"] = (
-                    state["win_streak"] - 1 if state["win_streak"] <= 0 else -1
-                )
+                if is_tie:
+                    state["win_streak"] = 0
+                elif won:
+                    state["wins"] += 1
+                    state["win_streak"] = max(state["win_streak"], 0) + 1
+                else:
+                    state["losses"] += 1
+                    state["win_streak"] = (
+                        state["win_streak"] - 1 if state["win_streak"] <= 0 else -1
+                    )
 
     # Apply features
     for col, vals in features.items():
