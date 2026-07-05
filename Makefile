@@ -4,7 +4,8 @@
 qb-gated-experience qb-depth-experiment turnover-experiment situational-micro \
 predict-week grade-week season-report prediction-audit rehearsal-season prediction-index publish-predictions \
 data-audit preseason-fire-drill live-preflight \
-build-qb-adjustments qb-adjusted-elo roster-strength regularized-logistic
+build-qb-adjustments qb-adjusted-elo roster-strength regularized-logistic \
+qb-lift
 
 # ── Install ──
 install:
@@ -186,6 +187,12 @@ regularized-logistic:
 regularized-logistic-meta:
 	sportslab regularized-logistic-meta
 
+calibration-audit:
+	sportslab calibration-audit
+
+calibration-remediation:
+	sportslab calibration-remediation
+
 roster-overlay:
 	sportslab roster-overlay
 
@@ -197,6 +204,9 @@ expanded-elo-spine:
 
 roster-strength:
 	sportslab roster-strength
+
+qb-lift:
+	sportslab qb-lift
 
 # ── Development ──
 .PHONY: dev

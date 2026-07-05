@@ -6,8 +6,12 @@ from sportslab.evaluation.audit_artifacts import run_audit
 from sportslab.evaluation.autogluon_experiment import run_autogluon_experiment
 from sportslab.evaluation.backtest_2025 import run_backtest, run_backtest_2025
 from sportslab.evaluation.build_dashboard import build_all_docs
+from sportslab.evaluation.calibration_audit import run_calibration_audit
 from sportslab.evaluation.calibration_improvements_experiment import (
     run_calibration_experiment,
+)
+from sportslab.evaluation.calibration_remediation import (
+    run_calibration_remediation,
 )
 from sportslab.evaluation.coach_qb_tenure_experiment import (
     run_coach_qb_tenure_experiment,
@@ -409,6 +413,27 @@ def qb_magnitude():
 def calibration_improvements():
     """Run calibration improvements experiment (era split + high-confidence shrinkage)."""
     run_calibration_experiment()
+
+
+@cli.command(name="calibration-remediation")
+def calibration_remediation_cmd():
+    """Run fold-safe calibration remediation experiment.
+
+    Tests temperature scaling and shrinkage methods to reduce ECE/MCE
+    on QB-change games without worsening log loss. No market features.
+    """
+    run_calibration_remediation()
+
+
+@cli.command(name="calibration-audit")
+def calibration_audit_cmd():
+    """Run comprehensive calibration and uncertainty audit for v3.0.0.
+
+    Computes ECE, MCE, Brier decomposition, reliability diagram,
+    sharpness histogram, over/underconfidence rates, subset-specific
+    calibration, and fold stability. No network access required.
+    """
+    run_calibration_audit()
 
 
 @cli.command(name="adaptive-k")
@@ -854,3 +879,17 @@ def weekly_qb_audit_cmd(season, week, output):
     overlay delta, and final win probability under each source.
     """
     run_weekly_qb_audit(season=season, week=week, output_path=output)
+
+
+@cli.command(name="qb-lift")
+@click.option("--output", type=str, default=None,
+              help="Optional output CSV path for predictions")
+def qb_lift_cmd(output):
+    """Run QB Lift experiment: rolling QB EPA/dropback features from PBP.
+
+    Tests whether rolling QB efficiency metrics (EPA/dropback, CPOE)
+    improve on the v3.0.0 Frozen QB Overlay champion. May only beat
+    if it wins on BOTH validation AND holdout.
+    """
+    from sportslab.evaluation.qb_lift_experiment import run_qb_lift_experiment
+    run_qb_lift_experiment()
