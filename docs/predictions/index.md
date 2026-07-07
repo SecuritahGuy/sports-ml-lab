@@ -13,7 +13,7 @@
 | Graded games | 0 |
 | Incumbent model | Standard Elo + qb_changed + rolling_mov_3 + Platt |
 | Version | v3.0.0 |
-| Holdout LL | 0.6200 |
+| Holdout LL | 0.62 |
 | Feature set | qb_changed + rolling_mov_3 |
 
 ## Quick Links
@@ -28,6 +28,7 @@
 
 | Season | Report |
 |--------|--------|
+| 2025 | [Audit Report](./audit_2025.md) |
 | 2026 | [Audit Report](./audit_2026.md) |
 
 ## Prediction Schema

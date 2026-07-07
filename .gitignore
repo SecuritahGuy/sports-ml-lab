@@ -21,20 +21,54 @@ venv/
 .ruff_cache/
 .pytest_cache/
 
-# Data files — raw data is tracked; generated artifacts not committed by default
-# data/features/     — uncomment if you want to ignore generated feature tables
-# reports/predictions/ — uncomment to ignore generated predictions
+# ── Data / Artifact Policy ──
+#
+# What IS committed (source of truth):
+#   - data/raw/nfl/schedules.parquet              (raw ingest, tracked)
+#   - data/features/nfl/feature_table.parquet      (built features, tracked)
+#   - reports/experiments/*.md                     (experiment reports, tracked)
+#   - reports/benchmarks/*.{md,csv}                (benchmark registry, tracked)
+#   - reports/predictions/incumbent_predictions*.csv  (canonical predictions, tracked)
+#
+# What is NOT committed (generated at runtime):
+#   - Any new *.parquet not already tracked              (build artifacts)
+#   - reports/predictions/snapshots/                     (weekly snapshots)
+#   - reports/predictions/rehearsal/                     (historical rehearsal)
+#   - mlruns/                                            (MLflow tracking)
 
-# OS
-.DS_Store
-Thumbs.db
+# Data — parquet ignores NEW files; existing tracked ones remain
+*.parquet
+
+# Reports — weekly predictions & rehearsal artifacts (hundreds per session)
+reports/predictions/snapshots/
+reports/predictions/rehearsal/
 
 # MLflow
 mlruns/
 
-# Rehearsal snapshots (auto-generated, hundreds per session)
-reports/predictions/rehearsal/
-reports/predictions/snapshots/
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
 
-# Misc
-*.parquet
+# Environments
+.venv/
+.env
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ruff / testing
+.ruff_cache/
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db

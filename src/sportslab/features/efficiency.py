@@ -201,8 +201,18 @@ def _lookup_home_away(
 # ── Team Stats Total EPA ──────────────────────────────────────────────────
 
 
+def _validate_seasons_efficiency(seasons: list[int]) -> None:
+    bad = [s for s in seasons if s < SPORTSLAB_MIN_SEASON]
+    if bad:
+        raise ValueError(
+            f"Season(s) {bad} are not allowed. "
+            f"This project supports NFL seasons {SPORTSLAB_MIN_SEASON}–current only."
+        )
+
+
 def _load_team_stats(seasons: list[int], cache_dir: str = "data/interim/nfl") -> pd.DataFrame:
     """Load and cache team-level stats from nflreadpy."""
+    _validate_seasons_efficiency(seasons)
     if nfl is None:
         raise ImportError("nflreadpy is required")
     seasons = [int(s) for s in seasons]
@@ -307,6 +317,7 @@ def _load_pfr_data(
     cache_dir: str = "data/interim/nfl",
 ) -> dict[str, pd.DataFrame]:
     """Load and cache all 4 PFR advanced stat types."""
+    _validate_seasons_efficiency(seasons)
     if nfl is None:
         raise ImportError("nflreadpy is required")
     seasons = [int(s) for s in seasons]
@@ -558,6 +569,7 @@ def _load_snap_counts(
     cache_dir: str = "data/interim/nfl",
 ) -> pd.DataFrame:
     """Load and cache snap count data."""
+    _validate_seasons_efficiency(seasons)
     if nfl is None:
         raise ImportError("nflreadpy is required")
     seasons = [int(s) for s in seasons]

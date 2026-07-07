@@ -7,14 +7,54 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-          cache: pip
-      - run: pip install .[dev]
-      - run: python -m pytest tests/ --tb=short
-      - run: ruff check src/sportslab/ tests/
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint with ruff
+        run: ruff check src/ tests/
+
+      - name: Test with pytest
+        run: python -m pytest --tb=short -x -q tests/
+
+      - name: Verify feature table exists
+        run: |
+          python -c "
+          import pandas as pd
+          df = pd.read_parquet('data/features/nfl/feature_table.parquet')
+          assert len(df) > 0, 'Feature table is empty'
+          assert df['season'].min() >= 2021, 'Pre-2021 data found'
+          print(f'Feature table: {len(df)} rows, seasons {df.season.min()}-{df.season.max()}')
+          "
+
+      - name: Verify incumbent metrics reproducible
+        run: |
+          python -c "
+          import pandas as pd
+          from sklearn.metrics import log_loss
+          df = pd.read_parquet('data/features/nfl/feature_table.parquet')
+          mask = df['season'] == 2025
+          inc_mask = df['model_eligible'].fillna(False) & mask
+          actual = df.loc[inc_mask, 'home_win'].values
+          probs = df.loc[inc_mask, 'incumbent_home_win_prob'].values
+          ll = log_loss(actual, probs)
+          print(f'Incumbent holdout LL: {ll:.4f}')
+          assert abs(ll - 0.6200) < 0.01, (
+              f'Incumbent holdout LL {ll:.4f} deviates from 0.6200'
+          )
+          "

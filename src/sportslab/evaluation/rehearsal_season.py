@@ -40,7 +40,7 @@ from sportslab.evaluation.weekly_pipeline import (
     grade_week,
     season_report,
 )
-from sportslab.features.build_features import MODEL_ELIGIBLE_COLUMN
+from sportslab.features.build_features import MODEL_ELIGIBLE_COLUMN, SPORTSLAB_MIN_SEASON
 from sportslab.features.qb import compute_qb_features
 from sportslab.features.ratings import compute_elo_features
 from sportslab.features.situational import compute_situational_features
@@ -145,6 +145,11 @@ def rehearse_season(
     Returns:
         Dict with rehearsal_dir, manifest, history paths and overall_metrics.
     """
+    if season < SPORTSLAB_MIN_SEASON:
+        raise ValueError(
+            f"Season {season} not allowed. "
+            f"Minimum season is {SPORTSLAB_MIN_SEASON}."
+        )
     qb_source = "oracle" if qb_input_path is None else "live_pregame"
 
     print(f"\n{'=' * 60}")

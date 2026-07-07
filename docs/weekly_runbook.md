@@ -355,7 +355,63 @@ Fix the CSV, then re-run `predict-week` or `live-preflight`.
 | "Oracle QB data not allowed" | Live mode without QB input | Add `--qb-input` or use `--mode dry_run` |
 | "No actual results found" | Feature table needs rebuild | `make build-features` after games finish |
 
-### 6. Full Pipeline Reset
+### 6. Force-Grading a Week (Data Recovery)
+
+If grading fails due to checksum mismatch or missing manifest entries, use
+`--force` to bypass guardrails:
+
+```bash
+# Force-grade a live-mode snapshot even if checksum mismatches
+sportslab grade-week --season 2026 --week 1 --mode live --force
+```
+
+This skips:
+- SHA-256 checksum verification (the snapshot was not modified, merely
+  the original is unavailable and was regenerated)
+- Manifest guardrail (the original entry may be missing)
+
+**Only use `--force` when you have verified the snapshot is legitimate.**
+Normal grading with guardrails is the intended workflow. Force mode is for
+data recovery scenarios where the snapshot was regenerated from identical
+data (e.g., machine rebuild, manifest corruption).
+
+### 7. Publishing Failure
+
+If `sportslab publish-predictions` or `make publish-predictions` fails:
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| "Prediction index" not generated | No audit reports exist | Run `sportslab prediction-audit --season <YEAR>` first |
+| "Docs directory" missing | `docs/predictions/` does not exist | Run `sportslab build-prediction-index` to create it |
+| Dry-run reports "no files written" | Dry-run mode is informational | Re-run without `--dry-run` to actually write files |
+
+First, always use dry-run to verify what will happen:
+
+```bash
+sportslab publish-predictions --dry-run
+```
+
+Then run without dry-run to publish:
+
+```bash
+sportslab publish-predictions
+# git add docs/predictions/
+# git commit -m "Update prediction artifacts"
+# git push origin main
+```
+
+### 8. Artifact Audit Failure
+
+If `sportslab audit-artifacts` reports issues:
+
+| Check | Failure | Resolution |
+|-------|---------|------------|
+| Incumbent prediction files exist | Missing CSV | Re-run `sportslab predict-incumbent` |
+| Holdout CSV exist | Missing holdout file | Re-run `sportslab predict-incumbent` |
+| Summary report exists | Missing index | Re-run `sportslab build-prediction-index` |
+| Docs directory exists | Missing predictions page | Run `sportslab build-prediction-index` |
+
+### 9. Full Pipeline Reset
 
 To rebuild from scratch (destructive — only when intentionally resetting):
 
@@ -375,6 +431,134 @@ sportslab predict-week --season 2026 --week 1 --mode dry_run
 
 ---
 
+## Model Trust Diagnostics
+
+Run the comprehensive trust diagnostic at any time to verify model quality:
+
+```bash
+sportslab model-trust
+# or:
+make model-trust
+```
+
+This produces `reports/experiments/model_trust.md` with:
+- Incumbent reproduction (holdout LL, Brier, accuracy, AUC, ECE)
+- Failure-mode splits across 11+ dimensions (QB change, roof type, rest, short week, Elo gap, home/road status, missing weather, season phase, neutral site)
+- Market benchmark comparison (incumbent vs no-vig market by season and week bucket)
+- High-confidence analysis (5 thresholds from 0.70 to 0.90)
+- Reproducibility verification
+
+No network access required. All data reads from existing prediction artifacts.
+
+## Reproducing Incumbent Metrics
+
+To verify the reported incumbent metrics:
+
+```bash
+# 1. Calibration audit (reports ECE, MCE, Brier decomposition, subset calibration)
+sportslab calibration-audit
+
+# 2. Backtest 2025 (per-game predictions, calibration buckets, weekly breakdown)
+sportslab backtest-2025
+
+# 3. Model trust report (comprehensive: splits, market comparison, high-confidence)
+sportslab model-trust
+```
+
+All three commands work with existing data — no network access required. The
+holdout LL should be **0.6200** (v3.0.0 Frozen QB Overlay). If any command
+reports a different value, the feature table or prediction artifacts may have
+been regenerated with different parameters.
+
+## Model Promotion Rules
+
+1. A challenger must beat the incumbent's **holdout log loss** AND have **better average rolling validation log loss** (both with minimum improvement delta of 0.001) to be promoted.
+2. If the challenger uses a logit-space overlay (e.g., frozen QB overlay), the non-gated subset must also not degrade (equality check).
+3. Selection uses average rolling validation log loss only. The 2025 holdout is for final evaluation only, never for model selection.
+4. Every feature must be **pregame-safe** and **explainable**.
+5. Do not promote based on AUC, accuracy, or ROI alone.
+6. Promoted models are documented in `reports/benchmarks/benchmark_history.md` and the registry at `reports/benchmarks/nfl_research_incumbent.md`.
+
+## Why Market Data Is Diagnostic-Only
+
+The feature table includes moneyline and spread data from nflreadpy schedules.
+This data is **diagnostic-only** and must never be used as model features:
+
+- **Timing mismatch**: Closing lines are near-kickoff. The model should produce
+  pregame predictions usable before game day.
+- **Circularity**: Using market odds as features means the model is learning
+  to replicate the market rather than discovering independent signals.
+- **Research integrity**: The goal is football-only predictions. Market data
+  sets the improvement ceiling (0.6090 holdout LL) but is not a production
+  candidate.
+
+The feature table includes a `MARKET_COLUMNS` constant that lists all market
+columns. The `LEAKAGE_COLUMNS` list in `build_features.py` does NOT include
+market columns — they are tracked separately and excluded from all feature
+pipelines by convention.
+
+## Why Oracle QB Fields Are Blocked From Live Mode
+
+The feature table's `home_qb_id` / `away_qb_id` reflect the **final actual
+starter** (backtest research oracle), not the pregame-announced starter:
+
+- **Live mode** (`--mode live`) rejects oracle QB data. You must provide
+  `--qb-input CSV` with pregame-announced starters.
+- **Dry-run mode** (`--mode dry_run`) allows oracle QB for test predictions.
+- **Rehearsal mode** uses oracle QB by default (historical replay only).
+
+This guardrail prevents accidentally using post-hoc knowledge in a live
+prediction context. The `predict-future` command defaults to `live` mode
+for the same reason.
+
+## Data / Artifact Policy
+
+### What Is Committed (Source of Truth)
+
+| Artifact | Tracked | Rationale |
+|----------|---------|-----------|
+| `data/raw/nfl/schedules.parquet` | Yes | Raw ingest — irreplaceable source data |
+| `data/features/nfl/feature_table.parquet` | Yes | Built features — expensive to rebuild; base for all experiments |
+| `reports/experiments/*.md` | Yes | Experiment reports — canonical documentation |
+| `reports/benchmarks/*.{md,csv}` | Yes | Benchmark registry — governance artifacts |
+| `reports/predictions/incumbent_predictions*.csv` | Yes | Canonical prediction artifacts — test reproducibility |
+
+### What Is NOT Committed (Generated at Runtime)
+
+| Artifact | Reason |
+|----------|--------|
+| Any new `*.parquet` not already tracked | Build artifact; gitignore prevents accidental commit |
+| `reports/predictions/snapshots/` | Hundreds of weekly snapshots |
+| `reports/predictions/rehearsal/` | Historical rehearsal runs |
+| `mlruns/` | MLflow tracking data |
+
+### Generated Report Drift Policy
+
+Experiment reports (`reports/experiments/*.md`) are **source-of-truth documents**.
+They are committed once after review and never regenerated by CI. If the code
+evolves such that a report becomes inaccurate:
+
+1. A test should catch the drift (e.g., holdout LL mismatch).
+2. A human must update the report text to match.
+3. CI runs tests but does NOT regenerate reports.
+
+This prevents silent report drift: if the code changes but the report doesn't,
+a test will fail, forcing human reconciliation.
+
+### CI Pipeline
+
+The CI workflow (`.github/workflows/ci.yml`) runs on push/PR to `main`:
+1. `ruff check` — lint verification
+2. `pytest` — 500+ tests including incumbent metric verification
+3. Feature table integrity check
+4. Incumbent holdout LL verification (±0.01 tolerance)
+
+CI does NOT:
+- Regenerate experiment reports
+- Run compute-intensive experiments (grid searches, Optuna)
+- Require network access or API keys
+- Modify any tracked files
+
 ## Publishing Audit Reports
 
 Live audit reports are automatically written to `docs/predictions/audit_{season}.md`
@@ -386,6 +570,30 @@ git push origin main
 
 Rehearsal audit reports are not published to Pages.
 
+### Prediction Index
+
+After audits are generated, rebuild the prediction index to link all
+published audits on the predictions page:
+
+```bash
+make prediction-index
+```
+
+This generates `docs/predictions/index.md` with links to all available
+season audit reports. Run after every new audit.
+
+### Publishing All Prediction Artifacts
+
+```bash
+make publish-predictions
+```
+
+This runs `prediction-index` and prints a reminder to push. Equivalent to:
+```bash
+sportslab build-prediction-index
+git push origin main  # manual reminder
+```
+
 ---
 
 ---
@@ -396,7 +604,7 @@ Before the 2026 season starts, run through this checklist to confirm
 the pipeline is launch-ready:
 
 - [ ] **Feature table built**: `make build-features` — confirms data up to 2025 season
-- [ ] **Full test suite**: `make test` — 364+ tests passing
+- [ ] **Full test suite**: `python -m pytest tests/` — 989+ tests passing
 - [ ] **Lint clean**: `make lint` — no new errors
 - [ ] **Rehearsal passes**: `make rehearsal-2025` — 21 weeks, LL matches 0.6200
 - [ ] **Audit generates cleanly**: `sportslab prediction-audit --season 2025` — no nan metrics
@@ -411,6 +619,9 @@ the pipeline is launch-ready:
 - [ ] **Ingest safety confirmed**: `sportslab ingest-nfl 2026` does not drop 2021-2025
 - [ ] **Oracle QB blocked**: `sportslab predict-week --season 2026 --week 1 --mode live` raises error
 - [ ] **Live-preflight passes**: `sportslab live-preflight --qb-input data/samples/sample_qb_input_2025_w1.csv` — all checks clear
+- [ ] **Grade-week --force confirmed**: `sportslab grade-week --help` shows `--force` flag
+- [ ] **Publish-predictions --dry-run passes**: `sportslab publish-predictions --dry-run` — reports no files written
+- [ ] **Audit-artifacts passes**: `sportslab audit-artifacts` — all artifact checks clean
 
 ### First Live Week (2026 Week 1)
 
@@ -431,8 +642,118 @@ make prediction-index
 
 | Day | Action |
 |-----|--------|
-| Thursday (before TNF) | `live-preflight`, `predict-week --mode live` |
-| Tuesday (after MNF) | `grade-week --mode live` |
-| End of season | `prediction-audit`, `prediction-index` |
+| Thursday (before TNF) | `data-audit`, `live-preflight`, `predict-week --mode live` |
+| Tuesday (after MNF) | `grade-week --mode live`, `model-trust`, weekly monitoring report, post-week review |
+| End of season | `season-report`, `prediction-audit`, `prediction-index`, full backtest |
 
-*See `reports/benchmarks/feature_family_status.md` for the research governance doc.*
+*See `docs/live_monitoring.md` for drift thresholds and monitoring templates.*
+
+---
+
+## Post-Week Review Workflow
+
+Run after grading each week (Tuesday after MNF).
+
+### Steps
+
+1. **Grade completed games**
+   ```bash
+   sportslab grade-week --season <Y> --week <W> --mode live
+   ```
+
+2. **Regenerate model trust report**
+   ```bash
+   sportslab model-trust
+   ```
+
+3. **Run prediction audit**
+   ```bash
+   sportslab prediction-audit --season <Y> --mode live
+   ```
+
+4. **Fill monitoring report**
+   Copy template from `docs/live_monitoring.md` to `reports/monitoring/weekly_<Y>_w<W>.md`.
+   Fill fields from:
+   - `grade-week` output for core metrics
+   - `model-trust` report for ECE, threshold checks, subgroup splits
+   - `prediction-audit` report for calibration buckets, confidence buckets
+
+5. **Check drift thresholds**
+   Compare against thresholds in `docs/live_monitoring.md` (Section 2).
+   If any threshold is breached, note it in the operator notes section.
+   Follow the escalation rules:
+   - Single breach → note only
+   - 2+ consecutive weeks breaching same threshold → schedule review
+   - 4+ consecutive weeks breaching any threshold → escalate to model research
+
+6. **Record operator notes**
+   Document:
+   - Any data issues encountered (missing scores, ingest failures)
+   - Any operator errors (wrong QB input, wrong mode)
+   - Any schedule/QB anomalies (last-minute changes, rescheduled games)
+   - Any unexpected behavior from the model
+   - Any games where prediction was clearly wrong and why (if identifiable)
+
+7. **Classify issues**
+   Determine whether any observed issue is:
+   - **Data issue**: Missing/malformed input data, stale feature table, incomplete ingest
+   - **Operator issue**: Wrong command, wrong mode, wrong QB input, wrong season/week
+   - **Schedule/QB issue**: Last-minute starter change, rescheduled game, neutral-site change
+   - **Model weakness**: Known weakness manifesting (early season, QB change, roof type)
+   - **Expected variance**: Normal statistical fluctuation within backtest range
+
+8. **Decide next action**
+   Based on classification:
+   - **Data issue**: Fix data pipeline, re-ingest, rebuild features, re-predict
+   - **Operator issue**: Fix workflow, update runbook, retrain operator
+   - **Schedule/QB issue**: Note in operator log; no model change
+   - **Model weakness**: Note in operator log. Do NOT change model from one week.
+     If same weakness repeats across 4+ weeks, follow research trigger policy below.
+   - **Expected variance**: No action. Continue monitoring.
+
+9. **Update season report**
+   ```bash
+   sportslab season-report --season <Y>
+   ```
+
+---
+
+## Future Research Trigger Policy
+
+Model research (new challenger experiments) must remain frozen unless **one or more** of the following triggers is met.
+
+### Triggers
+
+| # | Trigger | Evidence Required | Action |
+|---|---------|------------------|--------|
+| 1 | **Repeated live underperformance** | 4+ consecutive weeks where weekly LL > 0.65 across 16+ games/week | Run comparison backtest; design challenger if underperformance is consistent |
+| 2 | **Known failure mode repeats across multiple weeks** | Same subgroup (e.g., QB change, early season) shows LL > 0.70 in 3+ separate weeks | Design targeted challenger for that subgroup |
+| 3 | **New reliable pregame data source** | Source is documented, pregame-safe, available for all 2021+ games, and passed leakage audit | Run feature experiment following canonical promotion policy |
+| 4 | **Governance allows expanded seasons** | Explicit override of pre-2021 data ban | Run expanded-Elo validation on larger dataset |
+| 5 | **Operational needs change** | Live prediction format, frequency, or scope fundamentally changes | Update pipeline, then consider model changes |
+| 6 | **Model-trust thresholds are breached persistently** | Any threshold (ECE ≥ 0.10, high-confidence acc < 0.80, market gap > 0.05) breached for 4+ consecutive weeks | Run full diagnostic; consider calibration or model update |
+
+### Non-Triggers
+
+The following are **not** triggers for model research:
+
+- One bad week (expected variance)
+- Single-game extreme miss (happens in holdout too)
+- Market outperforming model (always does — known gap)
+- A new idea with no data or hypothesis (must have clear expected improvement)
+- Pressure to improve during the season (freeze is intentional)
+- Another researcher's model or approach that cannot be tested with our data
+
+### Process
+
+1. Trigger condition observed → operator notes it in monitoring report
+2. If condition persists for full trigger duration → schedule research review
+3. Review produces a challenger hypothesis with specific target and success criteria
+4. Challenger tested via isolated experiment (rolling-origin 3-fold, Platt per fold)
+5. If challenger beats incumbent on BOTH val and holdout with Δ ≥ 0.001 → promote
+6. If challenger fails → document in experiment ledger, close the direction
+7. After promotion or closure → resume freeze until next trigger
+
+### Do Not Resume Model Research from One Bad Week
+
+A single week with high log loss does not indicate model failure. The 2025 holdout contains individual weeks with LL > 0.70. A meaningful degradation signal requires sustained underperformance across multiple weeks (4+ consecutive weeks or repeated same-subgroup failure). Weekly variance is expected and does not justify breaking the freeze.

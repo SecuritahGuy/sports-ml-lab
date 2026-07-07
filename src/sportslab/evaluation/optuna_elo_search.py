@@ -313,12 +313,15 @@ def run_optuna_search(
         )
 
         improvement = inc_hold_m["log_loss"] - hold_m["log_loss"]
+        f.write(
+            f"**Best trial validation LL: {best.value:.4f}** (selected by rolling-origin).\n\n"
+        )
         if improvement > 0:
-            f.write(f"**Optuna best beats incumbent by {improvement:.4f} holdout log loss!** ")
-            if improvement > 0.005:
-                f.write("**New research champion.**\n")
-            else:
-                f.write("Marginal improvement — user discretion on promotion.\n")
+            f.write(
+                f"**Optuna best beats incumbent by {improvement:.4f} on holdout log loss.** "
+                f"Incumbent retains champion until both val and holdout improvement "
+                f"are confirmed (current val LL {best.value:.4f} vs required incumbent val LL).\n"
+            )
         else:
             f.write(
                 f"**Incumbent retains champion.** "

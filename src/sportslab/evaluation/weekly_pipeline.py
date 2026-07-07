@@ -42,7 +42,10 @@ from sportslab.evaluation.predict_incumbent import (
     INCUMBENT_VAL_LL,
     INCUMBENT_VERSION,
 )
-from sportslab.features.build_features import TARGET_COLUMN
+from sportslab.features.build_features import (
+    SPORTSLAB_MIN_SEASON,
+    TARGET_COLUMN,
+)
 
 # ── Snapshot modes ──
 LIVE_MODES = ["live"]
@@ -65,6 +68,15 @@ def _timestamp() -> str:
 
 def _iso_now() -> str:
     return NOW.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _validate_season(season: int, context: str = ""):
+    """Raise ValueError if season is before SPORTSLAB_MIN_SEASON."""
+    if season < SPORTSLAB_MIN_SEASON:
+        raise ValueError(
+            f"Season {season} not allowed{' in ' + context if context else ''}. "
+            f"Minimum season is {SPORTSLAB_MIN_SEASON}."
+        )
 
 
 def _validate_mode(mode: str) -> None:
@@ -215,6 +227,7 @@ def predict_week(
     Returns:
         Dict with snapshot and report paths.
     """
+    _validate_season(season, "predict_week")
     _validate_mode(mode)
 
     # Auto-source QB data (weekly tracking or depth chart snapshot)
@@ -381,21 +394,26 @@ def grade_week(
     week: int,
     snapshot: Optional[str] = None,
     mode: str = "live",
+    force: bool = False,
 ) -> Dict:
     """Grade a completed week's predictions.
 
     Guardrail: must grade from a manifest-registered snapshot.
     Refuses to grade if no snapshot exists (prevents retroactive grading).
+    Use --force to bypass checksum mismatch (e.g., after data recovery).
 
     Args:
         season: Season year.
         week: Week number.
         snapshot: Path to snapshot CSV. Auto-detects from manifest if None.
         mode: Snapshot mode — only grades snapshots matching this mode.
+        force: If True, bypass checksum verification and allow grading
+               from a provided snapshot path without manifest entry.
 
     Returns:
         Dict with metrics and history path.
     """
+    _validate_season(season, "grade_week")
     _validate_mode(mode)
 
     # Guardrail: find snapshot via manifest (filtered by mode)
@@ -405,6 +423,14 @@ def grade_week(
         snap_path = Path(snapshot)
         if not snap_path.exists():
             raise FileNotFoundError(f"Snapshot not found: {snap_path}")
+        if force:
+            print(f"  [force] Using explicit snapshot: {snap_path}")
+        elif not manifest_entry:
+            raise FileNotFoundError(
+                f"No {mode} snapshot in manifest for {season} week {week}."
+                f" Provide --snapshot to grade from explicit path, or"
+                f" use --force to bypass manifest guardrail."
+            )
     elif manifest_entry:
         snap_path = Path(manifest_entry["path"])
         if not snap_path.exists():
@@ -417,10 +443,11 @@ def grade_week(
             f"No {mode} snapshot found for {season} week {week} in manifest."
             f" Run `sportslab predict-week --season {season} --week {week} --mode {mode}` first."
             f" Grading from retroactively regenerated predictions is not allowed."
+            f" Use --force to bypass this guardrail."
         )
 
-    # Verify snapshot checksum against manifest
-    if manifest_entry:
+    # Verify snapshot checksum against manifest (skip if force)
+    if manifest_entry and not force:
         actual_checksum = _file_checksum(snap_path)
         expected = manifest_entry["checksum"]
         if actual_checksum != expected:
@@ -429,6 +456,7 @@ def grade_week(
                 f"  Expected: {expected}\n"
                 f"  Actual:   {actual_checksum}\n"
                 f"  File may have been modified after prediction. Aborting."
+                f"  Use --force to bypass checksum verification."
             )
 
     df = pd.read_csv(snap_path)
@@ -555,6 +583,7 @@ def _season_report_content(
 
 def season_report(season: int) -> Dict[str, str]:
     """Generate season dashboard from prediction history."""
+    _validate_season(season, "season_report")
     if not HISTORY_PATH.exists():
         print("  No prediction history found. Run `sportslab grade-week` first.")
         return {}

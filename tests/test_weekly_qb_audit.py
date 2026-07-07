@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from sportslab.evaluation.weekly_qb_audit import (
     run_weekly_qb_audit,
@@ -75,10 +76,9 @@ def test_weekly_qb_audit_qb_diff_detected():
 
 
 def test_weekly_qb_audit_invalid_season():
-    """Should handle missing season gracefully."""
-    result = run_weekly_qb_audit(season=1999, week=1)
-    assert isinstance(result, dict)
-    assert "No eligible" in str(result)
+    """Should raise ValueError for seasons before 2021."""
+    with pytest.raises(ValueError, match="not allowed"):
+        run_weekly_qb_audit(season=1999, week=1)
 
 
 def test_weekly_qb_audit_gate_change_detected():

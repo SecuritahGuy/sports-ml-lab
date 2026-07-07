@@ -207,12 +207,20 @@ Full session history (20+ experiments) has been consolidated into the governance
 ### Current State
 
 ```
-Incumbent:    Elo + qb_changed + rolling_mov_3 + Platt
-Val LL:       0.6334
-Holdout LL:   0.6262
-Tests:        267 passing
+Incumbent:    v3.0.0 Frozen QB Overlay (production freeze ✅)
+Val LL:       0.6305
+Holdout LL:   0.6200
+Tests:        989 passing (1 skipped)
 Lint:         clean
+RALPH Loop:   9 — production freeze, release readiness, live monitoring
+Status:       Frozen — no model research until trigger condition met
 ```
+
+### Experiment Ledger
+
+44 experiments documented in `reports/benchmarks/experiment_ledger.csv` / `.md`.
+- 1 promoted (current), 5 superseded, 28 rejected, 10 diagnostic.
+- Research backlog ranked in `reports/benchmarks/research_backlog.md`.
 
 ### Feature Research Closure
 
@@ -2062,3 +2070,348 @@ ds.to_parquet("data/features/nfl/drive_stats.parquet")
 
 ### Relevant Files (Remaining)
 - `src/sportslab/features/ratings.py` — `drive_stats_path` param removed, PPD logic removed
+
+---
+
+## Session Summary: RALPH Loop 6 — Focused Challengers (prior_win_pct, weather_missing, roof_enc, games_since_change, isotonic)
+
+### Goal
+Test 5 focused model challengers against v3.0.0 Frozen QB Overlay, following canonical promotion policy (must beat incumbent on BOTH rolling validation AND final holdout with Δ≥0.001).
+
+### Motivation
+Model-trust report identified top weaknesses: Weeks 1–4 LL=0.6727, missing weather LL=0.6497, retractable/open roof cal error=0.2141 (n=32), QB-change games (improved by existing overlay), calibration ECE=0.0628 (passes threshold). 5 challengers designed to address these without leaking, overfitting, or adding operational fragility.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/ralph6_challengers.py` | **New file** — 5 challenger model functions, base feature pipeline, rolling-origin runner, holdout scorer, subgroup analysis, report writer |
+| `src/sportslab/cli.py` | Added `ralph6` command |
+| `Makefile` | Added `ralph6` target |
+| `tests/test_ralph6_challengers.py` | **New file** — 18 tests for base pipeline, prior_win_pct computation, subgroup masks, promotion checker |
+
+### Experiment Results
+
+| Challenger | Features | Val LL | Δ vs Inc | Holdout LL | Δ vs Inc | Verdict |
+|-----------|----------|--------|----------|-----------|----------|---------|
+| incumbent | qb_changed + mov_3 + QB overlay | 0.6305 | — | **0.6200** | — | — |
+| L1: prior_win_pct | + home/away prior-season win% | 0.6316 | +0.0011 | 0.6183 | −0.0017 | ❌ REJECTED |
+| L2: weather_missing | + missing_flag + is_dome + outdoor | 0.6481 | +0.0176 | 0.6198 | −0.0002 | ❌ REJECTED |
+| L3: roof_enc | + stadium roof type (0/1/2) | 0.6315 | +0.0010 | 0.6202 | +0.0002 | ❌ REJECTED |
+| L4: games_since_change | + games since last QB change | 0.6321 | +0.0016 | 0.6202 | +0.0002 | ❌ REJECTED |
+| L5: isotonic | Replace Platt w/ IsotonicRegression | 0.6312 | +0.0007 | 0.6283 | +0.0083 | ❌ REJECTED |
+
+### Key Decisions
+- All 5 challengers rejected — no incumbent change
+- `prior_win_pct` showed marginal holdout improvement (−0.0017 LL) but worse validation (+0.0011) — did not meet both-criteria requirement
+- `weather_missing` and `games_since_change` both degraded validation significantly
+- `roof_enc` was essentially flat — roof type adds no marginal value over existing features
+- `isotonic` overfitted on validation and failed to generalize on holdout — Platt remains correct
+- Shared base feature pipeline reduced redundant Elo/QB/situational computation across 5 challengers
+- No new leakage risk, no feature set change, no live-workflow change
+
+### Current Test State
+- **973 passed, 1 skipped** (was 669 — +18 new ralph6 tests + many existing)
+- Lint clean
+
+### Relevant Files
+- `src/sportslab/evaluation/ralph6_challengers.py` — All 5 challenger functions, base pipeline, runner, report
+- `src/sportslab/cli.py` — `ralph6` command
+- `Makefile` — `ralph6` target
+- `tests/test_ralph6_challengers.py` — 18 tests
+- `reports/experiments/ralph6_challengers.md` — Full experiment report
+
+### Next Steps
+1. All 5 challenger directions exhausted — no remaining untested model-trust weakness directions that satisfy safety/pre-game constraints
+2. Future research must beat v3.0.0 Frozen QB Overlay (holdout LL 0.6200)
+3. Consider expanding season scope (pre-2021) if data leakage can be avoided — this is the only remaining path to significant incumbent improvement
+
+---
+
+## Session Summary: RALPH Loop 7 — Rejected Challenger Analysis + Research Infrastructure
+
+### Goal
+Analyze why all 5 RALPH Loop 6 challengers failed, create durable research infrastructure (experiment ledger, research backlog, guardrails), and design the next experiment lane.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `reports/experiments/ralph7_analysis.md` | **New file** — Full postmortems for all 5 rejected challengers with subgroup diagnostics, dispositions (RETIRE/MONITOR), and cross-challenger patterns |
+| `reports/benchmarks/experiment_ledger.csv` | **New file** — Machine-readable ledger of all 44 experiments with: val LL, holdout LL, AUC/Brier/Acc, decision, rejection reason, leakage risk, report path, date |
+| `reports/benchmarks/experiment_ledger.md` | **New file** — Human-readable ledger summary with timeline, by-decision grouping, and rejection pattern analysis |
+| `reports/benchmarks/research_backlog.md` | **New file** — Ranked research backlog (5 axes scoring), top recommendation: Preseason Elo Prior |
+| `AGENTS.md` | Added Research Governance section: When to Run a Challenger, Rejection Is a Result, Feature Chasing Guard, Closed Directions table |
+
+### Postmortem Dispositions
+
+| Challenger | Disposition | Key Finding |
+|-----------|-------------|-------------|
+| L1: prior_win_pct | **RETIRE** | Prior-season win% too noisy (NFL year-to-year correlation ~0.3); use Elo instead |
+| L2: weather_missing | **RETIRE** | Collinear with existing roof type; retested and failed |
+| L3: roof_enc | **RETIRE** | Target subgroup (n=32) too small; 0 games in 2025 holdout |
+| L4: games_since_change | **MONITOR** | −0.0102 QB-change improvement (real signal) but net penalty; retry with binned encoding or more data |
+| L5: isotonic | **RETIRE** | Overfits on <5000 training rows; Platt is correct |
+
+### Research Backlog Ranking
+
+| Rank | Lane | Score | Targets | Status |
+|------|------|-------|---------|--------|
+| 1 | Preseason Elo Prior | 22/30 | Early-season weakness | **Recommended for RALPH 8** |
+| 2 | Calibration Shrinkage | 14/30 | High-confidence | Already rejected (#10) |
+| 3 | Market Diagnostics | 11/30 | — | Diagnostic only |
+| 4 | Coach/QB Continuity | 10/30 | — | Saturated by overlay |
+| 5 | Expanded Seasons | N/A | All weaknesses | Blocked by governance |
+
+### Experiment Ledger (44 Experiments)
+
+| Outcome | Count |
+|---------|-------|
+| Promoted (current) | 1 |
+| Superseded (former) | 5 |
+| Rejected | 28 |
+| Diagnostic | 10 |
+
+### Key Decisions
+- **Incumbent unchanged** (v3.0.0 Frozen QB Overlay, holdout LL 0.6200)
+- Feature set, promotion policy, and live-workflow all unchanged
+- Research governance now codified in AGENTS.md with clear closed-directions table
+- Experiment ledger created for future agents — no more hunting through 40+ reports
+- Research backlog ranked by 5-axis scoring
+
+### Current Test State
+- **973 passed, 1 skipped** (unchanged — no new code changed)
+- Lint clean
+- All safety checks pass
+
+### Relevant Files
+- `reports/experiments/ralph7_analysis.md` — Rejected challenger postmortems
+- `reports/benchmarks/experiment_ledger.csv` — Machine-readable ledger (44 rows)
+- `reports/benchmarks/experiment_ledger.md` — Human-readable ledger summary
+- `reports/benchmarks/research_backlog.md` — Ranked research backlog
+
+---
+
+## Session Summary: RALPH Loop 8 — Preseason Elo Prior
+
+### Goal
+Test whether adding prior-season Elo rating as an explicit feature in the Platt model improves early-season prediction. Target model-trust weakness: Weeks 1-4 LL=0.6727 vs late season 0.6032.
+
+### Hypothesis
+The early-season weakness exists because season-start Elo ratings carry only a diluted signal (10% regression toward 1500). Adding the pre-regression prior-season final Elo gives the Platt model a stronger preseason baseline.
+
+### Changes Made
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/preseason_elo_prior_experiment.py` | **New** — 626 lines: 6 variants, base spine, fold-safe CV, holdout scorer, subgroup analysis, report writer, 10 audit questions |
+| `src/sportslab/cli.py` | Added `preseason-elo-prior` command |
+| `Makefile` | Added `preseason-elo-prior` target |
+| `tests/test_preseason_elo_prior.py` | **New** — 16 tests |
+
+### Variants Tested
+| ID | Description | Val LL | Δ vs Inc | Holdout LL | Δ vs Inc |
+|----|-------------|--------|----------|-----------|----------|
+| incumbent | Platt(qb_changed + mov_3 + QB overlay) | 0.6341 | — | 0.6259 | — |
+| prior_elo_raw | Raw prior final Elo | 0.6362 | +0.0021 | 0.6283 | +0.0024 |
+| prior_elo_reg10 | 10% regressed prior Elo | 0.6362 | +0.0021 | 0.6283 | +0.0024 |
+| prior_elo_reg50 | 50% regressed prior Elo | 0.6362 | +0.0021 | 0.6283 | +0.0024 |
+| prior_elo_diff | Home-away prior Elo diff | 0.6342 | +0.0001 | 0.6282 | +0.0023 |
+| prior_elo_raw_decay | Decay-weighted prior Elo | 0.6324 | −0.0017 | 0.6301 | +0.0042 |
+
+### Subgroup Analysis (Best: prior_elo_diff)
+| Subgroup | N | Incumbent LL | Best LL | Δ |
+|----------|---|-------------|---------|---|
+| Early (Weeks 1-4) | 61 | 0.5839 | 0.5803 | −0.0036 ✅ |
+| Mid (Weeks 5-12) | 109 | 0.6617 | 0.6657 | +0.0040 ❌ |
+| Late (Weeks 13+) | 106 | 0.6134 | 0.6173 | +0.0039 ❌ |
+| QB changed | 55 | 0.6696 | 0.6695 | −0.0001 ≈ |
+| Missing weather | 92 | 0.6470 | 0.6488 | +0.0018 ❌ |
+
+### Decision: ❌ REJECTED — All 6 variants rejected
+
+**Promotion check:**
+- Did any variant beat incumbent val LL by Δ ≥ 0.001? **Yes** — prior_elo_raw_decay (0.6324, Δ=−0.0017)
+- Did any variant beat incumbent holdout LL by Δ ≥ 0.001? **No**
+- Did the same variant beat both? **No**
+- Did any variant improve early season but damage later season? **Yes** — prior_elo_diff improved Weeks 1-4 (Δ=−0.0036) but worsened mid (Δ=+0.0040) and late (Δ=+0.0039)
+- Did any variant improve holdout only? **No**
+- Did any variant improve validation only? **Yes** — prior_elo_raw_decay improved validation (−0.0017) but not holdout (+0.0042)
+
+**Best variant (prior_elo_diff) audit:**
+1. **Improves Weeks 1-4?** ✅ Δ=−0.0036
+2. **Improves both val and holdout by ≥0.001?** ❌ No (val Δ=+0.0001, hold Δ=+0.0023)
+3. **Stable across folds?** See fold table (Fold 1: 0.6416, Fold 2: 0.6581, Fold 3: 0.6029)
+4. **Increases overconfidence?** ≈ Flat (ECE Δ=−0.0055)
+5. **Worsens QB-change games?** ≈ Flat (Δ=−0.0001)
+6. **Worsens missing-weather games?** ❌ Worsens by 0.0018
+7. **Data available before kickoff?** Yes
+8. **Changes live weekly operation?** No
+9. **Adds operational fragility?** No
+10. **Result large enough?** ❌ No
+
+### Key Decisions
+- **Preseason Elo Prior RETIRED** — all 6 variants rejected. Prior-season Elo signal already absorbed by `elo_prob` in the Platt model. Adding it explicitly adds noise once current-season data accumulates.
+- Prior_elo_raw, reg10, and reg50 produced identical metrics (logistic regression compensates for linear transformations)
+- Early-season improvement (Δ=−0.0036) was real but insufficient to offset mid/late penalties
+- Research backlog now empty — all ranked lanes tested or blocked
+- Incumbent unchanged: v3.0.0 Frozen QB Overlay (holdout LL 0.6200)
+
+### Current Test State
+- 989 passed, 1 skipped (+16 new preseason_elo_prior tests, was 973)
+- Lint clean
+- 45 experiments in ledger (29 rejected, 5 superseded, 10 diagnostic, 1 champion)
+
+### Relevant Files
+- `src/sportslab/evaluation/preseason_elo_prior_experiment.py` — experiment module
+- `tests/test_preseason_elo_prior.py` — 16 tests
+- `reports/experiments/preseason_elo_prior.md` — full report (125 lines)
+- `reports/benchmarks/leaderboard.csv` — row 41
+- `reports/benchmarks/experiment_ledger.csv` — row 45
+- `reports/benchmarks/experiment_ledger.md` — updated counts
+- `reports/benchmarks/research_backlog.md` — lane #1 marked RETIRED
+
+---
+
+## Session Summary: RALPH Loop 9 — Production Freeze & Release Readiness
+
+### Goal
+Freeze v3.0.0 Frozen QB Overlay as the production-ready 2026 weekly prediction system. Create monitoring, reporting, and operational workflows. Do not run new model challenger experiments.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `docs/production_freeze.md` | **New** — Production freeze checklist: incumbent details, promotion policy, data policy, required weekly commands, artifact locations, CI status, known weaknesses, rollback procedure, do-not-change list |
+| `reports/releases/release_v3.0.0.md` | **New** — Release metadata: version, date, feature set, artifact locations, live-ops commands, validation commands, known limitations, latest RALPH loop, CI status, proposed git tag |
+| `docs/live_monitoring.md` | **New** — Weekly monitoring report template, drift thresholds (11 checks with escalation rules), weekly cadence table, small-sample handling |
+| `docs/weekly_runbook.md` | Updated — Post-week review workflow (9 steps with classification and decision), future research trigger policy (6 triggers, non-triggers, process), updated weekly cadence to include monitoring |
+| `AGENTS.md` | Updated — Closed directions table expanded with Disposition + Revisit Trigger columns. Preseason Elo Prior → MODIFY. Games since QB change → MONITOR. All others → RETIRE/DIAGNOSTIC. |
+
+### Production Freeze Status
+
+| Check | Status |
+|-------|--------|
+| Incumbent version documented | ✅ `docs/production_freeze.md` |
+| Feature set frozen | ✅ 5 features, no changes |
+| Promotion policy documented | ✅ Δ ≥ 0.001 on both val and holdout |
+| Data policy documented | ✅ Seasons, market, oracle QB all specified |
+| Weekly commands documented | ✅ 10 commands with timing |
+| Artifact locations documented | ✅ 9 artifacts with paths |
+| CI status documented | ✅ 6 checks with expected results |
+| Known weaknesses documented | ✅ 7 weaknesses with severity |
+| Rollback procedure documented | ✅ 6 steps |
+| Do-not-change list documented | ✅ 8 items |
+
+### Release Metadata Status
+
+| Check | Status |
+|-------|--------|
+| Release file created | ✅ `reports/releases/release_v3.0.0.md` |
+| Model version | ✅ v3.0.0 |
+| Release label | ✅ Frozen QB Overlay |
+| Feature set | ✅ All 5 features listed with params |
+| Artifact locations | ✅ 15 artifact paths |
+| Live-ops commands | ✅ 10 commands |
+| Validation commands | ✅ 7 commands |
+| Known limitations | ✅ 7 limitations |
+| RALPH loop history | ✅ Loops 8 and 9 documented |
+| CI status | ✅ Test count, lint, all checks |
+
+### Live Monitoring Status
+
+| Check | Status |
+|-------|--------|
+| Weekly report template | ✅ `docs/live_monitoring.md` Section 1 |
+| Drift thresholds defined | ✅ Section 2 — 11 thresholds with escalation |
+| Small-sample rules | ✅ 4 tiers (0-5, 6-15, 16+, QB-change) |
+| Weekly cadence documented | ✅ Updated in runbook |
+| Post-week review workflow | ✅ 9 steps in runbook |
+| Future research trigger policy | ✅ 6 triggers, 6 non-triggers, process |
+
+### Rejected Lane Archive Status
+
+| Lane | Disposition | Documented In |
+|------|-------------|---------------|
+| prior_win_pct | RETIRE | AGENTS.md closed directions |
+| weather_missing | RETIRE | AGENTS.md closed directions |
+| roof_enc | RETIRE | AGENTS.md closed directions |
+| games_since_change | MONITOR | AGENTS.md closed directions |
+| isotonic | RETIRE | AGENTS.md closed directions |
+| preseason Elo prior | MODIFY | AGENTS.md closed directions |
+| All others | RETIRE/DIAGNOSTIC | AGENTS.md closed directions |
+
+### Key Decisions
+- **Incumbent unchanged** — no challenger experiments run in RALPH 9
+- **Feature set unchanged** — 5 features remain frozen
+- **Promotion policy unchanged** — Δ ≥ 0.001 on both val and holdout
+- **Market data remains diagnostic-only** — documented in freeze checklist
+- **Oracle QB remains blocked from live mode** — documented in freeze checklist
+- **Model research frozen** — only resumable via the 6 documented triggers
+- **Proposed git tag**: `v3.0.0` — documented in release metadata but not automatically pushed
+
+### Current Test State
+- 989 passed, 1 skipped (unchanged — no new code changed)
+- Lint clean
+- All verification commands pass
+
+### Relevant Files
+- `docs/production_freeze.md` — freeze checklist
+- `reports/releases/release_v3.0.0.md` — release metadata
+- `docs/live_monitoring.md` — monitoring template + drift thresholds
+- `docs/weekly_runbook.md` — post-week review + research trigger policy
+- `AGENTS.md` — closed directions archive
+
+---
+
+## Research Governance: When to Run a Challenger
+
+A challenger experiment should only be run when ALL of the following criteria are met:
+
+### Required Pre-Conditions
+
+1. **Clear hypothesis**: What specific improvement is expected and why? (Not "let's try this and see")
+2. **Target weakness**: Which model-trust split does it address? (Early season, QB-change, calibration, etc.)
+3. **Pregame-available data**: Every feature must be available before kickoff — no final score, no win/loss, no market closing lines
+4. **Leakage audit**: Chronological safety check passed — no future data used in feature computation
+5. **Validation plan**: Rolling-origin 3-fold (2022/2023/2024 val seasons), Platt fit per fold, variant selection by avg val LL
+6. **Rejection criteria**: Must know what constitutes failure (val worse, holdout worse, Δ < 0.001)
+7. **Operational cost**: Estimated implementation time, test burden, and rollback complexity
+
+### Rejection Is a Result
+
+A rejected challenger is not a failure. It produces:
+- A documented hypothesis that was wrong (useful signal for future researchers)
+- Subgroup analysis showing where the idea helped and where it hurt
+- A data point for the experiment ledger
+- Closure — so the same idea is not retested blindly
+
+### Feature Chasing Guard
+
+Do not add features to the model without:
+- Isolated testing (incumbent + feature, not bundled with other changes)
+- Leakage audit documented in experiment report
+- Verification that the feature is available pregame for ALL games, not just a subset
+- A clear promotion path (beat incumbent on BOTH val and holdout with Δ ≥ 0.001)
+
+### Closed Directions — Archived
+
+Do not retest without one of the four triggers (new data, new source, live failure, diagnostic request):
+
+| Direction | Disposition | Last Tested | Why Closed | Revisit Trigger |
+|-----------|-------------|-------------|------------|-----------------|
+| Weather features | RETIRE | RALPH 6 (L2) | Collinear with roof type; retested and failed | New data source |
+| Prior-season win% | RETIRE | RALPH 6 (L1) | Too noisy; year-to-year NFL win% correlation is low | 5+ seasons new data |
+| Encoded roof type | RETIRE | RALPH 6 (L3) | Target subgroup (n=32) too small; 0 games in holdout | 10+ seasons data |
+| Games since QB change | MONITOR | RALPH 6 (L4) | Real subgroup improvement (−0.0102) but net penalty; need binned encoding or more data | 2+ seasons new data or binned encoding |
+| Isotonic calibration | RETIRE | RALPH 6 (L5) | Overfits on <5000 training rows | 5000+ training games |
+| Tree/ensemble models | RETIRE | RALPH 5, #11, #20 | Overfit on dataset size; tested 4 times | 5000+ training games |
+| QB identity OHE | RETIRE | Experiment #7 | Holdout LL 14.51 — catastrophic overfit | Never |
+| Injury features | RETIRE | #21, #23, #37, #38 | All 10+ injury-based variants rejected | Fundamental data format change |
+| Coach features | RETIRE | #18, #29 | Weak signal; saturated by Elo | Fundamental feature redesign |
+| Market features | DIAGNOSTIC | #12, #25, #31 | Diagnostic only; not pregame; timing mismatch | Governance change on market data |
+| Glicko rating | RETIRE | Experiment #24 | All 432 configs worse than Elo | Never (Elo strictly dominates) |
+| Expanded Elo spine | RETIRE | Experiment #39 | 840 combos tested; QB overlay absorbs base Elo variation | Fundamental Elo redesign |
+| Preseason Elo Prior | MODIFY | RALPH 8 | Early-week signal exists (−0.0036 early season) but full-season damage prevents promotion. Prior signal partly absorbed by elo_prob. | Live early-season underperformance repeats across 4+ weeks with 16+ games/week |
+| QB market delta | DIAGNOSTIC | Experiment #25, #31 | Market already incorporates QB injury news; no added signal | Market data policy change |
+| Separate O/D Elo | DIAGNOSTIC | Experiment #19 | k_off/k_def selected using holdout; no clean path | Governance override |
+| Forward feature selection | DIAGNOSTIC | Experiment #26 | Feature audit only; no model change | Feature set redesign |

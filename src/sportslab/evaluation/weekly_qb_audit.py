@@ -36,7 +36,7 @@ from sportslab.evaluation.predict_incumbent import (
 from sportslab.evaluation.season_regression_experiment import (
     build_team_regression_overrides,
 )
-from sportslab.features.build_features import MODEL_ELIGIBLE_COLUMN
+from sportslab.features.build_features import MODEL_ELIGIBLE_COLUMN, SPORTSLAB_MIN_SEASON
 from sportslab.features.qb import compute_qb_features
 from sportslab.features.qb_adjustment import compute_qb_adjustments
 from sportslab.features.ratings import compute_elo_features
@@ -154,6 +154,11 @@ def run_weekly_qb_audit(
     Returns:
         Dict with {"report": path or message}.
     """
+    if season < SPORTSLAB_MIN_SEASON:
+        raise ValueError(
+            f"Season {season} not allowed. "
+            f"Minimum season is {SPORTSLAB_MIN_SEASON}."
+        )
     print(f"=== Weekly QB Source Audit: {season} Week {week} ===\n")
 
     ft = _load_ft()

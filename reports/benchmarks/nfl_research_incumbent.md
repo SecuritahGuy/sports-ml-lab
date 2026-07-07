@@ -91,8 +91,9 @@ pregame). See `reports/experiments/market_benchmark.md`.
 
 ## Promotion Rules
 
-1. Promotion: a challenger must beat **0.6200** holdout log loss to become the new football-only incumbent, AND have better average rolling validation log loss than the incumbent.
-2. Selection must use average rolling validation log loss only. Holdout data is for final evaluation only, never for model selection.
-3. 2025 holdout must remain untouched during model selection.
+1. A challenger must beat the incumbent's **holdout log loss** AND have **better average rolling validation log loss** (both with minimum improvement delta of 0.001) to be promoted.
+2. If the challenger uses a logit-space overlay (e.g., QB overlay), the non-gated subset must also not degrade (equality check).
+3. Selection uses average rolling validation log loss only. Holdout data is for final evaluation only, never for model selection.
 4. Every feature must be pregame-safe and explainable.
 5. Do not promote based on AUC or ROI alone.
+6. The first policy document explicitly setting these rules is RALPH Loop 4 (2026-07-06). Earlier experiments used varying thresholds.

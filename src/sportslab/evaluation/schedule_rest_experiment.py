@@ -412,13 +412,13 @@ def run_schedule_rest_experiment(
         best_chal_val_ll = challenger_val[best_chal_name]
 
         incumbent_val_ll = avg_platt
+        # NOTE: This experiment (oldest in repo, 2026-06-23) uses validation-only
+        # promotion. The canonical project policy (as of RALPH Loop 4, 2026-07-06)
+        # requires beating BOTH validation AND holdout with MIN_PROMOTION_DELTA=0.001.
+        # This is the ONLY experiment with validation-only promotion.
         improved = best_chal_val_ll < incumbent_val_ll - 0.001
 
         if improved:
-            f.write(
-                f"✅ **{best_chal_name} won across rolling validation and"
-                f" is the new research incumbent.**\n\n"
-            )
             hold_ll = hold_metrics[best_chal_name]
             f.write(
                 f"Average validation log loss {best_chal_val_ll:.4f} beats"

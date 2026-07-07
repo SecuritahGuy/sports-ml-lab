@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from sportslab.features.build_features import SPORTSLAB_MIN_SEASON
+
 TURNOVER_COLUMNS = [
     "home_to_net_3",
     "away_to_net_3",
@@ -18,6 +20,12 @@ CACHE_DIR = "data/interim/nfl"
 
 def _load_team_stats(seasons: list[int]) -> pd.DataFrame:
     """Load team stats from nflreadpy with local cache."""
+    bad = [s for s in seasons if s < SPORTSLAB_MIN_SEASON]
+    if bad:
+        raise ValueError(
+            f"Season(s) {bad} not allowed. "
+            f"Minimum season is {SPORTSLAB_MIN_SEASON}."
+        )
     import nflreadpy as nfl
 
     seasons = [int(s) for s in seasons]
@@ -52,7 +60,7 @@ def compute_turnover_features(
     Returns:
         df_games with added TURNOVER_COLUMNS.
     """
-    seasons_needed = sorted(int(s) for s in df_games["season"].unique() if s >= 2021)
+    seasons_needed = sorted(int(s) for s in df_games["season"].unique())
     ts = _load_team_stats(seasons_needed)
 
     # Compute turnover metrics per team-game

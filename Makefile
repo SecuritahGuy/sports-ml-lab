@@ -5,7 +5,7 @@ qb-gated-experience qb-depth-experiment turnover-experiment situational-micro \
 predict-week grade-week season-report prediction-audit rehearsal-season prediction-index publish-predictions \
 data-audit preseason-fire-drill live-preflight \
 build-qb-adjustments qb-adjusted-elo roster-strength regularized-logistic \
-qb-lift
+qb-lift model-trust ralph6
 
 # ── Install ──
 install:
@@ -129,9 +129,10 @@ prediction-index:
 	sportslab build-prediction-index
 
 publish-predictions:
-	sportslab build-prediction-index
-	@echo "  Audit reports are published by 'sportslab prediction-audit --season <YEAR>' (live mode)."
-	@echo "  Run: make prediction-audit SEASON=<YEAR> for each tracked season."
+	sportslab publish-predictions
+
+publish-predictions-dry-run:
+	sportslab publish-predictions --dry-run
 
 # ── Data Audit ──
 data-audit:
@@ -207,6 +208,15 @@ roster-strength:
 
 qb-lift:
 	sportslab qb-lift
+
+model-trust:
+	sportslab model-trust
+
+ralph6:
+	sportslab ralph6
+
+preseason-elo-prior:
+	sportslab preseason-elo-prior
 
 # ── Development ──
 .PHONY: dev

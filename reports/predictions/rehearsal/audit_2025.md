@@ -13,8 +13,8 @@
 | Graded weeks | 21 |
 | Model | v3.0.0 |
 | Holdout LL | 0.62 |
-| Last snapshot | week_2025_01_20260703_141837_rehearsal |
-| Last graded | 2026-07-03T14:17:59Z |
+| Last snapshot | week_2025_01_20260707_144052_rehearsal |
+| Last graded | 2026-07-07T14:40:01Z |
 
 ## Season Calibration
 

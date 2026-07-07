@@ -12,7 +12,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from autogluon.tabular import TabularPredictor
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -215,6 +214,8 @@ def run_autogluon_experiment(
     4. Compare AutoGluon (full features) vs AutoGluon (Elo only) vs Platt incumbent.
     5. Report.
     """
+    from autogluon.tabular import TabularPredictor
+
     fp = Path(feature_table_path)
     if not fp.exists():
         raise FileNotFoundError(f"Feature table not found: {fp}")

@@ -4,7 +4,10 @@ Computes per-QB rolling passing_epa averages and engineers magnitude
 features that quantify how much QB quality drops when a change occurs.
 """
 
-import nflreadpy as nfl
+try:
+    import nflreadpy as nfl
+except ImportError:
+    nfl = None
 import numpy as np
 import pandas as pd
 
@@ -28,6 +31,8 @@ def _build_qb_rolling_epa(seasons: list[int]) -> pd.DataFrame:
     Returns a DataFrame keyed by (player_id, season, week) with a
     pre-game rolling_epa column (games before the current week only).
     """
+    if nfl is None:
+        raise ImportError("nflreadpy is required for QB magnitude features")
     ps = nfl.load_player_stats(seasons=seasons).to_pandas()
     qb = ps[ps["position"] == "QB"].copy()
     qb = qb.sort_values(["player_id", "season", "week"]).reset_index(drop=True)

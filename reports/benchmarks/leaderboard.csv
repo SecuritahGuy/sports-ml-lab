@@ -38,3 +38,4 @@ frozen_qb_overlay_foldsafe_v3,incumbent_plus_frozen_qb_overlay_changed_or_starts
 roster_overlay_foldsafe,incumbent_plus_position_group_availability_overlays_375_variants,fold_safe_rolling_origin_3fold,0.6341,0.6255,0.7052,0.2179,0.6630,rejected,reports/experiments/roster_overlay_foldsafe.md,2026-06-29
 qb_roster_interaction,frozen_qb_overlay_plus_position_group_interaction_overlays_198_variants,fold_safe_rolling_origin_3fold,0.6305,0.6195,0.7103,0.2155,0.6630,rejected,reports/experiments/qb_roster_interaction.md,2026-06-30
 expanded_elo_spine,frozen_qb_overlay_plus_expanded_elo_k_hfa_reg_decay_840_combos,fold_safe_rolling_origin_3fold,0.6299,0.6302,0.6996,0.2203,0.6449,rejected,reports/experiments/expanded_elo_spine.md,2026-06-30
+preseason_elo_prior,prior_elo_raw_vs_reg10_vs_reg50_vs_diff_vs_decay,fold_safe_rolling_origin_3fold,0.6342,0.6282,0.7030,0.2191,0.6594,rejected,reports/experiments/preseason_elo_prior.md,2026-07-06

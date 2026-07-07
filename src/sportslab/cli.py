@@ -53,7 +53,12 @@ from sportslab.evaluation.optuna_elo_search import run_optuna_search
 from sportslab.evaluation.optuna_feature_selection_experiment import run_optuna_feature_selection
 from sportslab.evaluation.predict_future import run_predict_future
 from sportslab.evaluation.predict_incumbent import generate_incumbent_predictions
-from sportslab.evaluation.prediction_audit import build_prediction_index, run_prediction_audit
+from sportslab.evaluation.prediction_audit import (
+    build_prediction_index,
+    publish_predictions,
+    run_prediction_audit,
+)
+from sportslab.evaluation.preseason_elo_prior_experiment import run_preseason_elo_experiment
 from sportslab.evaluation.qb_ablation import run_qb_ablation
 from sportslab.evaluation.qb_adjusted_elo_experiment import run_qb_adjusted_elo_experiment
 from sportslab.evaluation.qb_continuity import run_qb_continuity
@@ -64,6 +69,7 @@ from sportslab.evaluation.qb_injury_experiment import run_qb_injury_experiment
 from sportslab.evaluation.qb_magnitude_experiment import run_qb_magnitude_experiment
 from sportslab.evaluation.qb_market_delta import run_qb_market_delta_experiment
 from sportslab.evaluation.qb_roster_interaction_experiment import run_qb_roster_interaction
+from sportslab.evaluation.ralph6_challengers import run_ralph6_experiment
 from sportslab.evaluation.regularized_logistic_experiment import (
     run_regularized_logistic_experiment,
 )
@@ -387,6 +393,18 @@ def build_dashboard_cmd():
 
 
 @cli.command()
+def ralph6_cmd():
+    """RALPH Loop 6: 5 focused challengers against v3.0.0 frozen QB overlay."""
+    run_ralph6_experiment()
+
+
+@cli.command()
+def preseason_elo_prior_cmd():
+    """RALPH Loop 8: Preseason Elo Prior experiment."""
+    run_preseason_elo_experiment()
+
+
+@cli.command()
 def backtest_2025_cmd():
     """Run comprehensive 2025 backtest analysis for the incumbent model."""
     run_backtest_2025()
@@ -398,6 +416,10 @@ def backtest(seasons):
     """Run backtest for one or more seasons (e.g. 'sportslab backtest 2022 2023')."""
     if not seasons:
         click.echo("Usage: sportslab backtest <season> [season ...]")
+        return
+    bad = [s for s in seasons if s < 2021]
+    if bad:
+        click.echo(f"Error: Season(s) {bad} not allowed. Minimum season is 2021.")
         return
     results = run_backtest(list(seasons))
     click.echo(f"Report: {results['report']}")
@@ -536,13 +558,18 @@ def predict_week_cmd(season, week, qb_input, auto_qb, weekly_qb, output, mode):
 @click.option("--week", type=int, required=True, help="Week number (1-22)")
 @click.option("--snapshot", type=str, default=None,
               help="Snapshot CSV path (auto-detected if not provided)")
-def grade_week_cmd(season, week, snapshot):
+@click.option("--force", is_flag=True, default=False,
+              help="Bypass manifest guardrail and checksum verification")
+def grade_week_cmd(season, week, snapshot, force):
     """Grade a completed week's predictions against actual results.
 
     Loads the prediction snapshot, merges actual results from the
     feature table, computes metrics, and appends to prediction history.
+
+    By default only grades manifest-registered snapshots (prevents
+    retroactive grading). Use --force to bypass this guardrail.
     """
-    grade_week(season=season, week=week, snapshot=snapshot)
+    grade_week(season=season, week=week, snapshot=snapshot, force=force)
 
 
 @cli.command(name="season-report")
@@ -604,6 +631,25 @@ def prediction_audit_cmd(season):
 def build_prediction_index_cmd():
     """Generate docs/predictions/index.md from manifest state."""
     build_prediction_index()
+
+
+@cli.command(name="publish-predictions")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Print what would be published without writing files")
+def publish_predictions_cmd(dry_run):
+    """Publish prediction artifacts to docs/predictions/.
+
+    Generates the prediction index from manifest state, lists audit
+    reports, and prints git commands for manual publishing.
+
+    Use --dry-run to preview before publishing.
+    """
+    result = publish_predictions(dry_run=dry_run)
+    if result.get("note") == "dry_run — no files written":
+        click.echo("✅ Dry-run complete. No files were modified.")
+    else:
+        click.echo("✅ Prediction artifacts published.")
+        click.echo(f"   Index: {result['index']}")
 
 
 @cli.command(name="rehearsal-season")
@@ -893,3 +939,23 @@ def qb_lift_cmd(output):
     """
     from sportslab.evaluation.qb_lift_experiment import run_qb_lift_experiment
     run_qb_lift_experiment()
+
+
+@cli.command(name="model-trust")
+@click.option(
+    "--output",
+    type=str,
+    default=None,
+    help="Output report path (default: reports/experiments/model_trust.md)",
+)
+def model_trust_cmd(output):
+    """Run comprehensive model trust diagnostics for the incumbent.
+
+    Produces a structured trust report covering incumbent reproduction,
+    failure-mode splits, market benchmark comparison, high-confidence
+    analysis, and reproducibility verification. No network access required.
+    """
+    from sportslab.evaluation.model_trust import run_model_trust
+
+    report_path = run_model_trust(output_path=output)
+    click.echo(f"Model trust report generated: {report_path}")

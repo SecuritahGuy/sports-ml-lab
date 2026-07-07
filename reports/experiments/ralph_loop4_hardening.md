@@ -1,0 +1,140 @@
+# RALPH Loop 4: Production Hardening — Policy Enforcement + CI
+
+*Generated: 2026-07-06*
+*Incumbent: v3.0.0 (holdout LL 0.6200)*
+
+---
+
+## Summary
+
+RALPH Loop 4 focused on **production hardening**: resolving promotion policy
+inconsistencies, adding CI infrastructure, documenting data/artifact policies,
+and adding model-trust threshold warnings.
+
+**No model changes.** Incumbent unchanged (v3.0.0, holdout LL 0.6200).
+
+### Files Changed
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `.github/workflows/ci.yml` | **New** | GitHub Actions CI: lint → test → feature table → incumbent LL verification |
+| `.gitignore` | Rewritten | Clear data/artifact policy with committed vs generated documentation |
+| `docs/benchmarks.md` | Updated | Promotion rules use relative (not absolute) holdout threshold |
+| `docs/weekly_runbook.md` | Extended | Added Data/Artifact Policy, Generated Report Drift Policy, CI Pipeline, Prediction Index, Publishing All Predictions, Model Trust Thresholds sections |
+| `reports/benchmarks/nfl_research_incumbent.md` | Updated | Promotion rules use relative (not absolute) holdout threshold; add MIN_PROMOTION_DELTA=0.001 and non-gated equality check |
+| `src/sportslab/evaluation/schedule_rest_experiment.py` | Updated | Added legacy validation-only promotion comment — the only experiment in the repo using the old policy |
+| `src/sportslab/evaluation/model_trust.py` | Updated | Added Section 6 (Model Trust Thresholds) with ECE, high-confidence accuracy, and market gap pass/caution flags |
+| `tests/test_promotion_policy.py` | **New** | 8 tests verifying both-required policy, relative threshold in docs, legacy experiment documented |
+
+---
+
+## 1. Promotion Policy Audit
+
+### Finding
+
+The canonical project policy is: **a challenger must beat the incumbent on BOTH
+average rolling validation log loss AND final holdout log loss, with a minimum
+improvement delta of 0.001.**
+
+This is implemented in `fold_safe.py::check_promotion()` and tested in
+`test_fold_safe.py`. However, three inconsistencies existed:
+
+| Inconsistency | Location | Fix |
+|---------------|----------|-----|
+| Docs said "must beat **0.6200** holdout" (absolute) | `nfl_research_incumbent.md`, `docs/benchmarks.md`, `docs/weekly_runbook.md` | Changed to relative comparison against incumbent's holdout LL |
+| `schedule_rest_experiment.py` used validation-only promotion (oldest experiment in repo) | `schedule_rest_experiment.py:415` | Added legacy comment noting it's the only experiment with validation-only policy |
+| `frozen_qb_overlay_foldsafe_experiment.py` has non-gated equality check not documented | `frozen_qb_overlay_foldsafe_experiment.py` | Added non-gated equality check to policy docs |
+| Some experiments lack `MIN_PROMOTION_DELTA` | Various experiment files | Documented as pre-standardization — all new experiments should use `check_promotion()` from `fold_safe.py` |
+
+### Promotion Rules (Post-RALPH 4)
+
+1. A challenger must beat the incumbent's **holdout log loss** AND have **better average rolling validation log loss** (both with minimum improvement delta of 0.001) to be promoted.
+2. If the challenger uses a logit-space overlay, the non-gated subset must also not degrade (equality check).
+3. Selection uses average rolling validation log loss only. Holdout data is for final evaluation only, never for model selection.
+4. Every feature must be pregame-safe and explainable.
+5. Do not promote based on AUC or ROI alone.
+
+These rules are enforced by:
+- `fold_safe.py::check_promotion()` — runtime promotion check
+- `tests/test_fold_safe.py` — tests for both-required, delta threshold
+- `tests/test_promotion_policy.py` — tests for docs consistency, legacy documentation
+
+---
+
+## 2. CI Pipeline
+
+A GitHub Actions workflow (`.github/workflows/ci.yml`) runs on push/PR to `main`:
+
+1. `ruff check src/ tests/` — lint verification
+2. `python -m pytest --tb=short -x -q tests/` — full test suite
+3. Feature table integrity check (exists, >= 2021 seasons)
+4. Incumbent holdout LL verification (±0.01 tolerance against 0.6200)
+
+CI does NOT:
+- Run compute-intensive experiments (grid searches, Optuna, AutoGluon)
+- Regenerate experiment reports
+- Require network access or API keys
+- Modify any tracked files
+
+---
+
+## 3. Data / Artifact Policy
+
+Defined in `.gitignore` and `docs/weekly_runbook.md`:
+
+### Committed (Source of Truth)
+- `data/raw/nfl/schedules.parquet` — raw ingest
+- `data/features/nfl/feature_table.parquet` — built features
+- `reports/experiments/*.md` — experiment reports
+- `reports/benchmarks/*.{md,csv}` — benchmark registry
+- `reports/predictions/incumbent_predictions*.csv` — canonical predictions
+
+### NOT Committed (Generated at Runtime)
+- `*.parquet` (new files not already tracked)
+- `reports/predictions/snapshots/` — weekly snapshots
+- `reports/predictions/rehearsal/` — historical rehearsal
+- `mlruns/` — MLflow tracking
+
+### Generated Report Drift Policy
+Experiment reports are committed once and never regenerated by CI.
+If code evolves such that a report becomes inaccurate:
+1. A test catches the drift (e.g., holdout LL mismatch).
+2. A human updates the report text to match.
+3. CI runs tests but does NOT regenerate reports.
+
+---
+
+## 4. Model Trust Thresholds
+
+Section 6 was added to the model trust report with pass/caution checks:
+
+| Check | Value | Threshold | Status |
+|-------|-------|-----------|--------|
+| ECE (holdout) | 0.063 | < 0.10 | ✅ PASS |
+| High-confidence accuracy (p≥0.90) | 0.955 | ≥ 0.80 | ✅ PASS |
+| High-confidence games (p≥0.90) | 22 | — | — |
+| Market gap (LL) | 0.026 | ≤ 0.05 | ✅ PASS |
+
+All checks pass for the v3.0.0 incumbent.
+
+---
+
+## 5. Verification
+
+| Check | Result |
+|-------|--------|
+| `ruff check src/ tests/` | ✅ All checks passed |
+| `python -m pytest tests/` | ✅ 922 passed (76.75s) |
+| `sportslab model-trust` | ✅ Report generated with new Section 6 |
+| Incumbent holdout LL | 0.6200 (verified in model_trust report) |
+
+---
+
+## 6. Next Steps
+
+1. Enable GitHub Pages from repo settings (Settings → Pages → Deploy from `main` `/docs`)
+2. Push changes to trigger CI on GitHub
+3. Any model must beat **v3.0.0 Frozen QB Overlay (holdout LL 0.6200)** to become the new incumbent
+4. No untested feature directions remain; future work requires new data or new pregame-safe data sources
+
+*See promotion rules in `reports/benchmarks/nfl_research_incumbent.md` and `docs/benchmarks.md`.*

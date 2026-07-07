@@ -9,13 +9,20 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+from sklearn.metrics import accuracy_score
 
 from sportslab.evaluation.predict_incumbent import (
     INCUMBENT_DATE,
     INCUMBENT_HOLDOUT_LL,
     INCUMBENT_VERSION,
 )
-from sportslab.evaluation.weekly_pipeline import _read_manifest
+from sportslab.evaluation.weekly_pipeline import (
+    _file_checksum,
+    _load_actuals,
+    _read_history,
+    _read_manifest,
+)
+from sportslab.features.build_features import SPORTSLAB_MIN_SEASON
 
 REPORT_DIR = Path("reports/predictions")
 DOCS_DIR = Path("docs/predictions")
@@ -40,8 +47,6 @@ def _load_graded_snapshots(season: int) -> pd.DataFrame:
             continue
         df = pd.read_csv(sp)
         df["week"] = entry["week"]
-        # Merge actuals from feature table
-        from sportslab.evaluation.weekly_pipeline import _load_actuals
         if "actual_home_win" not in df.columns:
             df = _load_actuals(df)
         frames.append(df)
@@ -117,7 +122,6 @@ def _confidence_buckets(
             continue
         y_bin = y_t[mask]
         p_bin = y_p[mask]
-        from sklearn.metrics import accuracy_score
         results.append({
             "bucket": labels[i],
             "n": int(mask.sum()),
@@ -300,7 +304,6 @@ def _write_audit_pages(
     total_snapshots = len(manifest.get("snapshots", []))
     total_graded = len([s for s in manifest["snapshots"] if s.get("graded")])
 
-    from sportslab.evaluation.weekly_pipeline import _read_history
     hist = _read_history()
     hist_weeks = len(hist)
     _w(f"| Total snapshots in manifest | {total_snapshots} |")
@@ -322,7 +325,6 @@ def _write_audit_pages(
     for s in manifest["snapshots"]:
         sp = Path(s["path"])
         if sp.exists():
-            from sportslab.evaluation.weekly_pipeline import _file_checksum
             if _file_checksum(sp) == s["checksum"]:
                 checksum_ok += 1
     _w(f"| Snapshots with matching checksums | {checksum_ok}/{total_snapshots} |")
@@ -365,6 +367,11 @@ def run_prediction_audit(season: int, mode: str = "live") -> Dict[str, str]:
     Returns:
         Dict mapping output location to file path.
     """
+    if season < SPORTSLAB_MIN_SEASON:
+        raise ValueError(
+            f"Season {season} not allowed. "
+            f"Minimum season is {SPORTSLAB_MIN_SEASON}."
+        )
     manifest = _read_manifest()
 
     df_all = _load_graded_snapshots(season)
@@ -492,3 +499,44 @@ def build_prediction_index() -> str:
     dest.write_text(content)
     print(f"  Prediction index: {dest}")
     return str(dest)
+
+
+def publish_predictions(dry_run: bool = False) -> Dict[str, str]:
+    """Publish prediction artifacts: build index and print manual publish steps.
+
+    In dry-run mode, prints what would be done without writing files.
+
+    Returns:
+        Dict with 'index' path and 'note'.
+    """
+    index_path = build_prediction_index()
+    result = {"index": index_path}
+
+    if dry_run:
+        print("\n=== PUBLISH-PREDICTIONS (DRY RUN) ===")
+        print(f"  Would write: {index_path}")
+        print(f"  Would run:   git add {DOCS_DIR}/")
+        print("  Would run:   git commit")
+        print("  Would run:   git push origin main")
+        print("  (No files written in dry-run mode)\n")
+        result["note"] = "dry_run — no files written"
+        return result
+
+    # Also publish audit reports if prediction-audit has been run
+    audit_files = sorted(DOCS_DIR.glob("audit_*.md"))
+    result["audit_files"] = [str(f) for f in audit_files]
+
+    print("\n=== PUBLISH-PREDICTIONS ===")
+    print(f"  Prediction index: {index_path}")
+    if audit_files:
+        print(f"  Audit reports:   {len(audit_files)} found")
+        for af in audit_files:
+            print(f"    {af}")
+    else:
+        print("  No audit reports found. Run `sportslab prediction-audit --season <YEAR>` first.")
+    print("\n  Next steps:")
+    print("    git add docs/predictions/")
+    print("    git commit -m 'Update prediction artifacts'")
+    print("    git push origin main\n")
+    result["note"] = "Manual git push required"
+    return result

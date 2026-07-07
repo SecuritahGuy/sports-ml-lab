@@ -3,10 +3,13 @@
 from pathlib import Path
 from typing import List, Optional
 
+import pandas as pd
+
 from sportslab.evaluation.data_audit import (
     FEATURE_TABLE_PATH,
     run_data_audit,
 )
+from sportslab.evaluation.predict_future import predict_future
 from sportslab.features.qb_input import parse_qb_input_csv
 
 
@@ -33,7 +36,6 @@ def validate_qb_csv(qb_input_path: Optional[str]) -> List[str]:
 
         # Check game_ids match the feature table
         if Path(FEATURE_TABLE_PATH).exists():
-            import pandas as pd
             ft = pd.read_parquet(FEATURE_TABLE_PATH)
             feature_ids = set(ft["game_id"].unique())
             csv_ids = set(df["game_id"].unique())
@@ -52,20 +54,38 @@ def validate_qb_csv(qb_input_path: Optional[str]) -> List[str]:
     return issues
 
 
-def dry_run_smoke_test() -> List[str]:
+def dry_run_smoke_test(season: Optional[int] = None) -> List[str]:
     """Run a basic dry-run predict as a smoke test.
+
+    Uses the current maximum season + week 1 by default, or the
+    specified season. Detects the latest available season from
+    the feature table to avoid hardcoded 2026.
 
     Returns a list of issues (empty = success).
     """
     issues: List[str] = []
     try:
-        from sportslab.evaluation.predict_future import predict_future
+        test_season = season
+        if test_season is None:
+            # Auto-detect latest season from feature table with future games
+            if Path(FEATURE_TABLE_PATH).exists():
+                ft = pd.read_parquet(FEATURE_TABLE_PATH)
+                max_season = int(ft["season"].max())
+                # Use max season if it has future games, otherwise next season
+                future = ft[ft["home_score"].isna()]
+                if len(future) > 0:
+                    test_season = int(future["season"].max())
+                else:
+                    test_season = max_season + 1
+            else:
+                test_season = 2026  # fallback
 
-        result = predict_future(season=2026, week=1, mode="dry_run")
+        result = predict_future(season=test_season, week=1, mode="dry_run")
         if result:
-            print(f"  Dry-run predict: {len(result)} output files created")
+            n_out = len(result)
+            print(f"  Dry-run predict (season={test_season}, week=1): {n_out} output files created")
         else:
-            issues.append("Dry-run predict produced no output")
+            issues.append(f"Dry-run predict produced no output for season {test_season}")
     except FileNotFoundError as e:
         issues.append(f"Dry-run predict failed (data missing): {e}")
     except Exception as e:

@@ -94,11 +94,11 @@ def test_logistic_with_saga():
     x = rng.uniform(0, 1, size=(100, 5))
     y = (x[:, 0] + x[:, 1] > 1.0).astype(int)
 
-    for penalty in ["l1", "l2"]:
+    for l1_value in [1.0, 0.0]:
         pipe = Pipeline([
             ("scaler", StandardScaler()),
             ("lr", LogisticRegression(
-                C=0.1, penalty=penalty, solver="saga",
+                C=0.1, l1_ratio=l1_value, solver="saga",
                 max_iter=5000, random_state=42,
             )),
         ])

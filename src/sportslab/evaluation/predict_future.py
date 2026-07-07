@@ -59,7 +59,7 @@ from sportslab.evaluation.predict_incumbent import (
 from sportslab.evaluation.season_regression_experiment import (
     build_team_regression_overrides,
 )
-from sportslab.features.build_features import MODEL_ELIGIBLE_COLUMN
+from sportslab.features.build_features import MODEL_ELIGIBLE_COLUMN, SPORTSLAB_MIN_SEASON
 from sportslab.features.market import compute_market_features
 from sportslab.features.qb import compute_qb_features
 from sportslab.features.qb_adjustment import compute_qb_adjustments
@@ -70,6 +70,15 @@ from sportslab.features.situational import compute_situational_features
 HISTORICAL_SEASONS = [2021, 2022, 2023, 2024]
 DEFAULT_OUTPUT = "reports/predictions/future_predictions.csv"
 FEATURE_TABLE_PATH = "data/features/nfl/feature_table.parquet"
+
+
+def _validate_season(season: int, context: str = ""):
+    """Raise ValueError if season is before SPORTSLAB_MIN_SEASON."""
+    if season < SPORTSLAB_MIN_SEASON:
+        raise ValueError(
+            f"Season {season} not allowed{(' in ' + context) if context else ''}. "
+            f"Minimum season is {SPORTSLAB_MIN_SEASON}."
+        )
 
 
 def _load_historical_and_future(
@@ -162,6 +171,9 @@ def predict_future(
     """
     from sportslab.evaluation.weekly_pipeline import _validate_mode
     _validate_mode(mode)
+
+    if season is not None:
+        _validate_season(season, "predict_future")
 
     if mode in LIVE_MODES and not qb_input_path:
         raise ValueError(
@@ -314,6 +326,8 @@ def run_predict_future(
     mode: str = "live",
 ) -> Dict[str, str]:
     """CLI entry point for future prediction."""
+    if season is not None:
+        _validate_season(season, "run_predict_future")
     if qb_input is not None and not Path(qb_input).exists():
         raise FileNotFoundError(f"QB input file not found: {qb_input}")
     return predict_future(
