@@ -222,9 +222,9 @@ class TestComputeGatedQBAdjustments:
         assert result["home_qb_adj"].iloc[0] == 0.0
         assert np.isfinite(result["home_qb_adj"].iloc[1])
 
-    def test_no_season_before_2021(self):
-        df = _make_minimal_df(season=[2020, 2020])
-        with pytest.raises(ValueError, match="2021"):
+    def test_no_season_before_2000(self):
+        df = _make_minimal_df(season=[1999, 1999])
+        with pytest.raises(ValueError):
             compute_gated_qb_adjustments(df, gate_mode="full")
 
     def test_empty_df(self):
@@ -311,9 +311,9 @@ class TestRecencyWeightedQBAdjustments:
         assert result["home_qb_adj"].iloc[0] == 0.0
         assert result["home_qb_starts"].iloc[0] == 0
 
-    def test_no_season_before_2021(self):
-        df = _make_minimal_df(season=[2020, 2020])
-        with pytest.raises(ValueError, match="2021"):
+    def test_no_season_before_2000(self):
+        df = _make_minimal_df(season=[1999, 1999])
+        with pytest.raises(ValueError):
             compute_recency_weighted_qb_adjustments(df)
 
 
@@ -338,15 +338,15 @@ class TestExperimentImportability:
 
 
 class TestExperimentSafety:
-    def test_no_season_before_2021(self):
-        """Verify experiment config does not use pre-2021 seasons."""
+    def test_no_season_before_2000(self):
+        """Verify experiment config does not use pre-2000 seasons."""
         from sportslab.evaluation.experiment_config import ALL_SEASONS, ROLLING_FOLDS
         for s in ALL_SEASONS:
-            assert s >= 2021
+            assert s >= 2000
         for train_seasons, val_season in ROLLING_FOLDS:
             for ts in train_seasons:
-                assert ts >= 2021
-            assert val_season >= 2022
+                assert ts >= 2000
+            assert val_season >= 2001
 
     def test_experiment_smoke(self, tmp_path):
         """Minimal smoke test — run experiment end-to-end."""

@@ -20,7 +20,7 @@ try:
 except ImportError:
     nfl = None
 
-SPORTSLAB_MIN_SEASON = 2021
+SPORTSLAB_MIN_SEASON = 2000
 ROLLING_WINDOWS = [3, 5]
 
 # ── Column lists ──────────────────────────────────────────────────────────

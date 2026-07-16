@@ -116,9 +116,9 @@ def test_experiment_function_signature():
     assert "output_csv" in sig.parameters
 
 
-def test_no_pre_2021_seasons():
+def test_no_pre_2000_seasons():
     from sportslab.evaluation.experiment_config import ALL_SEASONS
-    assert min(ALL_SEASONS) >= 2021
+    assert min(ALL_SEASONS) >= 2000
 
 
 def test_v3_0_0_constants_preserved():

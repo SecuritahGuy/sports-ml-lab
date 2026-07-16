@@ -18,9 +18,10 @@ from sportslab.features.build_features import (
 )
 from sportslab.features.ratings import compute_elo_features
 
-TRAIN_SEASONS = [2021, 2022, 2023]
-VAL_SEASON = 2024
-HOLDOUT_SEASON = 2025
+from sportslab.features.build_features import SPORTSLAB_MIN_SEASON
+from sportslab.evaluation.experiment_config import HOLDOUT_SEASON
+TRAIN_SEASONS = list(range(SPORTSLAB_MIN_SEASON, HOLDOUT_SEASON - 1))
+VAL_SEASON = HOLDOUT_SEASON - 1
 K_FACTOR_CANDIDATES = [4, 8, 12, 16, 20, 24, 32]
 HFA_CANDIDATES = [0, 25, 40, 55, 65, 75]
 REGRESSION_CANDIDATES = [0.0, 0.25, 0.33, 0.50]

@@ -284,7 +284,7 @@ class TestExperimentStructure:
     def test_rolling_folds_correct_seasons(self):
         for train, val in ROLLING_FOLDS:
             assert val not in train
-            assert all(s >= 2021 for s in train)
+            assert all(s >= 2000 for s in train)
             assert val >= 2022 and val <= 2024
 
     def test_model_variants_include_incumbent(self):

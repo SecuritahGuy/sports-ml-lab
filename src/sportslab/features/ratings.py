@@ -245,6 +245,7 @@ def compute_od_elo_features(
 def compute_elo_features(
     df: pd.DataFrame,
     k_factor: float = DEFAULT_K,
+    k_start: float | None = None,
     home_advantage: float = 0.0,
     default_elo: float = DEFAULT_ELO,
     preseason_regression: float = 0.0,
@@ -264,7 +265,11 @@ def compute_elo_features(
     Args:
         df: DataFrame with columns season, week, gameday, home_team, away_team,
             home_win, home_score, away_score.
-        k_factor: Elo K-factor controlling update magnitude.
+        k_factor: Elo K-factor controlling update magnitude (also the minimum
+            K when k_start is set).
+        k_start: If set, K linearly decays from k_start (week 1) to k_factor
+            (week max_week). Higher K early = faster rating adjustments for
+            early-season uncertainty.
         home_advantage: Global HFA added to home team's effective rating for
             expected score calculation.
         default_elo: Starting Elo for new teams.
@@ -348,8 +353,14 @@ def compute_elo_features(
                 mov_cap=mov_cap,
             )
             week_num = int(row.get("week", 1))
-            week_scale = max(0.0, 1.0 - (week_num - 1) / max_week)
-            effective_k = k_factor * (1.0 + adaptive_k_boost * week_scale)
+            if k_start is not None:
+                fraction = min(1.0, (week_num - 1) / max(max_week - 1, 1))
+                effective_k = k_start + (k_factor - k_start) * fraction
+            elif adaptive_k_boost > 0:
+                week_scale = max(0.0, 1.0 - (week_num - 1) / max_week)
+                effective_k = k_factor * (1.0 + adaptive_k_boost * week_scale)
+            else:
+                effective_k = k_factor
             update = effective_k * (actual_home - expected_home) * mov_mult
             ratings[home_team] = h_elo + update
             ratings[away_team] = a_elo - update

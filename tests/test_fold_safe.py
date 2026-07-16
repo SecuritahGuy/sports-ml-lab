@@ -173,4 +173,4 @@ def test_load_feature_table_exists():
 
 def test_load_feature_table_min_season():
     df = load_feature_table()
-    assert df["season"].min() >= 2021
+    assert df["season"].min() >= 2000

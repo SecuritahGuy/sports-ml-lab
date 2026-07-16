@@ -46,7 +46,9 @@ SIMULATION_SEASON = 2025
 FEATURE_TABLE_PATH = "data/features/nfl/feature_table.parquet"
 DEFAULT_OUTPUT = "reports/simulations/simulate_2025_results.csv"
 DEFAULT_REPORT = "reports/simulations/simulate_2025_report.md"
-TRAIN_SEASONS = [2021, 2022, 2023, 2024]
+from sportslab.features.build_features import SPORTSLAB_MIN_SEASON
+from sportslab.evaluation.experiment_config import HOLDOUT_SEASON
+TRAIN_SEASONS = list(range(SPORTSLAB_MIN_SEASON, HOLDOUT_SEASON))
 
 QB_MODE_ORACLE = "oracle"
 QB_MODE_LIVE = "live_pregame"

@@ -71,7 +71,7 @@ def test_load_feature_table():
     assert "home_team" in df.columns
     assert "away_team" in df.columns
     assert "home_win" in df.columns
-    assert df["season"].min() >= 2021
+    assert df["season"].min() >= 2000
 
 
 def test_get_2025_weeks():

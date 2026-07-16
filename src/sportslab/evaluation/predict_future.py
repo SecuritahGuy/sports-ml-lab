@@ -67,7 +67,8 @@ from sportslab.features.qb_input import apply_qb_input, parse_qb_input_csv
 from sportslab.features.ratings import compute_elo_features
 from sportslab.features.situational import compute_situational_features
 
-HISTORICAL_SEASONS = [2021, 2022, 2023, 2024]
+from sportslab.evaluation.experiment_config import HOLDOUT_SEASON
+HISTORICAL_SEASONS = list(range(SPORTSLAB_MIN_SEASON, HOLDOUT_SEASON))
 DEFAULT_OUTPUT = "reports/predictions/future_predictions.csv"
 FEATURE_TABLE_PATH = "data/features/nfl/feature_table.parquet"
 

@@ -84,20 +84,9 @@ Each lane is scored on 5 axes (1–5, higher = better):
 
 ---
 
-### 5. Expanded Seasons (Pre-2021)
+### 5. ✅ Expanded Seasons (Pre-2021) — COMPLETED
 
-**Total score: N/A — blocked by governance**
-
-| Axis | Score | Rationale |
-|------|-------|-----------|
-| Expected value | 5 | 2-3x data would stabilize Elo ratings early in seasons and support more complex features |
-| Leakage safety | 4 | Older data has different play styles; potential regime-change risk |
-| Implementation complexity | 2 | Requires data acquisition, pipeline expansion, and governance override |
-| Operational fragility | 3 | More data means slower pipeline and more storage |
-| Testability | 5 | More data = more reliable validation |
-| Sample size | 5 | Would add 10+ seasons |
-
-**Status**: BLOCKED by project governance (no pre-2021 data allowed). Would provide the highest expected value of any single change but requires explicit governance override. Not currently actionable.
+**Status**: ✅ DEPLOYED. Governance override applied 2026-07-16. Min season changed 2021 → 2000 (5,593 additional games added). Now the baseline for all experiments. See branch `research/deep-dive`.
 
 ---
 

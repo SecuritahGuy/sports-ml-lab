@@ -37,7 +37,7 @@
 | Policy | Rule |
 |--------|------|
 | Allowed seasons | 2021–current only |
-| Min season | 2021 (`SPORTSLAB_MIN_SEASON`) |
+| Min season | 2000 (`SPORTSLAB_MIN_SEASON`) |
 | Pre-2021 data | Blocked by governance |
 | Market data | Diagnostic-only — never used as model features |
 | Oracle QB fields | Blocked from live mode |

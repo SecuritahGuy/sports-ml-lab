@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-SPORTSLAB_MIN_SEASON = 2021
+SPORTSLAB_MIN_SEASON = 2000
 
 ROLLING_WINDOWS = [3, 5]
 
@@ -92,7 +92,7 @@ def load_pbp_data(
     for a season, loads from cache instead of re-downloading.
 
     Args:
-        seasons: List of season years (min 2021).
+        seasons: List of season years (min 2000).
         cache_dir: Directory for cached parquet files.
 
     Returns:

@@ -71,9 +71,9 @@ class TestWeek1ColdStart:
 
 
 class TestSeasonValidation:
-    def test_rejects_pre_2021(self):
+    def test_rejects_pre_2000(self):
         with pytest.raises(ValueError, match="Minimum season"):
-            _validate_season(2020)
+            _validate_season(1999)
 
     def test_accepts_2021(self):
         _validate_season(2021)
@@ -187,14 +187,14 @@ class TestQBInputValidation:
 
 
 class TestPre2021Rejection:
-    def test_validate_season_rejects_pre_2021(self):
-        with pytest.raises(ValueError, match=f"Season 2020.*{SPORTSLAB_MIN_SEASON}"):
-            _validate_season(2020)
+    def test_validate_season_rejects_pre_2000(self):
+        with pytest.raises(ValueError, match=f"Season 1999.*{SPORTSLAB_MIN_SEASON}"):
+            _validate_season(1999)
 
-    def test_feature_table_has_no_pre_2021(self):
+    def test_feature_table_has_no_pre_2000(self):
         fp = "data/features/nfl/feature_table.parquet"
         df = pd.read_parquet(fp)
-        assert df["season"].min() >= 2021
+        assert df["season"].min() >= 2000
 
 
 # ── Prediction Publishing Safety ──
@@ -263,7 +263,7 @@ class TestPublishingSafety:
 class TestGradingSafety:
     def test_grade_week_requires_valid_season(self):
         with pytest.raises(ValueError, match="Minimum season"):
-            grade_week(season=2020, week=1)
+            grade_week(season=1999, week=1)
 
     def test_grade_week_rejects_future_season(self):
         """A season with no data should fail gracefully, not silently."""
@@ -297,10 +297,10 @@ class TestGradingSafety:
 
 
 class TestFailureInjection:
-    def test_pre_2021_season_rejected_in_cli(self):
-        """The backtest CLI command rejects seasons before 2021."""
+    def test_pre_2000_season_rejected_in_cli(self):
+        """The backtest CLI command rejects seasons before 2000."""
         runner = CliRunner()
-        result = runner.invoke(cli, ["backtest", "2020"])
+        result = runner.invoke(cli, ["backtest", "1999"])
         assert result.exit_code == 0
         assert "not allowed" in result.output.lower()
 

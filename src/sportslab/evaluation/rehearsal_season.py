@@ -47,7 +47,8 @@ from sportslab.features.situational import compute_situational_features
 
 REHEARSAL_BASE = Path("reports/predictions/rehearsal")
 FEATURE_TABLE_PATH = "data/features/nfl/feature_table.parquet"
-HISTORICAL_SEASONS = [2021, 2022, 2023, 2024]
+from sportslab.evaluation.experiment_config import HOLDOUT_SEASON
+HISTORICAL_SEASONS = list(range(SPORTSLAB_MIN_SEASON, HOLDOUT_SEASON))
 
 
 # ── Path context manager ──

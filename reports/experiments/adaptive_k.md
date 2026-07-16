@@ -1,46 +1,109 @@
-# Adaptive Elo K by Week Experiment
+# Adaptive K Elo Experiment
 
-*K(week) = base_K * (1 + boost * max(0, 1 - (week-1)/18))*
+## Research Question
 
-Grid: K∈[20, 28, 36, 44, 52], boost∈[0.0, 0.25, 0.5, 0.75, 1.0] (25 combos)
+Can a season-decaying K-factor (k_start > k_factor) improve prediction by combining fast early-season learning (high K) with stable late-season ratings (low K)?
 
-## Results (top 10 by avg val LL)
+The expanded-era Elo tuning found that K=52 HFA=10 (no regression, no decay) improves Weeks 1-4 by −0.0099 but hurts late season by +0.0099. Adaptive K aims to capture both benefits.
 
-| Params | Avg Val LL | Fold1 | Fold2 | Fold3 | Holdout LL |
-|--------|-----------|-------|-------|-------|-----------|
-| K=20, boost=0.0 | 0.6328 | 0.6425 | 0.6563 | 0.5996 | 0.6293 |
-| K=28, boost=0.0 | 0.6330 | 0.6418 | 0.6567 | 0.6005 | 0.6275 |
-| Baseline K=36 | 0.6334 | 0.6413 | 0.6573 | 0.6016 | 0.6262 |
-| K=20, boost=0.25 | 0.6335 | 0.6434 | 0.6567 | 0.6003 | 0.6289 |
-| K=28, boost=0.25 | 0.6338 | 0.6427 | 0.6572 | 0.6015 | 0.6272 |
-| K=44, boost=0.0 | 0.6339 | 0.6411 | 0.6579 | 0.6027 | 0.6254 |
-| K=20, boost=0.5 | 0.6342 | 0.6442 | 0.6571 | 0.6012 | 0.6286 |
-| K=36, boost=0.25 | 0.6343 | 0.6423 | 0.6580 | 0.6027 | 0.6260 |
-| K=52, boost=0.0 | 0.6345 | 0.6410 | 0.6587 | 0.6038 | 0.6249 |
-| K=28, boost=0.5 | 0.6346 | 0.6435 | 0.6578 | 0.6026 | 0.6270 |
+## Architecture
 
-**Best**: K=20, boost=0.0 (val=0.6328, hold=0.6293)
+```
+base Elo with K = linear decay from k_start (week 1) to k_factor (week max_week)
+→ fold-safe Platt on [elo_prob, qb_changed, rolling_mov_3]
+→ frozen QB overlay (v3.0.0 champion, fixed)
+→ validation/holdout comparison
+```
 
-## Promotion Check
+## Champion (v3.0.0, retrained 2000-2024)
 
-To beat Baseline K=36: val < 0.6334 AND hold < 0.6262
+| Metric | Value |
+|--------|-------|
+| Val LL | 0.6305 |
+| Holdout LL | 0.6212 |
+| Parameters | K=36 (fixed), HFA=40, reg=0.1, decay=32 |
 
-K=20, boost=0.0: val 0.6328 (✓) hold 0.6293 (✗) → Partial
-K=28, boost=0.0: val 0.6330 (✓) hold 0.6275 (✗) → Partial
-K=44, boost=0.0: val 0.6339 (✗) hold 0.6254 (✓) → Partial
-K=36, boost=0.25: val 0.6343 (✗) hold 0.6260 (✓) → Partial
-K=52, boost=0.0: val 0.6345 (✗) hold 0.6249 (✓) → Partial
-K=44, boost=0.25: val 0.6350 (✗) hold 0.6254 (✓) → Partial
-K=36, boost=0.5: val 0.6353 (✗) hold 0.6260 (✓) → Partial
-K=52, boost=0.25: val 0.6356 (✗) hold 0.6251 (✓) → Partial
-K=44, boost=0.5: val 0.6360 (✗) hold 0.6255 (✓) → Partial
-K=36, boost=0.75: val 0.6362 (✗) hold 0.6261 (✓) → Partial
-K=52, boost=0.5: val 0.6368 (✗) hold 0.6254 (✓) → Partial
-K=44, boost=0.75: val 0.6370 (✗) hold 0.6257 (✓) → Partial
-K=52, boost=0.75: val 0.6379 (✗) hold 0.6257 (✓) → Partial
-K=44, boost=1.0: val 0.6380 (✗) hold 0.6260 (✓) → Partial
-K=52, boost=1.0: val 0.6389 (✗) hold 0.6261 (✓) → Partial
-No adaptive K variant beats baseline on both val and holdout.
+## Grid Search
+
+**912 combos** (5k_start × 4k_factor × 4HFA × 3reg × 4decay, k_start > k_factor required)
+
+| Param | Values |
+|-------|--------|
+| k_start | [44, 52, 60, 72, 84] |
+| k_factor | [20, 28, 36, 44] |
+| HFA | [10, 20, 30, 40] |
+| reg | [0.0, 0.1, 0.2] |
+| decay | [None, 24, 32, 48] |
+
+K decays linearly over `max_week=18` weeks: K(w) = k_start + (k_factor - k_start) * (w-1)/(max_week-1).
+
+## Validation Results
+
+### Top 10
+
+| Rank | k_start | k_factor | HFA | reg | decay | Val LL | Δ vs v3.0.0 |
+|------|---------|----------|-----|-----|-------|--------|-------------|
+| 1 | 52 | 44 | 10 | 0.0 | None | 0.6307 | +0.0002 |
+| 2 | 52 | 44 | 20 | 0.0 | None | 0.6309 | +0.0004 |
+| 3 | 52 | 44 | 10 | 0.1 | None | 0.6309 | +0.0004 |
+| 4 | 60 | 44 | 10 | 0.0 | None | 0.6310 | +0.0005 |
+| 5 | 52 | 44 | 20 | 0.1 | None | 0.6310 | +0.0005 |
+| 6 | 52 | 44 | 30 | 0.0 | None | 0.6310 | +0.0005 |
+| 7 | 44 | 36 | 10 | 0.0 | None | 0.6311 | +0.0006 |
+| 8 | 44 | 36 | 10 | 0.1 | None | 0.6311 | +0.0006 |
+| 9 | 52 | 44 | 10 | 0.0 | 48 | 0.6311 | +0.0006 |
+| 10 | 60 | 44 | 20 | 0.0 | None | 0.6311 | +0.0006 |
+
+### By improvement
+
+- 0/912 combos beat v3.0.0 on validation
+- 0/912 by >= 0.001
+
+## Holdout Results
+
+| Model | Log Loss | Brier | AUC | Accuracy |
+|-------|----------|-------|-----|----------|
+| v3.0.0 champion | 0.6212 | 0.2168 | 0.7111 | 0.6341 |
+| Adaptive K best | 0.6258 | 0.2187 | 0.7063 | 0.6268 |
+| Best fixed K=52 (HFA=10) | 0.6253 | 0.2185 | 0.7072 | 0.6196 |
+
+## Best Candidate
+
+| Param | Value |
+|-------|-------|
+| k_start | 52 |
+| k_factor | 44 |
+| HFA | 10 |
+| reg | 0.0 |
+| decay | None |
+| Val LL | 0.6307 |
+| Holdout LL | 0.6258 |
+| Δ val vs v3.0.0 | +0.0002 |
+| Δ holdout vs v3.0.0 | +0.0046 |
+
+## Subgroup Analysis (2025 holdout)
+
+| Subgroup | N | Adaptive LL | v3.0.0 LL | Δ |
+|----------|---|-------------|-----------|-----|
+| Weeks 1-4 | 61 | 0.5689 | 0.5799 | -0.0110 |
+| Weeks 5-12 | 109 | 0.6641 | 0.6570 | +0.0071 |
+| Weeks 13+ | 106 | 0.6190 | 0.6081 | +0.0110 |
+
+## Decision
+
+**❌ REJECTED**
+
+Adaptive K does not beat the v3.0.0 champion on either validation or holdout.
+
+The v3.0.0 fixed K parameters remain optimal even with 5x more data. Adaptive K does not beat the champion.
+
+## Takeaways
+
+1. **Adaptive K rejected** — no combo beats v3.0.0 on both val and holdout.
+2. **v3.0.0 fixed K (K=36) is robust** — the simple constant-K Elo is hard to beat.
+3. **Week-based decay may be too coarse** — ratings uncertainty is better modeled by team-specific games played, not calendar week.
+4. **Grid**: 912 combos searched.
 
 ---
-*Report generated by `sportslab adaptive-k`. Incumbent: 0.6262.*
+*Report generated by `sportslab adaptive-k-experiment`.
+Grid: 912 combos, 3 rolling-origin folds, fold-safe Platt, frozen QB overlay.*

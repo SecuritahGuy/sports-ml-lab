@@ -85,7 +85,7 @@ def compute_prior_season_elo(df: pd.DataFrame) -> pd.DataFrame:
         away = row["away_team"]
         prior_season = season - 1
 
-        if prior_season in team_final_elo and prior_season >= 2021:
+        if prior_season in team_final_elo and prior_season >= 2000:
             h_prior = team_final_elo[prior_season].get(home, DEFAULT_ELO)
             a_prior = team_final_elo[prior_season].get(away, DEFAULT_ELO)
         else:

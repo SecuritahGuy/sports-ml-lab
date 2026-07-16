@@ -53,7 +53,7 @@ def _build_metadata(
     }
 
 
-NFL_MIN_SEASON = 2021
+NFL_MIN_SEASON = 2000
 _SOURCE_FUNCTION = "load_schedules"
 
 

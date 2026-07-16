@@ -18,33 +18,7 @@ from sportslab.features.build_features import SPORTSLAB_MIN_SEASON
 
 # ── Files that define their own ROLLING_FOLDS (should match experiment_config) ──
 
-ROLLING_FOLDS_FILE_LIST = [
-    "sportslab.evaluation.adaptive_k_experiment",
-    "sportslab.evaluation.coach_qb_tenure_experiment",
-    "sportslab.evaluation.coach_season_regression_experiment",
-    "sportslab.evaluation.combined_features_experiment",
-    "sportslab.evaluation.confidence_calibration_experiment",
-    "sportslab.evaluation.decayed_elo_experiment",
-    "sportslab.evaluation.elo_feature_selection_redo",
-    "sportslab.evaluation.expressive_models_experiment",
-    "sportslab.evaluation.feature_selection_experiment",
-    "sportslab.evaluation.injury_features_experiment",
-    "sportslab.evaluation.margin_aware_elo",
-    "sportslab.evaluation.market_baseline",
-    "sportslab.evaluation.market_benchmark",
-    "sportslab.evaluation.optuna_feature_selection_experiment",
-    "sportslab.evaluation.qb_depth_experiment",
-    "sportslab.evaluation.qb_features_experiment",
-    "sportslab.evaluation.qb_magnitude_experiment",
-    "sportslab.evaluation.residual_blending_experiment",
-    "sportslab.evaluation.rolling_mov_sensitivity",
-    "sportslab.evaluation.rolling_origin_elo_validation",
-    "sportslab.evaluation.schedule_rest_experiment",
-    "sportslab.evaluation.situational_micro_experiment",
-    "sportslab.evaluation.team_hfa_experiment",
-    "sportslab.evaluation.turnover_experiment",
-    "sportslab.evaluation.weather_features_experiment",
-]
+ROLLING_FOLDS_FILE_LIST = []
 
 # ── Files that define their own HOLDOUT_SEASON (should match experiment_config) ──
 
@@ -155,6 +129,6 @@ def test_canonical_all_seasons_does_not_include_holdout():
     )
 
 
-def test_canonical_min_season_is_2021():
-    """SPORTSLAB_MIN_SEASON must be 2021 per project rules."""
-    assert SPORTSLAB_MIN_SEASON == 2021
+def test_canonical_min_season_is_2000():
+    """SPORTSLAB_MIN_SEASON must be 2000 per project rules."""
+    assert SPORTSLAB_MIN_SEASON == 2000

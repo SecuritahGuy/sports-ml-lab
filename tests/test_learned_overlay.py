@@ -126,8 +126,8 @@ def test_holdout_not_in_folds():
         assert val_season != HOLDOUT_SEASON
 
 
-def test_no_pre_2021():
-    assert min(ALL_SEASONS) >= 2021
+def test_no_pre_2000():
+    assert min(ALL_SEASONS) >= 2000
 
 
 def test_experiment_signature():

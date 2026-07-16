@@ -8,7 +8,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Seasons tracked | 1 (2026) |
+| Seasons tracked | 0 () |
 | Graded weeks | 0 |
 | Graded games | 0 |
 | Incumbent model | Standard Elo + qb_changed + rolling_mov_3 + Platt |
@@ -28,6 +28,7 @@
 
 | Season | Report |
 |--------|--------|
+| 2019 | [Audit Report](./audit_2019.md) |
 | 2025 | [Audit Report](./audit_2025.md) |
 | 2026 | [Audit Report](./audit_2026.md) |
 

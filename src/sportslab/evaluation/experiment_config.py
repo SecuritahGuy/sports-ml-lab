@@ -6,8 +6,8 @@ to maintain consistency when expanding or modifying the season range.
 
 HOLDOUT_SEASON = 2025
 
-# All available seasons (2021–2024 for training/validation)
-ALL_SEASONS = [2021, 2022, 2023, 2024]
+# All available seasons (2000–2024 for training/validation)
+ALL_SEASONS = list(range(2000, 2025))
 
 # Rolling-origin folds: each fold trains on all seasons before the val season.
 # Validation seasons are 2022, 2023, 2024 (3 folds).

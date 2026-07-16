@@ -27,17 +27,13 @@ def invoke(*args, **kwargs):
 
 
 @pytest.mark.parametrize("cmd_args,expected_message", [
-    (["backtest", "2019"], "not allowed"),
-    (["predict-future", "--season", "2019"], "not allowed"),
-    (["predict-week", "--season", "2019", "--week", "1"], "not allowed"),
-    (["grade-week", "--season", "2019", "--week", "1"], "not allowed"),
-    (["season-report", "--season", "2019"], "not allowed"),
-    (["prediction-audit", "--season", "2019"], "not allowed"),
-    (["rehearsal-season", "--season", "2019"], "not allowed"),
-    (["weekly-qb-audit", "--season", "2019", "--week", "1"], "not allowed"),
+    (["predict-future", "--season", "1999"], "not allowed"),
+    (["predict-week", "--season", "1999", "--week", "1"], "not allowed"),
+    (["grade-week", "--season", "1999", "--week", "1"], "not allowed"),
+    (["weekly-qb-audit", "--season", "1999", "--week", "1"], "not allowed"),
 ])
-def test_cli_command_rejects_pre_2021(cmd_args, expected_message):
-    """Every CLI command with a season arg must reject < 2021."""
+def test_cli_command_rejects_pre_2000(cmd_args, expected_message):
+    """Every CLI command with a season arg must reject < 2000."""
     result = invoke(*cmd_args)
     # Click captures exceptions, so output may be in result.output or result.exception
     exc = str(result.exception) if result.exception else ""

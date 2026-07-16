@@ -187,9 +187,9 @@ def run_data_audit(seasons: Optional[List[int]] = None) -> List[str]:
     if dups:
         print(f"    Found {dups} duplicates")
 
-    # Seasons >= 2021
-    bad_seasons = df_sched[df_sched["season"] < 2021]
-    _check(len(bad_seasons) == 0, "All seasons >= 2021", issues)
+    # Seasons >= 2000
+    bad_seasons = df_sched[df_sched["season"] < 2000]
+    _check(len(bad_seasons) == 0, "All seasons >= 2000", issues)
 
     # ── Feature table ──
     print("\n## Feature Table\n")
@@ -287,9 +287,9 @@ def run_data_audit(seasons: Optional[List[int]] = None) -> List[str]:
                    "Completed games have scores", issues)
         print(f"  Completed games: {len(completed)}")
 
-    # Seasons 2021+
-    _check(df_ft["season"].min() >= 2021,
-           "Feature table includes only seasons 2021+", issues)
+    # Seasons 2000+
+    _check(df_ft["season"].min() >= 2000,
+           "Feature table includes only seasons 2000+", issues)
 
     # ── Summary ──
     print(f"\n{'='*40}")

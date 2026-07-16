@@ -139,10 +139,10 @@ class TestImportability:
 
 
 class TestSeasonSafety:
-    def test_no_season_before_2021(self):
+    def test_no_season_before_2000(self):
         from sportslab.evaluation.experiment_config import ALL_SEASONS
         for s in ALL_SEASONS:
-            assert s >= 2021
+            assert s >= 2000
 
     def test_holdout_season(self):
         from sportslab.evaluation.experiment_config import HOLDOUT_SEASON

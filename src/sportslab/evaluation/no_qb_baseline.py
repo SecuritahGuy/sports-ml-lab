@@ -45,7 +45,9 @@ from sportslab.features.situational import compute_situational_features
 
 SIMULATION_SEASON = 2025
 FEATURE_TABLE_PATH = "data/features/nfl/feature_table.parquet"
-TRAIN_SEASONS = [2021, 2022, 2023, 2024]
+from sportslab.features.build_features import SPORTSLAB_MIN_SEASON
+from sportslab.evaluation.experiment_config import HOLDOUT_SEASON
+TRAIN_SEASONS = list(range(SPORTSLAB_MIN_SEASON, HOLDOUT_SEASON))
 DEFAULT_REPORT = "reports/experiments/no_qb_live_baseline.md"
 
 # Non-QB feature set: only rolling_mov_3 (no qb_changed)

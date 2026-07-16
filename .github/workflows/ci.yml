@@ -38,7 +38,7 @@ jobs:
           import pandas as pd
           df = pd.read_parquet('data/features/nfl/feature_table.parquet')
           assert len(df) > 0, 'Feature table is empty'
-          assert df['season'].min() >= 2021, 'Pre-2021 data found'
+          assert df['season'].min() >= 2000, 'Pre-2000 data found'
           print(f'Feature table: {len(df)} rows, seasons {df.season.min()}-{df.season.max()}')
           "
 

@@ -20,9 +20,11 @@ from sportslab.evaluation.metrics import compute_classification_metrics
 from sportslab.evaluation.season_regression_experiment import (
     build_team_regression_overrides,
 )
+from sportslab.evaluation.experiment_config import HOLDOUT_SEASON
 from sportslab.features.build_features import (
     MODEL_ELIGIBLE_COLUMN,
     NEUTRAL_COLUMN,
+    SPORTSLAB_MIN_SEASON,
     TARGET_COLUMN,
 )
 from sportslab.features.coach import compute_coach_features
@@ -61,7 +63,7 @@ FEATURE_COLS = [
 # QB overlay parameters
 OVERLAY_GAMMA = 1.0
 OVERLAY_CAP = 40
-TRAIN_SEASONS = [2021, 2022, 2023, 2024]
+TRAIN_SEASONS = list(range(SPORTSLAB_MIN_SEASON, HOLDOUT_SEASON))
 
 ELO_TO_LOGIT = np.log(10) / 400.0
 

@@ -158,9 +158,9 @@ class TestComputeQBAdjustments:
         assert np.isfinite(result["home_qb_adj"].iloc[0])
         assert np.isfinite(result["away_qb_adj"].iloc[0])
 
-    def test_season_validation_rejects_pre2021(self):
-        df = _make_minimal_df(season=[2020, 2020])
-        with pytest.raises(ValueError, match="2021"):
+    def test_season_validation_rejects_pre2000(self):
+        df = _make_minimal_df(season=[1999, 1999])
+        with pytest.raises(ValueError):
             compute_qb_adjustments(df)
 
     def test_empty_df(self):

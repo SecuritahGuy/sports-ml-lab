@@ -1,5 +1,10 @@
 # Sports ML Lab — Agent Rules
 
+> **⚠️ Research branch override (2026-07-16):** This branch (`research/deep-dive`) overrides
+> the production freeze to explore pre-2021 data expansion and new model directions.
+> Min season changed from 2021 → 2000. All other governance rules remain in effect.
+> See `docs/production_freeze.md` for the frozen baseline.
+
 ## Project Overview
 
 This repository sets up the foundational structure for an NFL prediction research lab. The project follows reproducible ML research practices with a focus on explainability, proper data usage, and preventing leakage.
@@ -13,10 +18,10 @@ This repository sets up the foundational structure for an NFL prediction researc
 
 ## NFL Data Scope
 
-- **Allowed seasons: 2021–current only.**
-- Do not ingest, train, test, backtest, benchmark, or tune on seasons earlier than 2021.
-- If a command, config, or test tries to use a season before 2021, fail clearly.
-- Future walk-forward tests must start with 2021 as the earliest training season.
+- **Allowed seasons: 2000–current only.**
+- Do not ingest, train, test, backtest, benchmark, or tune on seasons earlier than 2000.
+- If a command, config, or test tries to use a season before 2000, fail clearly.
+- Future walk-forward tests must start with 2000 as the earliest training season.
 
 ## Environment Configuration
 
@@ -196,7 +201,7 @@ sports-ml-lab/
 4.  Use `make format` to auto-format code
 5.  Use `make mlflow` to start MLflow tracking
 6.  Use `make ingest-nfl` to download NFL schedule data (requires internet)
-7.  Use `sportslab ingest-nfl --seasons 2021 2022 2023 2024 2025` for custom seasons
+7.  Use `sportslab ingest-nfl --seasons 2000 2001 2024 2025` for custom seasons
 
 ---
 

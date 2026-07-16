@@ -54,8 +54,9 @@ from sportslab.features.ratings import compute_elo_features
 from sportslab.features.situational import compute_situational_features
 
 FEATURE_TABLE_PATH = "data/features/nfl/feature_table.parquet"
-HISTORICAL_SEASONS = [2021, 2022, 2023, 2024]
-HOLDOUT_SEASON = 2025
+from sportslab.features.build_features import SPORTSLAB_MIN_SEASON
+from sportslab.evaluation.experiment_config import HOLDOUT_SEASON
+HISTORICAL_SEASONS = list(range(SPORTSLAB_MIN_SEASON, HOLDOUT_SEASON))
 
 INCUMBENT_VAL_LL = 0.6305
 INCUMBENT_HOLDOUT_LL = 0.6200

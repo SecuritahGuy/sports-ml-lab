@@ -203,6 +203,9 @@ qb-roster-interaction:
 expanded-elo-spine:
 	sportslab expanded-elo-spine
 
+expanded-era-elo-tuning:
+	sportslab expanded-era-elo-tuning
+
 roster-strength:
 	sportslab roster-strength
 
@@ -217,6 +220,9 @@ ralph6:
 
 preseason-elo-prior:
 	sportslab preseason-elo-prior
+
+adaptive-k:
+	sportslab adaptive-k
 
 # ── Development ──
 .PHONY: dev

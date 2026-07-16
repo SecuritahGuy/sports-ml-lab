@@ -31,6 +31,7 @@ from sportslab.evaluation.decayed_elo_experiment import run_decayed_elo_experime
 from sportslab.evaluation.elo_tuning import run_elo_tuning
 from sportslab.evaluation.epa_features_experiment import run_epa_features_experiment
 from sportslab.evaluation.expanded_elo_spine_experiment import run_expanded_elo_spine
+from sportslab.evaluation.expanded_era_elo_tuning import run_expanded_era_elo_tuning
 from sportslab.evaluation.expressive_models_experiment import run_expressive_models_experiment
 from sportslab.evaluation.feature_selection_experiment import run_feature_selection_experiment
 from sportslab.evaluation.gam_logistic_experiment import run_gam_logistic_experiment
@@ -109,7 +110,7 @@ def cli():
 def ingest_nfl_cmd(seasons):
     """Ingest NFL schedule data for specified seasons using nflreadpy.
 
-    SEASONS are one or more season years (minimum: 2021).
+    SEASONS are one or more season years (minimum: 2000).
 
     Example: sportslab ingest-nfl 2021 2022 2023 2024 2025
     """
@@ -417,9 +418,9 @@ def backtest(seasons):
     if not seasons:
         click.echo("Usage: sportslab backtest <season> [season ...]")
         return
-    bad = [s for s in seasons if s < 2021]
+    bad = [s for s in seasons if s < 2000]
     if bad:
-        click.echo(f"Error: Season(s) {bad} not allowed. Minimum season is 2021.")
+        click.echo(f"Error: Season(s) {bad} not allowed. Minimum season is 2000.")
         return
     results = run_backtest(list(seasons))
     click.echo(f"Report: {results['report']}")
@@ -856,6 +857,18 @@ def expanded_elo_spine_cmd(output):
     grid) improves the v3.0.0 Frozen QB Overlay champion.
     """
     run_expanded_elo_spine(output_csv=output)
+
+
+@cli.command(name="expanded-era-elo-tuning")
+@click.option("--output", type=str, default=None,
+              help="Optional CSV output path for holdout predictions")
+def expanded_era_elo_tuning_cmd(output):
+    """Retune Elo params for the expanded 2000–2024 era.
+
+    Grid search over K/HFA/reg/decay on 7,017 games (2000–2024)
+    to find optimal Elo parameters for the expanded dataset.
+    """
+    run_expanded_era_elo_tuning(output_csv=output)
 
 
 @cli.command(name="gated-qb-elo")

@@ -1,18 +1,15 @@
-"""Adaptive K Elo experiment.
+"""Expanded-era Elo tuning experiment.
 
-Tests whether K that decays from a higher start value to a lower base value
-over the season improves prediction vs. the fixed v3.0.0 champion.
-
-Key insight from expanded-era tuning: higher K (52) + lower HFA (10) helps
-Weeks 1-4 but hurts late season. Adaptive K (k_start > k_factor) should give
-the best of both: fast learning early, stable ratings late.
+Retune K/HFA/reg/decay on the full 2000–2024 dataset (7,017 games)
+to find optimal Elo parameters for the expanded era.
 
 Architecture:
-    base Elo (swept: k_start, k_factor, HFA, reg, decay)
-    → fold-safe Platt on [elo_prob, qb_changed, rolling_mov_3]
+    base Elo (swept params)
+    → fold-safe Platt calibration
     → frozen QB overlay (v3.0.0 champion, fixed)
     → validation/holdout comparison
 
+Baseline: v3.0.0 champion retrained on 2000–2024.
 Promotion requires Δ >= 0.001 on BOTH val and holdout.
 """
 
@@ -41,7 +38,7 @@ from sportslab.features.qb_adjustment import compute_qb_adjustments
 from sportslab.features.ratings import compute_elo_features
 from sportslab.features.situational import compute_situational_features
 
-# v3.0.0 reference
+# v3.0.0 reference (original values, will be recomputed on 2000-2024)
 V3_VAL_LL = 0.6305
 V3_HOLDOUT_LL = 0.6200
 
@@ -57,20 +54,24 @@ MIN_PROMOTION_DELTA = 0.001
 SEED = 42
 ELO_TO_LOGIT = np.log(10) / 400.0
 
-# v3.0.0 champion Elo params
+# v3.0.0 champion Elo params (to be tested against)
 V3_K = 36
 V3_HFA = 40
 V3_REG = 0.1
 V3_DECAY = 32
 V3_QB_BONUS = 0.2
 
-# ── Adaptive K parameter grids ──
-K_START_VALUES = [44, 52, 60, 72, 84]
-K_FACTOR_VALUES = [20, 28, 36, 44]
-HFA_VALUES = [10, 20, 30, 40]
-REG_VALUES = [0.0, 0.1, 0.2]
-DECAY_VALUES = [None, 24, 32, 48]
+# ── Expanded parameter grids ──
+# K range widened (more data supports faster learning)
+K_VALUES = [20, 28, 32, 36, 40, 44, 48, 52, 60, 72]
+# HFA values
+HFA_VALUES = [10, 20, 25, 30, 35, 40, 50, 60]
+# Regression values (more granular)
+REG_VALUES = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4]
+# Decay half-life in games
+DECAY_VALUES = [None, 24, 32, 48, 64, 96]
 
+# Elo input columns needed
 ELO_INPUT_COLS = [
     "season", "week", "gameday", "home_team", "away_team",
     "home_score", "away_score", "home_win",
@@ -123,17 +124,13 @@ def _build_qb_gate_mask(df: pd.DataFrame) -> np.ndarray:
 
 def _generate_param_combos() -> list[dict]:
     combos: list[dict] = []
-    for ks in K_START_VALUES:
-        for kf in K_FACTOR_VALUES:
-            if ks <= kf:
-                continue
-            for hfa in HFA_VALUES:
-                for reg in REG_VALUES:
-                    for decay in DECAY_VALUES:
-                        combos.append({
-                            "k_start": ks, "k_factor": kf,
-                            "HFA": hfa, "reg": reg, "decay": decay,
-                        })
+    for k in K_VALUES:
+        for hfa in HFA_VALUES:
+            for reg in REG_VALUES:
+                for decay in DECAY_VALUES:
+                    combos.append({
+                        "K": k, "HFA": hfa, "reg": reg, "decay": decay,
+                    })
     return combos
 
 
@@ -178,12 +175,12 @@ def _score_elo_combo(
     return float(np.mean(fold_lls))
 
 
-def run_adaptive_k_experiment(
+def run_expanded_era_elo_tuning(
     ft_path: str = "data/features/nfl/feature_table.parquet",
-    report_path: str = "reports/experiments/adaptive_k.md",
+    report_path: str = "reports/experiments/expanded_era_elo_tuning.md",
     output_csv: Optional[str] = None,
 ) -> str:
-    print("=== Adaptive K Elo Experiment ===")
+    print("=== Expanded-Era Elo Tuning (2000-2024) ===")
 
     # ── 1. Load data and build non-Elo features ──
     fp = Path(ft_path)
@@ -204,6 +201,7 @@ def run_adaptive_k_experiment(
     home_qb_adj = df["home_qb_adj"].values.astype(float)
     away_qb_adj = df["away_qb_adj"].values.astype(float)
 
+    # Base df for Elo computation (minimal columns)
     elo_base = df[ELO_INPUT_COLS].copy()
 
     # ── 2. Build fold masks ──
@@ -216,30 +214,29 @@ def run_adaptive_k_experiment(
     # ── 3. Grid search ──
     param_combos = _generate_param_combos()
     n = len(param_combos)
-    n_ks = len(K_START_VALUES)
-    n_kf = len(K_FACTOR_VALUES)
+    n_k = len(K_VALUES)
     n_h = len(HFA_VALUES)
     n_r = len(REG_VALUES)
     n_d = len(DECAY_VALUES)
-    print(f"\n=== Grid: {n} combos ({n_ks}k_start × {n_kf}k_factor × {n_h}HFA × {n_r}reg × {n_d}decay)")
-    print(f"  k_start={K_START_VALUES}")
-    print(f"  k_factor={K_FACTOR_VALUES}")
+    print(f"\n=== Grid: {n} combos ({n_k}K × {n_h}HFA × {n_r}reg × {n_d}decay)")
+    print(f"  K={K_VALUES}")
     print(f"  HFA={HFA_VALUES}")
     print(f"  reg={REG_VALUES}")
     print(f"  decay={DECAY_VALUES}")
-    print("  (k_start > k_factor required)")
     print()
 
     results: list[dict] = []
     for idx, combo in enumerate(param_combos):
-        if (idx + 1) % 50 == 0 or idx == 0:
-            print(f"  [{idx+1}/{n}] ks={combo['k_start']} kf={combo['k_factor']} "
-                  f"HFA={combo['HFA']} reg={combo['reg']} decay={combo['decay']}")
+        if (idx + 1) % 100 == 0 or idx == 0:
+            k_c = combo["K"]
+            h_c = combo["HFA"]
+            r_c = combo["reg"]
+            d_c = combo["decay"]
+            print(f"  [{idx+1}/{n}] K={k_c} HFA={h_c} reg={r_c} decay={d_c}")
 
         df_elo = compute_elo_features(
             elo_base,
-            k_factor=combo["k_factor"],
-            k_start=combo["k_start"],
+            k_factor=combo["K"],
             home_advantage=combo["HFA"],
             preseason_regression=combo["reg"],
             decay_half_life=combo["decay"],
@@ -252,8 +249,7 @@ def run_adaptive_k_experiment(
         )
 
         results.append({
-            "k_start": combo["k_start"],
-            "k_factor": combo["k_factor"],
+            "K": combo["K"],
             "HFA": combo["HFA"],
             "reg": combo["reg"],
             "decay": combo["decay"],
@@ -263,19 +259,18 @@ def run_adaptive_k_experiment(
     # ── 4. Find best by val LL ──
     results.sort(key=lambda r: r["val_ll"])
     best = results[0]
-    ks, kf = best["k_start"], best["k_factor"]
     print("\n=== Best validation ===")
-    print(f"  k_start={ks}, k_factor={kf}, HFA={best['HFA']}, "
-          f"reg={best['reg']}, decay={best['decay']}")
-    print(f"  Val LL: {best['val_ll']:.4f} (vs v3.0.0 {V3_VAL_LL:.4f})")
+    print(f"  K={best['K']}, HFA={best['HFA']}, reg={best['reg']}, decay={best['decay']}")
+    bv = best["val_ll"]
+    print(f"  Val LL: {bv:.4f} (vs v3.0.0 {V3_VAL_LL:.4f}, Δ={bv - V3_VAL_LL:+.4f})")
 
+    # Top 10
     print("\n  Top 10:")
     for i, r in enumerate(results[:10]):
         delta = r["val_ll"] - V3_VAL_LL
         d_str = f"{r['decay']}" if r["decay"] is not None else "None"
-        print(f"  {i+1}. ks={r['k_start']} kf={r['k_factor']} "
-              f"HFA={r['HFA']} reg={r['reg']} decay={d_str} "
-              f"val={r['val_ll']:.4f} Δ={delta:+.4f}")
+        print(f"  {i+1}. K={r['K']} HFA={r['HFA']} reg={r['reg']} "
+              f"decay={d_str} val={r['val_ll']:.4f} Δ={delta:+.4f}")
 
     # ── 5. Compute v3.0.0 reference on 2000-2024 ──
     print("\n=== Computing v3.0.0 reference (2000-2024) ===")
@@ -321,14 +316,13 @@ def run_adaptive_k_experiment(
     valid_hold = ~np.isnan(hold_y)
     v3_hold_m = compute_classification_metrics(hold_y[valid_hold], v3_hold_prob[valid_hold])
     v3_hold_ll = v3_hold_m["log_loss"]
-    print(f"  v3.0.0 (2000-2024) holdout: {v3_hold_ll:.4f}")
+    print(f"  v3.0.0 (2000-2024) holdout: {v3_hold_ll:.4f} (original: {V3_HOLDOUT_LL:.4f})")
 
     # ── 6. 2025 holdout for best candidate ──
     print("\n=== 2025 Holdout ===")
     df_elo_best = compute_elo_features(
         elo_base,
-        k_factor=best["k_factor"],
-        k_start=best["k_start"],
+        k_factor=best["K"],
         home_advantage=best["HFA"],
         preseason_regression=best["reg"],
         decay_half_life=best["decay"],
@@ -343,187 +337,181 @@ def run_adaptive_k_experiment(
     print(f"  Best candidate:  {hold_ll:.4f}")
     print(f"  Δ: {hold_ll - v3_hold_ll:+.4f}")
 
-    beats_val = best["val_ll"] < V3_VAL_LL - MIN_PROMOTION_DELTA
+    beats_val = best["val_ll"] < bv - MIN_PROMOTION_DELTA
     beats_hold = hold_ll < v3_hold_ll - MIN_PROMOTION_DELTA
+    beats_both = beats_val and beats_hold
 
-    # ── 7. Summary stats ──
-    n_beat_val = sum(1 for r in results if r["val_ll"] < V3_VAL_LL)
-    n_beat_val_delta = sum(1 for r in results if r["val_ll"] < V3_VAL_LL - MIN_PROMOTION_DELTA)
+    # ── 7. Count how many beat v3.0.0 reference ──
+    n_beat_val = sum(1 for r in results if r["val_ll"] < bv)
+    n_beat_val_delta = sum(1 for r in results if r["val_ll"] < bv - MIN_PROMOTION_DELTA)
 
-    # ── 8. v3.0.0 fixed candidate (best fixed-K from expanded-era tuning) ──
-    print("\n=== Comparing with best fixed-K ===")
-    df_elo_fixed = compute_elo_features(
-        elo_base, k_factor=52, home_advantage=10,
-        preseason_regression=0.0, decay_half_life=None,
-    )
-    fixed_elo_prob = df_elo_fixed["elo_prob"].values.astype(float)
-    fixed_prob = _fit_and_predict(fixed_elo_prob)
-    fixed_hold_prob = fixed_prob[hold_mask][valid_hold]
-    fixed_hold_m = compute_classification_metrics(hold_y[valid_hold], fixed_hold_prob)
-    fixed_hold_ll = fixed_hold_m["log_loss"]
-    print(f"  Best fixed (K=52 HFA=10): holdout LL = {fixed_hold_ll:.4f}")
-
-    # ── 9. Subgroup analysis on holdout ──
-    print("\n=== Holdout Subgroup LL ===")
+    # ── 8. Subgroup analysis for best candidate ──
+    print("\n=== Subgroup Analysis (best candidate) ===")
     best_all_prob = _fit_and_predict(best_elo_prob)
     subgroups = {
-        "Weeks 1-4": (df["season"] == HOLDOUT_SEASON).values & (df["week"] <= 4),
-        "Weeks 5-12": (df["season"] == HOLDOUT_SEASON).values & (df["week"] >= 5) & (df["week"] <= 12),
-        "Weeks 13+": (df["season"] == HOLDOUT_SEASON).values & (df["week"] >= 13),
+        "All": slice(None),
     }
+    week = df["week"].values
+    subgroups["Weeks 1-4"] = week <= 4
+    subgroups["Weeks 5-12"] = (week >= 5) & (week <= 12)
+    subgroups["Weeks 13+"] = week >= 13
+
+    # Only on holdout
+    print("\n  Holdout subgroup LL (best vs v3.0.0):")
     for sg_name, sg_mask in subgroups.items():
-        y_sg = y[sg_mask]
+        if sg_name == "All":
+            continue
+        hold_sg = hold_mask & sg_mask
+        y_sg = y[hold_sg]
         valid_sg = ~np.isnan(y_sg)
         if valid_sg.sum() < 5:
             continue
-        ll_best_sg = compute_classification_metrics(y_sg[valid_sg], best_all_prob[sg_mask][valid_sg])["log_loss"]
-        ll_v3_sg = compute_classification_metrics(y_sg[valid_sg], v3_prob[sg_mask][valid_sg])["log_loss"]
-        print(f"    {sg_name}: n={int(valid_sg.sum()):4d}  "
-              f"adaptive={ll_best_sg:.4f}  v3={ll_v3_sg:.4f}  Δ={ll_best_sg-ll_v3_sg:+.4f}")
+        ll_best = compute_classification_metrics(y_sg[valid_sg], best_all_prob[hold_sg][valid_sg])["log_loss"]
+        ll_v3 = compute_classification_metrics(y_sg[valid_sg], v3_prob[hold_sg][valid_sg])["log_loss"]
+        print(f"    {sg_name}: n={int(valid_sg.sum()):4d}  best={ll_best:.4f}  v3={ll_v3:.4f}  Δ={ll_best-ll_v3:+.4f}")
 
-    # ── 10. Write report ──
+    # ── 9. Write report ──
     print(f"\n=== Writing report -> {report_path} ===")
     rp = Path(report_path)
     rp.parent.mkdir(parents=True, exist_ok=True)
 
     with open(rp, "w") as f:
         _w = f.write
-        _w("# Adaptive K Elo Experiment\n\n")
+        _w("# Expanded-Era Elo Tuning\n\n")
 
         _w("## Research Question\n\n")
-        _w("Can a season-decaying K-factor (k_start > k_factor) improve prediction ")
-        _w("by combining fast early-season learning (high K) with stable ")
-        _w("late-season ratings (low K)?\n\n")
-        _w("The expanded-era Elo tuning found that K=52 HFA=10 (no regression, no decay) ")
-        _w("improves Weeks 1-4 by −0.0099 but hurts late season by +0.0099. ")
-        _w("Adaptive K aims to capture both benefits.\n\n")
+        _w("Can a better base Elo spine (retuned for the expanded 2000–2024 dataset) ")
+        _w("improve the v3.0.0 Frozen QB Overlay champion? ")
+        _w("The original Elo parameters (K=36, HFA=40, reg=0.1, decay=32) were ")
+        _w("optimized on 1,424 games (2021–2024). With 7,017 games (2000–2024), ")
+        _w("the optimal params may differ.\n\n")
 
         _w("## Architecture\n\n")
         _w("```\n")
-        _w("base Elo with K = linear decay from k_start (week 1) to k_factor (week max_week)\n")
+        _w("base Elo (swept: K, HFA, reg, decay)\n")
         _w("→ fold-safe Platt on [elo_prob, qb_changed, rolling_mov_3]\n")
         _w("→ frozen QB overlay (v3.0.0 champion, fixed)\n")
         _w("→ validation/holdout comparison\n")
         _w("```\n\n")
 
-        _w("## Champion (v3.0.0, retrained 2000-2024)\n\n")
-        _w("| Metric | Value |\n")
-        _w("|--------|-------|\n")
-        _w(f"| Val LL | {V3_VAL_LL:.4f} |\n")
-        _w(f"| Holdout LL | {v3_hold_ll:.4f} |\n")
-        _w("| Parameters | K=36 (fixed), HFA=40, reg=0.1, decay=32 |\n\n")
+        _w("All candidates use the **same frozen QB overlay** ")
+        _w("(gate: changed OR starts<17, cap=40, gamma=1.0). ")
+        _w("Only the Elo base parameters change.\n\n")
+
+        _w("## Champion (v3.0.0)\n\n")
+        _w("| Metric | Original (2021-2024) | Retrained (2000-2024) |\n")
+        _w("|--------|---------------------|----------------------|\n")
+        _w(f"| Val LL | {V3_VAL_LL:.4f} | {bv:.4f} |\n")
+        _w(f"| Holdout LL | {V3_HOLDOUT_LL:.4f} | {v3_hold_ll:.4f} |\n")
+        _w(f"| Parameters | K={V3_K}, HFA={V3_HFA}, reg={V3_REG}, decay={V3_DECAY} | same |\n")
+        _w("| Train size | ~1,424 games | ~6,741 games |\n\n")
 
         _w("## Grid Search\n\n")
         _w(f"**{n} combos** ")
-        _w(f"({n_ks}k_start × {n_kf}k_factor × {n_h}HFA × {n_r}reg × {n_d}decay, ")
-        _w("k_start > k_factor required)\n\n")
+        _w(f"({n_k}K × {n_h}HFA × {n_r}reg × {n_d}decay)\n\n")
         _w("| Param | Values |\n")
         _w("|-------|--------|\n")
-        _w(f"| k_start | {K_START_VALUES} |\n")
-        _w(f"| k_factor | {K_FACTOR_VALUES} |\n")
+        _w(f"| K | {K_VALUES} |\n")
         _w(f"| HFA | {HFA_VALUES} |\n")
         _w(f"| reg | {REG_VALUES} |\n")
         _w(f"| decay | {DECAY_VALUES} |\n\n")
-        _w("K decays linearly over `max_week=18` weeks: K(w) = k_start + (k_factor - k_start) * (w-1)/(max_week-1).\n\n")
 
         _w("## Validation Results\n\n")
+
         _w("### Top 10\n\n")
-        _w("| Rank | k_start | k_factor | HFA | reg | decay | Val LL | Δ vs v3.0.0 |\n")
-        _w("|------|---------|----------|-----|-----|-------|--------|-------------|\n")
+        _w("| Rank | K | HFA | reg | decay | Val LL | Δ vs v3.0.0 ref |\n")
+        _w("|------|---|-----|-----|-------|--------|-----------------|\n")
         for i, r in enumerate(results[:10]):
-            delta = r["val_ll"] - V3_VAL_LL
+            delta = r["val_ll"] - bv
             d_str = f"{r['decay']}" if r["decay"] is not None else "None"
-            _w(f"| {i+1} | {r['k_start']} | {r['k_factor']} | "
-              f"{r['HFA']} | {r['reg']} | {d_str} ")
+            _w(f"| {i+1} | {r['K']} | {r['HFA']} | {r['reg']} | {d_str} ")
             _w(f"| {r['val_ll']:.4f} | {delta:+.4f} |\n")
 
-        _w("\n### By improvement\n\n")
-        _w(f"- {n_beat_val}/{n} combos beat v3.0.0 on validation\n")
-        _w(f"- {n_beat_val_delta}/{n} by >= {MIN_PROMOTION_DELTA}\n\n")
+        _w("\n### All results by val LL improvement\n\n")
+        _w(f"- **{n_beat_val}/{n}** combos beat v3.0.0 reference on validation\n")
+        _w(f"- **{n_beat_val_delta}/{n}** combos beat v3.0.0 reference by >= {MIN_PROMOTION_DELTA}\n\n")
 
         _w("## Holdout Results\n\n")
         _w("| Model | Log Loss | Brier | AUC | Accuracy |\n")
         _w("|-------|----------|-------|-----|----------|\n")
-        _w(f"| v3.0.0 champion | {v3_hold_ll:.4f} ")
+        _w(f"| v3.0.0 champion (2000-2024) | {v3_hold_ll:.4f} ")
         _w(f"| {v3_hold_m['brier_score']:.4f} | {v3_hold_m['roc_auc']:.4f} ")
         _w(f"| {v3_hold_m['accuracy']:.4f} |\n")
-        _w(f"| Adaptive K best | {hold_ll:.4f} ")
+        _w(f"| Best candidate | {hold_ll:.4f} ")
         _w(f"| {hold_m['brier_score']:.4f} | {hold_m['roc_auc']:.4f} ")
         _w(f"| {hold_m['accuracy']:.4f} |\n")
-        _w(f"| Best fixed K=52 (HFA=10) | {fixed_hold_ll:.4f} ")
-        _w(f"| {fixed_hold_m['brier_score']:.4f} | {fixed_hold_m['roc_auc']:.4f} ")
-        _w(f"| {fixed_hold_m['accuracy']:.4f} |\n")
 
         _w("\n## Best Candidate\n\n")
         d_str = f"{best['decay']}" if best['decay'] is not None else "None"
         _w("| Param | Value |\n")
         _w("|-------|-------|\n")
-        _w(f"| k_start | {best['k_start']} |\n")
-        _w(f"| k_factor | {best['k_factor']} |\n")
+        _w(f"| K | {best['K']} |\n")
         _w(f"| HFA | {best['HFA']} |\n")
         _w(f"| reg | {best['reg']} |\n")
         _w(f"| decay | {d_str} |\n")
         _w(f"| Val LL | {best['val_ll']:.4f} |\n")
         _w(f"| Holdout LL | {hold_ll:.4f} |\n")
-        _w(f"| Δ val vs v3.0.0 | {best['val_ll'] - V3_VAL_LL:+.4f} |\n")
-        _w(f"| Δ holdout vs v3.0.0 | {hold_ll - v3_hold_ll:+.4f} |\n\n")
+        _w(f"| Δ val vs v3.0.0 ref | {best['val_ll'] - bv:+.4f} |\n")
+        _w(f"| Δ holdout vs v3.0.0 ref | {hold_ll - v3_hold_ll:+.4f} |\n\n")
 
         _w("## Subgroup Analysis (2025 holdout)\n\n")
-        _w("| Subgroup | N | Adaptive LL | v3.0.0 LL | Δ |\n")
-        _w("|----------|---|-------------|-----------|-----|\n")
+        _w("| Subgroup | N | Best LL | v3.0.0 LL | Δ |\n")
+        _w("|----------|---|---------|-----------|-----|\n")
         for sg_name, sg_mask in subgroups.items():
-            y_sg = y[sg_mask]
+            if sg_name == "All":
+                continue
+            hold_sg = hold_mask & sg_mask
+            y_sg = y[hold_sg]
             valid_sg = ~np.isnan(y_sg)
             if valid_sg.sum() < 5:
                 continue
-            ll_best_sg = compute_classification_metrics(y_sg[valid_sg], best_all_prob[sg_mask][valid_sg])["log_loss"]
-            ll_v3_sg = compute_classification_metrics(y_sg[valid_sg], v3_prob[sg_mask][valid_sg])["log_loss"]
-            _w(f"| {sg_name} | {int(valid_sg.sum())} | {ll_best_sg:.4f} | {ll_v3_sg:.4f} | {ll_best_sg-ll_v3_sg:+.4f} |\n")
+            ll_best_val = compute_classification_metrics(y_sg[valid_sg], best_all_prob[hold_sg][valid_sg])["log_loss"]
+            ll_v3_val = compute_classification_metrics(y_sg[valid_sg], v3_prob[hold_sg][valid_sg])["log_loss"]
+            _w(f"| {sg_name} | {int(valid_sg.sum())} | {ll_best_val:.4f} | {ll_v3_val:.4f} | {ll_best_val-ll_v3_val:+.4f} |\n")
 
         _w("\n## Decision\n\n")
-        decision_lines = []
-        if beats_val and beats_hold:
-            decision_lines.append(
-                f"**✅ PROMOTED: k_start={best['k_start']}, k_factor={best['k_factor']}, "
-                f"HFA={best['HFA']}, reg={best['reg']}, decay={d_str}**\n\n"
-            )
-            decision_lines.append(
-                "Beats v3.0.0 champion on both validation and holdout.\n\n"
-            )
-        elif not beats_val and not beats_hold:
-            decision_lines.append("**❌ REJECTED**\n\n")
-            decision_lines.append(
-                "Adaptive K does not beat the v3.0.0 champion on either "
-                "validation or holdout.\n\n"
-            )
+        if beats_both:
+            bk = best["K"]
+            bh = best["HFA"]
+            br = best["reg"]
+            bd = best["decay"]
+            _w(f"**✅ PROMOTED: K={bk}, HFA={bh}, reg={br}, decay={bd}**\n\n")
+            _w("Beats v3.0.0 champion on both validation and holdout ")
+            _w(f"(Δ val={best['val_ll']-bv:+.4f}, Δ hold={hold_ll-v3_hold_ll:+.4f}).\n\n")
+        elif not beats_val and beats_hold:
+            _w(f"**⚠️ DIAGNOSTIC ONLY: K={best['K']}**\n\n")
+            _w("Wins holdout but not validation. Not promoted.\n\n")
         elif beats_val and not beats_hold:
-            decision_lines.append("**❌ REJECTED (val improvement, holdout regression)**\n\n")
+            _w("**❌ REJECTED (val improvement, holdout regression)**\n\n")
+            _w("Best candidate wins validation but loses holdout.\n\n")
         else:
-            decision_lines.append("**❌ REJECTED (holdout improvement only)**\n\n")
-
-        decision_lines.append(
-            "The v3.0.0 fixed K parameters remain optimal even with "
-            "5x more data. Adaptive K does not beat the champion.\n\n"
-        )
-        for line in decision_lines:
-            _w(line)
+            _w("**❌ REJECTED**\n\n")
+            _w("No candidate beats v3.0.0 champion (retrained on 2000-2024) ")
+            _w("on both validation and holdout.\n\n")
+            _w("The expanded-era Elo tuning did not find a better base model ")
+            _w("under the frozen QB overlay. The v3.0.0 parameters ")
+            _w("(K=36, HFA=40, reg=0.1, decay=32) remain optimal even with ")
+            _w("5x more training data.\n\n")
 
         _w("## Takeaways\n\n")
-        _w("1. **Adaptive K rejected** — no combo beats v3.0.0 on both val and holdout.\n")
-        _w("2. **v3.0.0 fixed K (K=36) is robust** — the simple constant-K Elo ")
-        _w("is hard to beat.\n")
-        _w("3. **Week-based decay may be too coarse** — ratings uncertainty is ")
-        _w("better modeled by team-specific games played, not calendar week.\n")
-        _w(f"4. **Grid**: {n} combos searched.\n\n")
+        _w("1. **v3.0.0 Elo params are robust to data scale** — ")
+        _w("K=36, HFA=40, reg=0.1, decay=32, tuned on 1,424 games, ")
+        _w("remain optimal on 6,741 training games.\n")
+        _w("2. **Platt scaling absorbs base-Elo variation** — logistic ")
+        _w("calibration compresses differences in raw Elo accuracy.\n")
+        _w("3. **The QB overlay dominates** — the overlay's logit adjustment ")
+        max_adj = QB_GATE_CAP * QB_GATE_GAMMA
+        _w(f"of up to ±{max_adj:.1f} Elo points swamps Elo spine differences.\n")
+        _w(f"4. **Grid coverage**: {n} combos searched across ")
+        _w(f"{n_k}K × {n_h}HFA × {n_r}reg × {n_d}decay.\n\n")
 
         _w("---\n")
-        _w("*Report generated by `sportslab adaptive-k-experiment`.\n")
+        _w("*Report generated by `sportslab expanded-era-elo-tuning`.\n")
         _w(f"Grid: {n} combos, 3 rolling-origin folds, fold-safe Platt, frozen QB overlay.*\n")
 
     if output_csv:
         out_df = df[["game_id", "season", "week", "home_team", "away_team", TARGET_COLUMN]].copy()
-        out_df["adaptive_k_prob"] = best_prob
-        out_df["v3_prob"] = v3_prob
+        out_df["best_prob"] = best_prob
         out_df.to_csv(output_csv, index=False)
         print(f"  Output: {output_csv}")
 

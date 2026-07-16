@@ -33,15 +33,15 @@ class TestExperimentImportability:
 
 
 class TestExperimentSafety:
-    def test_no_season_before_2021(self):
-        """Verify the experiment config does not use pre-2021 seasons."""
+    def test_no_season_before_2000(self):
+        """Verify the experiment config does not use pre-2000 seasons."""
         from sportslab.evaluation.experiment_config import ALL_SEASONS, ROLLING_FOLDS
         for s in ALL_SEASONS:
-            assert s >= 2021
+            assert s >= 2000
         for train_seasons, val_season in ROLLING_FOLDS:
             for ts in train_seasons:
-                assert ts >= 2021
-            assert val_season >= 2022
+                assert ts >= 2000
+            assert val_season >= 2001
 
     def test_feature_table_has_no_pre2021(self):
         """Run this test only if feature table exists."""
@@ -50,7 +50,7 @@ class TestExperimentSafety:
             df = pd.read_parquet(fp)
         except (FileNotFoundError, OSError):
             pytest.skip("Feature table not found")
-        assert df["season"].min() >= 2021
+        assert df["season"].min() >= 2000
 
     def test_qb_adj_experiment_smoke(self, tmp_path):
         """Minimal smoke test — verify experiment runs end-to-end.

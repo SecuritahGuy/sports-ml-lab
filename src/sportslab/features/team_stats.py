@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-SPORTSLAB_MIN_SEASON = 2021
+SPORTSLAB_MIN_SEASON = 2000
 
 TEAM_STATS_COLUMNS: list[str] = [
     "home_off_yds_rolling_3",

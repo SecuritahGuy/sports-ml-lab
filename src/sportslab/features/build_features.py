@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-SPORTSLAB_MIN_SEASON = 2021
+SPORTSLAB_MIN_SEASON = 2000
 
 TARGET_COLUMN = "home_win"
 MODEL_ELIGIBLE_COLUMN = "model_eligible"
