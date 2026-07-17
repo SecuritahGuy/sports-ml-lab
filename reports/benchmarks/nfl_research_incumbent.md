@@ -1,6 +1,6 @@
 # NFL Research Incumbent
 
-*Last updated: 2026-06-29*
+*Last updated: 2026-06-29 (production v3.0.0). Deep-dive branch updated 2026-07-16 with v3.1.0 MLP incumbent — see bottom of file.*
 
 **Short name:** Standard Elo + qb_changed + rolling_mov_3 + Platt + Frozen QB overlay (gated)
 
@@ -97,3 +97,50 @@ pregame). See `reports/experiments/market_benchmark.md`.
 4. Every feature must be pregame-safe and explainable.
 5. Do not promote based on AUC or ROI alone.
 6. The first policy document explicitly setting these rules is RALPH Loop 4 (2026-07-06). Earlier experiments used varying thresholds.
+
+## Deep-Dive Branch Incumbent (2026-07-16) — NOT production
+
+The `research/deep-dive` branch expanded training data to seasons 2000–2024 (vs
+2021–2024 in production) and replaced the logistic Platt calibration with a
+PyTorch MLP. This is the branch's research incumbent, recorded separately from
+the production v3.0.0 above.
+
+| Attribute | Value |
+|-----------|-------|
+| **Model version** | v3.1.0 (deep-dive branch) |
+| **Calibration** | MLP (3 hidden layers 16,16,16, dropout=0.1, weight_decay=1e-4) replacing logistic Platt |
+| **Base features** | `home_qb_changed`, `away_qb_changed`, `home_rolling_mov_3`, `away_rolling_mov_3`, `elo_prob` |
+| **Frozen QB overlay** | unchanged (gate: changed OR starts<17, gamma=1.0, cap=40) |
+| **Training seasons** | 2000–2024 (deep-dive expansion) |
+| **Avg validation log loss** | 0.6279 |
+| **2025 holdout log loss** | **0.6151** (Brier 0.2138, AUC 0.7175, Acc 0.6667, ECE 0.0331) |
+| **Promotion basis** | Beats branch incumbent (logistic, holdout 0.6226) on both val (−0.0029) and holdout (−0.0075) |
+| **Report** | `reports/experiments/neural_network.md` |
+| **Selection date** | 2026-07-16 |
+
+*Note: the production v3.0.0 above (holdout 0.6200) was evaluated on the
+narrower 2021–2024 training window. The deep-dive retune shifts the baseline to
+0.6226 on the 2000–2024 window; the MLP improvement is measured against that
+branch baseline.*
+
+### Deep-Dive PyTorch / GBM follow-up (2026-07-16)
+
+Two further experiments tested whether the v3.1.0 MLP calibrator could be
+improved or whether a gradient-boosted tree is a better calibrator:
+
+- **`pytorch_deepdive`** — swept LR schedule (cosine/one-cycle), optimizer
+  (Adam/AdamW), weight-decay (1e-4..1e-2), GELU, ensembles (5 seeds), and richer
+  feature sets (elo_rich, antisymmetric) against the exact v3.1.0 protocol
+  reproduced within the experiment. **Rejected**: every variant is at or worse
+  than the baseline on both validation and holdout. The v3.1.0 MLP is already
+  near-optimal for this dataset. Methodology note: an earlier spurious 0.609
+  "win" was caused by an internal 80/20 train/val split silently dropping 20% of
+  training data; after the fix no variant beats the baseline.
+- **`gbm_tabpfn_baseline`** — LightGBM (default + deep) and TabPFN vs the MLP.
+  **Rejected**: LightGBM is worse on both validation (0.638 vs 0.628) and
+  holdout (0.626 vs 0.616) — trees overfit ~6.9k rows. TabPFN v8 requires a
+  PriorLabs API token and is blocked offline (diagnostic only).
+
+**Conclusion**: the v3.1.0 MLP calibrator is the best choice at this dataset
+size. No further PyTorch/GBM tuning is warranted unless more seasons of data
+accumulate.

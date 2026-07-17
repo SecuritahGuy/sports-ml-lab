@@ -64,6 +64,21 @@ qb-depth-experiment:
 turnover-experiment:
 	sportslab turnover-experiment
 
+turnover-retest:
+	sportslab turnover-retest
+
+gsc-binned-experiment:
+	sportslab gsc-binned-experiment
+
+gsc-overlay-interaction:
+	sportslab gsc-overlay-interaction
+
+team-games-k:
+	sportslab team-games-k
+
+raw-elo-ratings:
+	sportslab raw-elo-ratings
+
 situational-micro:
 	sportslab situational-micro
 
@@ -217,6 +232,18 @@ model-trust:
 
 ralph6:
 	sportslab ralph6
+
+neural-network:
+	sportslab neural-network
+
+neural-network-features:
+	sportslab neural-network-features
+
+pytorch-deepdive:
+	sportslab pytorch-deepdive
+
+gbm-tabpfn-baseline:
+	sportslab gbm-tabpfn-baseline
 
 preseason-elo-prior:
 	sportslab preseason-elo-prior

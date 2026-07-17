@@ -35,10 +35,13 @@ from sportslab.evaluation.expanded_era_elo_tuning import run_expanded_era_elo_tu
 from sportslab.evaluation.expressive_models_experiment import run_expressive_models_experiment
 from sportslab.evaluation.feature_selection_experiment import run_feature_selection_experiment
 from sportslab.evaluation.gam_logistic_experiment import run_gam_logistic_experiment
+from sportslab.evaluation.gbm_tabpfn_baseline import run_gbm_baseline_experiment
 from sportslab.evaluation.glicko_experiment import run_glicko_experiment
 from sportslab.evaluation.gradient_boosting_diagnostic import (
     run_gradient_boosting_diagnostic,
 )
+from sportslab.evaluation.gsc_binned_experiment import run_gsc_binned_experiment
+from sportslab.evaluation.gsc_overlay_interaction import run_gsc_overlay_interaction
 from sportslab.evaluation.injury_features_experiment import (
     run_injury_features_experiment,
 )
@@ -49,6 +52,10 @@ from sportslab.evaluation.live_preflight import run_live_preflight
 from sportslab.evaluation.margin_aware_elo import run_margin_aware_experiment
 from sportslab.evaluation.market_baseline import run_market_baseline
 from sportslab.evaluation.market_benchmark import run_market_benchmark
+from sportslab.evaluation.neural_network_experiment import run_neural_network_experiment
+from sportslab.evaluation.neural_network_features_experiment import (
+    run_neural_network_features_experiment,
+)
 from sportslab.evaluation.no_qb_baseline import run_no_qb_baseline
 from sportslab.evaluation.optuna_elo_search import run_optuna_search
 from sportslab.evaluation.optuna_feature_selection_experiment import run_optuna_feature_selection
@@ -60,6 +67,7 @@ from sportslab.evaluation.prediction_audit import (
     run_prediction_audit,
 )
 from sportslab.evaluation.preseason_elo_prior_experiment import run_preseason_elo_experiment
+from sportslab.evaluation.pytorch_deepdive_experiment import run_pytorch_deepdive_experiment
 from sportslab.evaluation.qb_ablation import run_qb_ablation
 from sportslab.evaluation.qb_adjusted_elo_experiment import run_qb_adjusted_elo_experiment
 from sportslab.evaluation.qb_continuity import run_qb_continuity
@@ -71,6 +79,7 @@ from sportslab.evaluation.qb_magnitude_experiment import run_qb_magnitude_experi
 from sportslab.evaluation.qb_market_delta import run_qb_market_delta_experiment
 from sportslab.evaluation.qb_roster_interaction_experiment import run_qb_roster_interaction
 from sportslab.evaluation.ralph6_challengers import run_ralph6_experiment
+from sportslab.evaluation.raw_elo_ratings_experiment import run_raw_elo_ratings_experiment
 from sportslab.evaluation.regularized_logistic_experiment import (
     run_regularized_logistic_experiment,
 )
@@ -87,9 +96,11 @@ from sportslab.evaluation.roster_overlay_foldsafe_experiment import run_roster_o
 from sportslab.evaluation.schedule_rest_experiment import run_schedule_rest_experiment
 from sportslab.evaluation.season_regression_experiment import run_season_regression_experiment
 from sportslab.evaluation.situational_micro_experiment import run_situational_micro_experiment
+from sportslab.evaluation.team_games_k_experiment import run_team_games_k_experiment
 from sportslab.evaluation.team_hfa_experiment import run_team_hfa_experiment
 from sportslab.evaluation.train_baseline import train_baseline
 from sportslab.evaluation.turnover_experiment import run_turnover_experiment
+from sportslab.evaluation.turnover_retest import run_turnover_retest
 from sportslab.evaluation.weather_features_experiment import run_weather_features_experiment
 from sportslab.evaluation.weekly_pipeline import grade_week, predict_week, season_report
 from sportslab.evaluation.weekly_qb_audit import run_weekly_qb_audit
@@ -364,6 +375,60 @@ def qb_depth_cmd():
 def turnover_cmd():
     """Focused turnover features experiment (rolling TO differential windows)."""
     run_turnover_experiment()
+
+
+@cli.command(name="turnover-retest")
+def turnover_retest_cmd():
+    """Retest turnover features on expanded 2000-2024 data."""
+    run_turnover_retest()
+
+
+@cli.command(name="gsc-binned-experiment")
+def gsc_binned_cmd():
+    """Test binned games_since_qb_change encoding."""
+    run_gsc_binned_experiment()
+
+
+@cli.command(name="gsc-overlay-interaction")
+def gsc_overlay_cmd():
+    """Test GSC binned × QB overlay interaction."""
+    run_gsc_overlay_interaction()
+
+
+@cli.command(name="team-games-k")
+def team_games_k_cmd():
+    """Test team-games-based K decay (vs week-based)."""
+    run_team_games_k_experiment()
+
+
+@cli.command(name="raw-elo-ratings")
+def raw_elo_ratings_cmd():
+    """Test raw Elo ratings as Platt features."""
+    run_raw_elo_ratings_experiment()
+
+
+@cli.command(name="neural-network")
+def neural_network_cmd():
+    """Neural network (PyTorch MLP) challenger vs incumbent Platt calibration."""
+    run_neural_network_experiment()
+
+
+@cli.command(name="neural-network-features")
+def neural_network_features_cmd():
+    """Test MLP calibrator with expanded pregame-safe feature sets."""
+    run_neural_network_features_experiment()
+
+
+@cli.command(name="pytorch-deepdive")
+def pytorch_deepdive_cmd():
+    """PyTorch deep-dive: tuning, ensembles, featureization vs v3.1.0 MLP."""
+    run_pytorch_deepdive_experiment()
+
+
+@cli.command(name="gbm-tabpfn-baseline")
+def gbm_tabpfn_cmd():
+    """LightGBM + TabPFN baselines vs v3.1.0 MLP calibrator."""
+    run_gbm_baseline_experiment()
 
 
 @cli.command(name="situational-micro")
