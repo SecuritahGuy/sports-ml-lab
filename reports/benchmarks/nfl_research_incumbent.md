@@ -144,3 +144,22 @@ improved or whether a gradient-boosted tree is a better calibrator:
 **Conclusion**: the v3.1.0 MLP calibrator is the best choice at this dataset
 size. No further PyTorch/GBM tuning is warranted unless more seasons of data
 accumulate.
+
+### NN architecture exploration (2026-07-16)
+
+Beyond hyperparameter tuning, tested genuinely-different NN architectures vs
+the v3.1.0 MLP:
+
+- **ResNet-tabular** (residual blocks + LayerNorm, 3×64 / 4×128): **worse**
+  (holdout 0.633–0.637 vs 0.6155). Skip connections + normalization overfit.
+- **RealMLP 5/7-seed ensemble** (kaiming init + cosine + full-batch): **worse**
+  (holdout 0.6187–0.6195). Ensembling well-init'd MLPs does not beat the single.
+- **Deeper/wider MLPs** (4×32, 5×64): **worse** (holdout 0.6183–0.6204). More
+  capacity → overfit.
+
+**Conclusion**: at ~7k rows with 5 numeric features, the small plain MLP
+(3×16, Adam, const LR, full-batch) sits at the Pareto frontier. ResNet,
+ensembles, and deeper networks all overfit. This matches the tabular-DL
+literature (Gorishniy 2025: MLP/ResNet tie below ~10k rows; transformers/NODE
+need 100k+ rows or categoricals). No architecture change is warranted unless
+more seasons of data accumulate.

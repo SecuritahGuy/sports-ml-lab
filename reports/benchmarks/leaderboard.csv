@@ -42,3 +42,4 @@ preseason_elo_prior,prior_elo_raw_vs_reg10_vs_reg50_vs_diff_vs_decay,fold_safe_r
 neural_network_mlp_16_16_16,mlp_3_hidden_16_16_16_dp0.1_wd1e-4_replaces_platt_on_incumbent_features,fold_safe_rolling_origin_3fold_deep_dive_2000_2024,0.6279,0.6151,,,,promoted_deep_dive,reports/experiments/neural_network.md,2026-07-16
 pytorch_deepdive,mlp_3x16_tuning_ensembles_featureization_vs_v3.1.0,fold_safe_rolling_origin_3fold_deep_dive_2000_2024,0.6284,0.6158,,,,rejected,reports/experiments/pytorch_deepdive.md,2026-07-16
 gbm_tabpfn_baseline,lightgbm_default_deep_vs_v3.1.0_mlp_tabpfn_blocked,fold_safe_rolling_origin_3fold_deep_dive_2000_2024,0.6381,0.6260,,,,rejected,reports/experiments/gbm_tabpfn_baseline.md,2026-07-16
+nn_architecture,resnet_tabular_realmlp_ensemble_deeper_mlp_vs_v3.1.0,fold_safe_rolling_origin_3fold_deep_dive_2000_2024,0.6291,0.6155,,,,rejected,reports/experiments/nn_architecture.md,2026-07-16

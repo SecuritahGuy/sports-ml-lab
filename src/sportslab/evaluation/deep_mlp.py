@@ -209,6 +209,60 @@ class _MLP(nn.Module):
         return self.net(x).squeeze(-1)
 
 
+class _ResNetBlock(nn.Module):
+    """Pre-activation residual block: LN -> Linear -> act -> Dropout, + skip."""
+
+    def __init__(self, dim, activation="relu", dropout=0.1):
+        super().__init__()
+        self.ln1 = nn.LayerNorm(dim)
+        self.lin1 = nn.Linear(dim, dim)
+        self.act = nn.GELU() if activation == "gelu" else nn.ReLU()
+        self.drop = nn.Dropout(dropout)
+        self.ln2 = nn.LayerNorm(dim)
+        self.lin2 = nn.Linear(dim, dim)
+
+    def forward(self, x):
+        h = self.act(self.lin1(self.ln1(x)))
+        h = self.drop(h)
+        h = self.lin2(self.ln2(h))
+        return x + h
+
+
+class _ResNetMLP(nn.Module):
+    """Tabular ResNet (Gorishniy 2025): proj in -> residual blocks -> head.
+
+    `hidden` is interpreted as a list of block widths; all blocks use the
+    first width (residual blocks preserve dimension). A final projection
+    expands the input to the block width.
+    """
+
+    def __init__(self, in_dim, hidden, activation="relu", dropout=0.1, init="default"):
+        super().__init__()
+        width = hidden[0]
+        self.proj = nn.Linear(in_dim, width) if in_dim != width else nn.Identity()
+        self.blocks = nn.Sequential(
+            *[_ResNetBlock(width, activation, dropout) for _ in hidden]
+        )
+        self.head_ln = nn.LayerNorm(width)
+        self.head_act = nn.GELU() if activation == "gelu" else nn.ReLU()
+        self.out = nn.Linear(width, 1)
+        self._init_weights(init)
+
+    def _init_weights(self, init):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                if init == "kaiming":
+                    nn.init.kaiming_uniform_(m.weight, nonlinearity="relu")
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        h = self.proj(x)
+        h = self.blocks(h)
+        h = self.head_act(self.head_ln(h))
+        return self.out(h).squeeze(-1)
+
+
 def _make_lr_schedule(optimizer, n_epochs, kind, base_lr):
     if kind == "cosine":
         return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(n_epochs, 1))
@@ -238,8 +292,9 @@ def train_mlp(
     scaler="robust",
     full_batch=False,
     init="default",
+    arch="mlp",
 ):
-    """Train a single MLP with scaling, LR schedule, early stopping.
+    """Train a single MLP/ResNet with scaling, LR schedule, early stopping.
 
     scaler: "robust" (RealMLP-style) or "standard" (matches v3.1.0 incumbent).
     Returns (proba_fn, scaler_params) where proba_fn(X) -> probabilities.
@@ -265,7 +320,10 @@ def train_mlp(
     xt = torch.tensor(xs, dtype=torch.float32, device=DEVICE)
     yt = torch.tensor(y_train.astype(np.float64), dtype=torch.float32, device=DEVICE)
 
-    model = _MLP(xt.shape[1], hidden, activation, dropout, init).to(DEVICE)
+    if arch == "resnet":
+        model = _ResNetMLP(xt.shape[1], hidden, activation, dropout, init).to(DEVICE)
+    else:
+        model = _MLP(xt.shape[1], hidden, activation, dropout, init).to(DEVICE)
     if optimizer == "adam":
         opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     else:

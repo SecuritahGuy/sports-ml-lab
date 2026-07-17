@@ -56,6 +56,7 @@ from sportslab.evaluation.neural_network_experiment import run_neural_network_ex
 from sportslab.evaluation.neural_network_features_experiment import (
     run_neural_network_features_experiment,
 )
+from sportslab.evaluation.nn_architecture_experiment import run_nn_architecture_experiment
 from sportslab.evaluation.no_qb_baseline import run_no_qb_baseline
 from sportslab.evaluation.optuna_elo_search import run_optuna_search
 from sportslab.evaluation.optuna_feature_selection_experiment import run_optuna_feature_selection
@@ -429,6 +430,12 @@ def pytorch_deepdive_cmd():
 def gbm_tabpfn_cmd():
     """LightGBM + TabPFN baselines vs v3.1.0 MLP calibrator."""
     run_gbm_baseline_experiment()
+
+
+@cli.command(name="nn-architecture")
+def nn_architecture_cmd():
+    """NN architecture exploration (ResNet, RealMLP ensemble, deeper MLPs)."""
+    run_nn_architecture_experiment()
 
 
 @cli.command(name="situational-micro")

@@ -245,6 +245,9 @@ pytorch-deepdive:
 gbm-tabpfn-baseline:
 	sportslab gbm-tabpfn-baseline
 
+nn-architecture:
+	sportslab nn-architecture
+
 preseason-elo-prior:
 	sportslab preseason-elo-prior
 
