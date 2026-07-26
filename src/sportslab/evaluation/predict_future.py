@@ -220,9 +220,15 @@ def predict_future(
     df_feat = compute_market_features(df_feat)
 
     feat_cols = [c for c in FEATURE_COLS if c in df_feat.columns]
-    elo_prob_all = df_feat["elo_prob"].values
+    elo_prob_all = df_feat["elo_prob"].values.copy()
     feat_all = df_feat[feat_cols].values if feat_cols else np.empty((len(df_feat), 0))
     has_feats = len(feat_cols) > 0
+
+    # Adjust Elo probability for neutral-site games (remove HFA bias)
+    neutral_mask = df_feat["is_neutral"].fillna(False).values
+    if neutral_mask.any():
+        elo_diff = df_feat["elo_diff"].values
+        elo_prob_all[neutral_mask] = 1 / (1 + 10 ** (-elo_diff[neutral_mask] / 400))
 
     has_scores = df_feat["home_score"].notna().values
     eligible = df_feat[MODEL_ELIGIBLE_COLUMN].fillna(False).values
@@ -238,7 +244,7 @@ def predict_future(
     pipe.fit(x_known, y_known)
     print("  Platt calibration fitted on historical games")
 
-    future_mask = ~has_scores & ~df_feat["is_neutral"].fillna(False).values
+    future_mask = ~has_scores
     x_future = np.column_stack(
         [elo_prob_all[future_mask],
          feat_all[future_mask]] if has_feats else [elo_prob_all[future_mask]]
@@ -290,7 +296,7 @@ def predict_future(
         "away_qb_id": df_feat.loc[future_mask, "away_qb_id"].values,
     })
 
-    df_out = _add_caution_flags(df_out, df_feat.loc[future_mask], prob)
+    df_out = _add_caution_flags(df_out, df_feat.loc[future_mask].reset_index(drop=True), prob)
 
     if "market_home_prob_novig" in df_feat.columns:
         future_mkt = df_feat.loc[future_mask, "market_home_prob_novig"].values
