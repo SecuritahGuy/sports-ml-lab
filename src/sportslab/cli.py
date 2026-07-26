@@ -31,6 +31,7 @@ from sportslab.evaluation.decayed_elo_experiment import run_decayed_elo_experime
 from sportslab.evaluation.elo_tuning import run_elo_tuning
 from sportslab.evaluation.epa_features_experiment import run_epa_features_experiment
 from sportslab.evaluation.expanded_elo_spine_experiment import run_expanded_elo_spine
+from sportslab.evaluation.expanded_seasons_experiment import run_expanded_seasons_experiment
 from sportslab.evaluation.expressive_models_experiment import run_expressive_models_experiment
 from sportslab.evaluation.feature_selection_experiment import run_feature_selection_experiment
 from sportslab.evaluation.gam_logistic_experiment import run_gam_logistic_experiment
@@ -500,7 +501,9 @@ def simulate_2025_cmd(qb_input, output, report):
               help="Season year to predict (default: all future)")
 @click.option("--week", type=int, default=None,
               help="Week number to predict (default: all future)")
-def predict_future_cmd(input, output, qb_input, season, week):
+@click.option("--mode", type=click.Choice(["live", "dry_run", "rehearsal"]),
+              default="live", help="Snapshot mode (default: live)")
+def predict_future_cmd(input, output, qb_input, season, week, mode):
     """Generate pregame predictions for future games without requiring scores.
 
     Fits Elo on all available historical data (2021-current),
@@ -512,7 +515,7 @@ def predict_future_cmd(input, output, qb_input, season, week):
     Provide --qb-input to override with live-safe pregame-announced starters.
     """
     run_predict_future(input_path=input, output=output, qb_input=qb_input,
-                       season=season, week=week)
+                       season=season, week=week, mode=mode)
 
 
 @cli.command(name="predict-week")
@@ -858,6 +861,22 @@ def expanded_elo_spine_cmd(output):
     run_expanded_elo_spine(output_csv=output)
 
 
+@cli.command(name="expanded-seasons")
+@click.option("--output", type=str, default=None,
+              help="Optional report path override")
+def expanded_seasons_cmd(output):
+    """Test whether pre-2021 data improves the incumbent.
+
+    Compares 3 flavors: baseline (2021-2024), skip 2020 (2019+2021-2024),
+    and include 2020 (2020-2024). Each builds features from scratch to
+    prevent Elo leakage across excluded seasons.
+    """
+    kwargs = {}
+    if output:
+        kwargs["report_path"] = output
+    run_expanded_seasons_experiment(**kwargs)
+
+
 @cli.command(name="gated-qb-elo")
 @click.option("--output", type=str, default=None,
               help="Optional CSV output path for holdout predictions")
@@ -941,6 +960,13 @@ def qb_lift_cmd(output):
     run_qb_lift_experiment()
 
 
+@cli.command(name="build-team-site")
+def build_team_site_cmd():
+    """Build static team site with schedule, predictions, and rosters for Cloudflare Pages."""
+    from sportslab.evaluation.build_team_site import build_site
+    build_site()
+
+
 @cli.command(name="model-trust")
 @click.option(
     "--output",
@@ -959,3 +985,15 @@ def model_trust_cmd(output):
 
     report_path = run_model_trust(output_path=output)
     click.echo(f"Model trust report generated: {report_path}")
+
+
+@cli.command(name="refresh-week")
+@click.option("--week", type=int, default=None, help="Week to grade before refreshing")
+def refresh_week_cmd(week):
+    """Ingest scores → rebuild features → repredict → rebuild site.
+
+    One-command weekly refresh: picks up actual scores, retrains Elo,
+    regenerates predictions for remaining weeks, and rebuilds the site.
+    """
+    from sportslab.evaluation.refresh_week import refresh_week
+    refresh_week(week=week)

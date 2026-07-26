@@ -5,7 +5,7 @@ qb-gated-experience qb-depth-experiment turnover-experiment situational-micro \
 predict-week grade-week season-report prediction-audit rehearsal-season prediction-index publish-predictions \
 data-audit preseason-fire-drill live-preflight \
 build-qb-adjustments qb-adjusted-elo roster-strength regularized-logistic \
-qb-lift model-trust ralph6
+qb-lift model-trust ralph6 team-site team-site-serve
 
 # ── Install ──
 install:
@@ -203,6 +203,9 @@ qb-roster-interaction:
 expanded-elo-spine:
 	sportslab expanded-elo-spine
 
+expanded-seasons:
+	sportslab expanded-seasons
+
 roster-strength:
 	sportslab roster-strength
 
@@ -217,6 +220,17 @@ ralph6:
 
 preseason-elo-prior:
 	sportslab preseason-elo-prior
+
+team-site:
+	sportslab build-team-site
+
+team-site-serve: team-site
+
+# Refresh: ingest scores → rebuild features → repredict → rebuild site
+# Usage: make refresh WEEK=1  (grade week 1, predict weeks 2-18)
+#        make refresh          (full refresh, all weeks)
+refresh:
+	sportslab refresh-week $(if $(WEEK),--week $(WEEK),)
 
 # ── Development ──
 .PHONY: dev
