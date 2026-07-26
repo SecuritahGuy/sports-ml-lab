@@ -540,20 +540,38 @@ td.neutral { color: var(--warning); }
 JS = r"""// Sports ML Lab — Client-side interactivity
 
 document.addEventListener('DOMContentLoaded', function () {
-  // Week selector
+  // Week selector with URL query string
   const weekBtns = document.querySelectorAll('.week-selector-btn');
   const weekBlocks = document.querySelectorAll('.week-block');
+
+  function selectWeek(wk) {
+    weekBtns.forEach(b => b.classList.remove('active'));
+    weekBtns.forEach(b => {
+      if (b.dataset.week === wk) b.classList.add('active');
+    });
+    weekBlocks.forEach(b => {
+      b.style.display = b.dataset.week === wk ? 'block' : 'none';
+    });
+  }
+
+  // Read initial week from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialWeek = urlParams.get('week');
+  if (initialWeek && document.querySelector(`[data-week="${initialWeek}"]`)) {
+    selectWeek(initialWeek);
+  } else if (weekBtns.length > 0) {
+    selectWeek(weekBtns[0].dataset.week);
+  }
+
   weekBtns.forEach(btn => {
     btn.addEventListener('click', function () {
-      weekBtns.forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
       const wk = this.dataset.week;
-      weekBlocks.forEach(b => {
-        b.style.display = b.dataset.week === wk ? 'block' : 'none';
-      });
+      selectWeek(wk);
+      const url = new URL(window.location);
+      url.searchParams.set('week', wk);
+      window.history.replaceState({}, '', url);
     });
   });
-  if (weekBtns.length > 0) weekBtns[0].click();
 
   // Position group collapsible
   document.querySelectorAll('.position-header').forEach(hdr => {
@@ -701,6 +719,39 @@ def _week_date_range(games):
 def position_sort_key(pos):
     return POS_ORDER.index(pos) if pos in POS_ORDER else 99
 
+PREV_RANK_PATH = BASE / "site" / "assets" / "data" / "_previous_rankings.json"
+
+
+def load_previous_rankings():
+    import json as _json
+    if PREV_RANK_PATH.exists():
+        try:
+            return _json.loads(PREV_RANK_PATH.read_text())
+        except (_json.JSONDecodeError, KeyError):
+            return {}
+    return {}
+
+
+def save_rankings(stats):
+    import json as _json
+    PREV_RANK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    rankings = {r["team"]: int(r["rank"]) for r in stats.to_dict("records")}
+    PREV_RANK_PATH.write_text(_json.dumps(rankings, indent=2))
+    return rankings
+
+
+def compute_rank_deltas(stats):
+    prev = load_previous_rankings()
+    current = {r["team"]: int(r["rank"]) for r in stats.to_dict("records")}
+    deltas = {}
+    for team, rank in current.items():
+        if team in prev:
+            delta = prev[team] - rank
+            if delta != 0:
+                deltas[team] = delta
+    return deltas
+
+
 # ── JSON Data Generation ──
 
 def generate_json(preds, stats, output_dir):
@@ -789,6 +840,9 @@ def _render_header(active_nav=""):
 <div class="header-tagline">2026 NFL Predictions</div>
 </div>
 <nav class="header-nav">{links_html}</nav>
+<div class="header-search">
+<input type="text" id="team-search" placeholder="Search teams…" autocomplete="off">
+</div>
 </div>
 </header>"""
 
@@ -929,6 +983,7 @@ def render_index(preds, stats):
 
     # Top teams grid
     top8 = teams[:8]
+    rank_deltas = compute_rank_deltas(stats)
     team_cards = ""
     for r in top8:
         t = r["team"]
@@ -936,8 +991,14 @@ def render_index(preds, stats):
         name = TEAM_NAMES.get(t, t)
         color = TEAM_COLORS.get(t, "#999")
         tier_name = TIER_NAMES.get(tier, tier)
+        delta = rank_deltas.get(t, 0)
+        delta_html = ""
+        if delta > 0:
+            delta_html = f' <span style="color:var(--positive);font-size:0.7rem">↑{delta}</span>'
+        elif delta < 0:
+            delta_html = f' <span style="color:var(--negative);font-size:0.7rem">↓{abs(delta)}</span>'
         team_cards += f"""<a href="teams/{t}.html" class="team-card" style="border-left-color:{color}">
-<div class="team-card-rank">#{r['rank']}</div>
+<div class="team-card-rank">#{r['rank']}{delta_html}</div>
 <div class="team-card-abbr" style="color:{color}">{t}</div>
 <div class="team-card-name">{name}</div>
 <div class="team-card-wins">{r['pred_wins']}<small> wins</small></div>
@@ -1038,10 +1099,16 @@ def render_schedule(preds):
 # ── Standings Page ──
 
 def render_standings(stats):
+    rank_deltas = compute_rank_deltas(stats)
+    def _delta_html(delta):
+        if delta > 0: return f'<span style="color:var(--positive);font-size:0.7rem">↑{delta}</span>'
+        if delta < 0: return f'<span style="color:var(--negative);font-size:0.7rem">↓{abs(delta)}</span>'
+        return ""
+
     def _div_table(div_teams, div_name):
         rows = "".join(
             f"""<tr style="border-left:3px solid {TEAM_COLORS.get(r['team'], '#999')}">
-<td class="num">#{r['rank']}</td>
+<td class="num">#{r['rank']} {_delta_html(rank_deltas.get(r['team'], 0))}</td>
 <td class="team-col" style="color:{TEAM_COLORS.get(r['team'], '#ccc')}">{r['team']}</td>
 <td>{TEAM_NAMES.get(r['team'], r['team'])}</td>
 <td class="num {'pos' if float(r['pred_wins']) >= 10 else 'neutral' if float(r['pred_wins']) >= 8 else 'neg'}">{r['pred_wins']}</td>
@@ -1068,10 +1135,16 @@ def render_standings(stats):
         for div in ["NFC East", "NFC North", "NFC South", "NFC West"]
     )
 
-    # League table (top 10)
+    rank_deltas = compute_rank_deltas(stats)
+    def _delta_html(delta):
+        if delta > 0: return f'<span style="color:var(--positive);font-size:0.7rem">↑{delta}</span>'
+        if delta < 0: return f'<span style="color:var(--negative);font-size:0.7rem">↓{abs(delta)}</span>'
+        return ""
+
+    # League table (top 16)
     league_rows = "".join(
         f"""<tr style="border-left:3px solid {TEAM_COLORS.get(r['team'], '#999')}">
-<td class="num">#{r['rank']}</td>
+<td class="num">#{r['rank']} {_delta_html(rank_deltas.get(r['team'], 0))}</td>
 <td class="team-col" style="color:{TEAM_COLORS.get(r['team'], '#ccc')}">{r['team']}</td>
 <td>{TEAM_NAMES.get(r['team'], r['team'])}</td>
 <td>{TEAM_DIVISIONS.get(r['team'], '')}</td>
@@ -1113,6 +1186,14 @@ def render_team_page(team, preds, rosters, stats, player_values=None, team_value
     tier = team_tier(pw)
     tier_name = TIER_NAMES.get(tier, tier)
 
+    rank_deltas = compute_rank_deltas(stats)
+    rank_delta = rank_deltas.get(team, 0)
+    rank_delta_html = ""
+    if rank_delta > 0:
+        rank_delta_html = f' <span style="color:var(--positive);font-size:0.75rem">↑{rank_delta}</span>'
+    elif rank_delta < 0:
+        rank_delta_html = f' <span style="color:var(--negative);font-size:0.75rem">↓{abs(rank_delta)}</span>'
+
     # Prev/next team nav
     all_teams = stats["team"].tolist()
     idx = all_teams.index(team) if team in all_teams else -1
@@ -1137,7 +1218,7 @@ def render_team_page(team, preds, rosters, stats, player_values=None, team_value
 <div class="hero-stat-label">Projected Wins</div>
 </div>
 <div class="hero-stat">
-<div class="hero-stat-value">#{rank}</div>
+<div class="hero-stat-value">#{rank}{rank_delta_html}</div>
 <div class="hero-stat-label">Overall Rank</div>
 </div>
 <div class="hero-stat">
@@ -1210,9 +1291,45 @@ def render_team_page(team, preds, rosters, stats, player_values=None, team_value
 <h3 style="font-size:0.9rem;margin-bottom:8px">2026 Schedule</h3>
 <div class="table-wrap">
 <table>
-<thead><tr><th>Week</th><th>Date</th><th>Opponent</th><th>Win Prob</th><th></th><th>Confidence</th><th></th></tr></thead>
+<thead><tr><th>Week</th><th>Date</th><th>Opponent</th><th>Win Prob</th><th></th><th title="Historical calibration band: this percentage range reflects actual outcome rate for predictions at this probability level">Cal Band</th><th></th></tr></thead>
 <tbody>{"".join(sched_rows)}</tbody>
 </table>
+</div>
+</div>"""
+
+    # Season Outlook (computed from sched)
+    avg_prob = sched["team_prob"].mean()
+    best_row = sched.loc[sched["team_prob"].idxmax()]
+    worst_row = sched.loc[sched["team_prob"].idxmin()]
+    sos_hw = 1 - preds[preds["home_team"] == team]["incumbent_home_win_prob"]
+    sos_ap = preds[preds["away_team"] == team]["incumbent_home_win_prob"]
+    all_opp_probs = pd.concat([sos_hw, sos_ap])
+    avg_sos = all_opp_probs.mean() if len(all_opp_probs) else 0.5
+    best_opp = best_row["opponent"]
+    best_prob = best_row["team_prob"]
+    worst_opp = worst_row["opponent"]
+    worst_prob = worst_row["team_prob"]
+
+    outlook_html = f"""<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px">
+<div class="summary-card">
+<div class="summary-card-label">Avg Win Prob</div>
+<div class="summary-card-value">{avg_prob:.0%}</div>
+<div class="summary-card-sub">Across all 17 games</div>
+</div>
+<div class="summary-card">
+<div class="summary-card-label">Best Shot</div>
+<div class="summary-card-value" style="color:var(--positive)">{best_prob:.0%}</div>
+<div class="summary-card-sub">W{best_row['week']} vs {TEAM_NAMES.get(best_opp, best_opp)}</div>
+</div>
+<div class="summary-card">
+<div class="summary-card-label">Toughest Test</div>
+<div class="summary-card-value" style="color:var(--negative)">{worst_prob:.0%}</div>
+<div class="summary-card-sub">W{worst_row['week']} vs {TEAM_NAMES.get(worst_opp, worst_opp)}</div>
+</div>
+<div class="summary-card">
+<div class="summary-card-label">Avg Opponent</div>
+<div class="summary-card-value">{avg_sos:.0%}</div>
+<div class="summary-card-sub">Strength of schedule</div>
 </div>
 </div>"""
 
@@ -1300,7 +1417,7 @@ def render_team_page(team, preds, rosters, stats, player_values=None, team_value
 {"".join(sections)}
 </div>"""
 
-    body_html = hero_html + strength_html + sched_html + moves_html + roster_html
+    body_html = hero_html + outlook_html + strength_html + sched_html + moves_html + roster_html
     return render_page(f"{team} — {name}", body_html, "Teams")
 
 # ── Model Page ──
@@ -1437,6 +1554,9 @@ def build_site():
 
     for name, html in pages:
         (OUTPUT / name).write_text(html)
+
+    # Save rankings for next-run delta tracking
+    save_rankings(stats)
 
     n_teams = len(stats)
     n_players = len(rosters) if len(rosters) > 0 else 0
