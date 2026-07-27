@@ -5,7 +5,7 @@ qb-gated-experience qb-depth-experiment turnover-experiment situational-micro \
 predict-week grade-week season-report prediction-audit rehearsal-season prediction-index publish-predictions \
 data-audit preseason-fire-drill live-preflight \
 build-qb-adjustments qb-adjusted-elo roster-strength regularized-logistic \
-qb-lift model-trust ralph6 team-site team-site-serve
+qb-lift model-trust ralph6 team-site team-site-serve monitoring-report score-margin
 
 # ── Install ──
 install:
@@ -206,20 +206,62 @@ expanded-elo-spine:
 expanded-seasons:
 	sportslab expanded-seasons
 
+statspace-fdr:
+	sportslab statspace-fdr
+
+statspace-doba:
+	sportslab statspace-doba
+
+statspace-chaos:
+	sportslab statspace-chaos
+
+statspace-coward-tax:
+	sportslab statspace-coward-tax
+
+statspace-qb-lift:
+	sportslab statspace-qb-lift
+
+team-profiles:
+	sportslab team-profiles
+
+statspace-plots:
+	sportslab statspace-plots
+
+statspace-backtest:
+	sportslab statspace-backtest
+
 roster-strength:
 	sportslab roster-strength
 
 qb-lift:
 	sportslab qb-lift
 
+dynamic-elo:
+	sportslab dynamic-elo
+
+kalman-elo:
+	sportslab kalman-elo
+
+elo-ensemble:
+	sportslab elo-ensemble
+
+retest-rejected-features:
+	sportslab retest-rejected-features
+
 model-trust:
 	sportslab model-trust
+
+monitoring-report:
+	sportslab monitoring-report --season $(or $(SEASON),2026) --week $(or $(WEEK),1)
 
 ralph6:
 	sportslab ralph6
 
 preseason-elo-prior:
 	sportslab preseason-elo-prior
+
+score-margin:
+	sportslab score-margin-experiment
 
 team-site:
 	sportslab build-team-site

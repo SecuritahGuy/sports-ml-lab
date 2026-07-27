@@ -53,5 +53,11 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N"]
 
+[tool.ruff.lint.per-file-ignores]
+"src/sportslab/evaluation/monitoring_report.py" = ["E501"]
+"src/sportslab/evaluation/score_margin_model.py" = ["N803", "N806"]
+"src/sportslab/evaluation/score_margin_experiment.py" = ["E501", "N806"]
+"tests/test_score_margin_model.py" = ["N806"]
+
 [tool.ruff.format]
 quote-style = "double"

@@ -91,6 +91,7 @@ from sportslab.evaluation.team_hfa_experiment import run_team_hfa_experiment
 from sportslab.evaluation.train_baseline import train_baseline
 from sportslab.evaluation.turnover_experiment import run_turnover_experiment
 from sportslab.evaluation.weather_features_experiment import run_weather_features_experiment
+from sportslab.evaluation.monitoring_report import generate_monitoring_report
 from sportslab.evaluation.weekly_pipeline import grade_week, predict_week, season_report
 from sportslab.evaluation.weekly_qb_audit import run_weekly_qb_audit
 from sportslab.evaluation.weekly_report import generate_weekly_report
@@ -987,6 +988,224 @@ def model_trust_cmd(output):
     click.echo(f"Model trust report generated: {report_path}")
 
 
+@cli.command(name="statspace-fdr")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/statspace_fdr.md",
+    help="Output report path",
+)
+def statspace_fdr_cmd(ft_path, output):
+    """Run StatSpace FDR (Fraud Detector Rating) experiment.
+
+    Computes Fraud Detector Rating per team-season from nflverse PBP,
+    schedule results, and Elo ratings. Compares against the current
+    champion (Platt + QB overlay) with and without FDR augmentation.
+    """
+    from sportslab.evaluation.statspace_fdr_experiment import (
+        run_statspace_fdr_experiment,
+    )
+    report_path = run_statspace_fdr_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"FDR experiment report generated: {report_path}")
+
+
+@cli.command(name="statspace-doba")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/statspace_doba.md",
+    help="Output report path",
+)
+def statspace_doba_cmd(ft_path, output):
+    """Run StatSpace DOBA (Offensive Efficiency) experiment.
+
+    Computes DOBA per team-season from nflverse PBP and compares
+    against the FDR incumbent with and without DOBA augmentation.
+    """
+    from sportslab.evaluation.statspace_doba_experiment import (
+        run_statspace_doba_experiment,
+    )
+    report_path = run_statspace_doba_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"DOBA experiment report generated: {report_path}")
+
+
+@cli.command(name="team-profiles")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/team_profiles.csv",
+    help="Output CSV path",
+)
+def team_profiles_cmd(ft_path, output):
+    """Build per-team-season profiles for all StatSpace metrics (FDR, DOBA, Chaos, Coward Tax, QB Lift)."""
+    from sportslab.evaluation.team_profiles import build_team_profiles
+    build_team_profiles(ft_path=ft_path, output_path=output)
+
+
+@cli.command(name="statspace-plots")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output-dir", default="reports/figures",
+    help="Output directory for plots",
+)
+def statspace_plots_cmd(ft_path, output_dir):
+    """Generate pairwise scatterplots of all StatSpace metrics."""
+    from sportslab.evaluation.statspace_plots import build_statspace_plots
+    build_statspace_plots(ft_path=ft_path, output_dir=output_dir)
+    click.echo(f"StatSpace plots saved to {output_dir}")
+
+
+@cli.command(name="statspace-backtest")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/statspace_backtest.md",
+    help="Output report path",
+)
+def statspace_backtest_cmd(ft_path, output):
+    """Backtest each StatSpace metric as a standalone year-over-year predictor."""
+    from sportslab.evaluation.statspace_backtest import run_statspace_backtest
+    run_statspace_backtest(ft_path=ft_path, report_path=output)
+    click.echo("StatSpace backtest complete")
+
+
+@cli.command(name="statspace-coward-tax")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/statspace_coward_tax.md",
+    help="Output report path",
+)
+def statspace_coward_tax_cmd(ft_path, output):
+    """Run StatSpace Coward Tax (4th-down aggressiveness) experiment.
+
+    Computes Coward Tax per team-season from nflverse PBP and compares
+    against the FDR+DOBA+Chaos incumbent with and without Coward Tax.
+    """
+    from sportslab.evaluation.statspace_coward_tax_experiment import (
+        run_statspace_coward_tax_experiment,
+    )
+    report_path = run_statspace_coward_tax_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"Coward Tax experiment report generated: {report_path}")
+
+
+@cli.command(name="statspace-qb-lift")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/statspace_qb_lift.md",
+    help="Output report path",
+)
+def statspace_qb_lift_cmd(ft_path, output):
+    """Run StatSpace QB Lift experiment."""
+    from sportslab.evaluation.statspace_qb_lift_experiment import (
+        run_statspace_qb_lift_experiment,
+    )
+    report_path = run_statspace_qb_lift_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"QB Lift experiment report generated: {report_path}")
+
+
+@cli.command(name="statspace-chaos")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/statspace_chaos.md",
+    help="Output report path",
+)
+def statspace_chaos_cmd(ft_path, output):
+    """Run StatSpace Chaos Rate (Defensive Disruption) experiment.
+
+    Computes Chaos Rate per team-season from nflverse PBP and compares
+    against the FDR+DOBA incumbent with and without Chaos augmentation.
+    """
+    from sportslab.evaluation.statspace_chaos_experiment import (
+        run_statspace_chaos_experiment,
+    )
+    report_path = run_statspace_chaos_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"Chaos Rate experiment report generated: {report_path}")
+
+
+@cli.command(name="dynamic-elo")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/dynamic_elo.md",
+    help="Output report path",
+)
+def dynamic_elo_cmd(ft_path, output):
+    """Run Dynamic Bayesian Elo experiment."""
+    from sportslab.evaluation.dynamic_elo_experiment import run_dynamic_elo_experiment
+    report_path = run_dynamic_elo_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"Dynamic Elo report generated: {report_path}")
+
+
+@cli.command(name="kalman-elo")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/kalman_elo.md",
+    help="Output report path",
+)
+def kalman_elo_cmd(ft_path, output):
+    """Run Kalman-filter Elo experiment."""
+    from sportslab.evaluation.kalman_elo_experiment import run_kalman_elo_experiment
+    report_path = run_kalman_elo_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"Kalman Elo report generated: {report_path}")
+
+
+@cli.command(name="elo-ensemble")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/elo_ensemble.md",
+    help="Output report path",
+)
+def elo_ensemble_cmd(ft_path, output):
+    """Run Elo parameter ensemble experiment."""
+    from sportslab.evaluation.elo_ensemble_experiment import run_elo_ensemble_experiment
+    report_path = run_elo_ensemble_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"Elo ensemble report generated: {report_path}")
+
+
+@cli.command(name="retest-rejected-features")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/retest_rejected_features.md",
+    help="Output report path",
+)
+def retest_rejected_features_cmd(ft_path, output):
+    """Re-test weather, scheduling, injury features on modern Elo spine."""
+    from sportslab.evaluation.retest_rejected_features import run_retest_experiment
+    report_path = run_retest_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"Re-test report generated: {report_path}")
+
+
 @cli.command(name="refresh-week")
 @click.option("--week", type=int, default=None, help="Week to grade before refreshing")
 def refresh_week_cmd(week):
@@ -997,3 +1216,38 @@ def refresh_week_cmd(week):
     """
     from sportslab.evaluation.refresh_week import refresh_week
     refresh_week(week=week)
+
+
+@cli.command(name="monitoring-report")
+@click.option("--season", type=int, required=True, help="Season year")
+@click.option("--week", type=int, required=True, help="Week number")
+@click.option("--mode", type=click.Choice(["live", "dry_run", "rehearsal"]),
+              default="live", show_default=True)
+@click.option("--output", type=str, default=None,
+              help="Output path for the monitoring report")
+def monitoring_report_cmd(season, week, mode, output):
+    """Generate weekly monitoring report from graded artifacts.
+
+    Reads prediction history, manifest, and snapshot data,
+    checks 11 drift thresholds, and produces a structured
+    markdown report saved to reports/monitoring/ by default.
+    """
+    report_path = generate_monitoring_report(
+        season=season, week=week, mode=mode, output=output)
+    click.echo(f"Monitoring report: {report_path}")
+
+
+@cli.command(name="score-margin-experiment")
+@click.option("--ft-path", default="data/features/nfl/feature_table.parquet",
+              help="Feature table path")
+@click.option("--output", default=None,
+              help="Output report path")
+def score_margin_experiment_cmd(ft_path, output):
+    """Run score-margin distribution model shadow experiment.
+
+    Compares OLS-on-margin model vs incumbent on rolling-origin folds.
+    Shadow experiment — no promotion pressure.
+    """
+    from sportslab.evaluation.score_margin_experiment import run_score_margin_experiment
+    report_path = run_score_margin_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"Score-margin report: {report_path}")
