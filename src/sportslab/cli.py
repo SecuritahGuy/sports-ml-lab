@@ -49,6 +49,7 @@ from sportslab.evaluation.live_preflight import run_live_preflight
 from sportslab.evaluation.margin_aware_elo import run_margin_aware_experiment
 from sportslab.evaluation.market_baseline import run_market_baseline
 from sportslab.evaluation.market_benchmark import run_market_benchmark
+from sportslab.evaluation.monitoring_report import generate_monitoring_report
 from sportslab.evaluation.no_qb_baseline import run_no_qb_baseline
 from sportslab.evaluation.optuna_elo_search import run_optuna_search
 from sportslab.evaluation.optuna_feature_selection_experiment import run_optuna_feature_selection
@@ -91,7 +92,6 @@ from sportslab.evaluation.team_hfa_experiment import run_team_hfa_experiment
 from sportslab.evaluation.train_baseline import train_baseline
 from sportslab.evaluation.turnover_experiment import run_turnover_experiment
 from sportslab.evaluation.weather_features_experiment import run_weather_features_experiment
-from sportslab.evaluation.monitoring_report import generate_monitoring_report
 from sportslab.evaluation.weekly_pipeline import grade_week, predict_week, season_report
 from sportslab.evaluation.weekly_qb_audit import run_weekly_qb_audit
 from sportslab.evaluation.weekly_report import generate_weekly_report
@@ -1043,7 +1043,7 @@ def statspace_doba_cmd(ft_path, output):
     help="Output CSV path",
 )
 def team_profiles_cmd(ft_path, output):
-    """Build per-team-season profiles for all StatSpace metrics (FDR, DOBA, Chaos, Coward Tax, QB Lift)."""
+    """Build per-team-season profiles for StatSpace metrics."""
     from sportslab.evaluation.team_profiles import build_team_profiles
     build_team_profiles(ft_path=ft_path, output_path=output)
 
@@ -1185,8 +1185,8 @@ def kalman_elo_cmd(ft_path, output):
 )
 def elo_ensemble_cmd(ft_path, output):
     """Run Elo parameter ensemble experiment."""
-    from sportslab.evaluation.elo_ensemble_experiment import run_elo_ensemble_experiment
-    report_path = run_elo_ensemble_experiment(ft_path=ft_path, report_path=output)
+    from sportslab.evaluation.elo_ensemble_experiment import run_elo_ensemble
+    report_path = run_elo_ensemble(ft_path=ft_path, report_path=output)
     click.echo(f"Elo ensemble report generated: {report_path}")
 
 

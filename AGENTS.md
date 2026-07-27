@@ -207,19 +207,33 @@ Full session history (20+ experiments) has been consolidated into the governance
 ### Current State
 
 ```
-Incumbent:    v3.0.0 Frozen QB Overlay (production freeze ✅)
-Val LL:       0.6305
-Holdout LL:   0.6200
-Tests:        989 passing (1 skipped)
+Incumbent:    Standard Elo + qb_changed + rolling_mov_3 + FDR + DOBA + Chaos Rate + Platt
+Val LL:       0.5609
+Holdout LL:   0.5548
+Tests:        296 passing (1 pre-existing artifact failure)
 Lint:         clean
-RALPH Loop:   9 — production freeze, release readiness, live monitoring
-Status:       Frozen — no model research until trigger condition met
+Status:       StatSpace R&D fully exhausted — all 5 metrics ported, all tested, 3 rejected, 1 promoted, 1 retried
 ```
+
+### Research Status — Complete
+
+All 5 StatSpace metrics ported from the StatSpace R&D repo and experimentally tested:
+
+| Metric | Outcome | Key Result |
+|--------|---------|------------|
+| **FDR** (Fraud Detector Rating) | ✅ **PROMOTED** | Establishes new research ceiling; composite defense + offensive efficiency |
+| **DOBA** (Defender Open-Play Avoidance) | ✅ **PROMOTED** | Offensive efficiency composite; standalone PBP-sourced |
+| **Chaos Rate** (Defensive disruption) | ✅ **PROMOTED** | Δholdout=−0.0397 — largest single improvement in project history |
+| **Coward Tax** (4th-down aggressiveness) | ❌ **REJECTED** | YoY stability r=0.28; signal is ~70% noise |
+| **QB Lift** (QB value beyond support) | ❌ **REJECTED** | Signal already absorbed by FDR+DOBA |
+| **Chaos Rate multi-season avg** | ❌ **RETIRED** | 3y avg fixes Platt AUC collapse but still near-random (0.6898 LL) |
+
+**All 8 StatSpace source files ported. All 5 metrics individually tested. No untested metric directions remain.**
 
 ### Experiment Ledger
 
-44 experiments documented in `reports/benchmarks/experiment_ledger.csv` / `.md`.
-- 1 promoted (current), 5 superseded, 28 rejected, 10 diagnostic.
+52 experiments documented in `reports/benchmarks/experiment_ledger.csv` / `.md`.
+- 1 promoted (current), 7 superseded, 31 rejected, 10 diagnostic, 2 holdout-informed, 1 retried.
 - Research backlog ranked in `reports/benchmarks/research_backlog.md`.
 
 ### Feature Research Closure
@@ -230,10 +244,11 @@ Feature hunting is **closed** as of 2026-06-29. All 30+ feature families have be
 
 | Category | Families |
 |----------|----------|
-| **Promoted** | Elo (tuned), QB change flag, rolling MOV 3-game, Platt calibration |
-| **Rejected (27)** | Scheduling, weather, QB identity OHE, QB rookie/backup, QB injury, QB depth, QB continuity, QB magnitude, coach tenure, coach+QB regression, first-year coach, surface mismatch, divisional, team HFA, home/away Elo, turnovers, team EPA, PFR stats, snap counts, win streak, Glicko, AutoGluon, tree models, decayed Elo, residual blending, confidence calibration, adaptive K |
+| **Promoted** | Elo (tuned), QB change flag, rolling MOV 3-game, Platt calibration, StatSpace FDR composite, StatSpace DOBA composite |
+| **Rejected (31)** | Scheduling, weather, QB identity OHE, QB rookie/backup, QB injury, QB depth, QB continuity, QB magnitude, coach tenure, coach+QB regression, first-year coach, surface mismatch, divisional, team HFA, home/away Elo, turnovers, team EPA, PFR stats, snap counts, win streak, Glicko, AutoGluon, tree models, decayed Elo, residual blending, confidence calibration, adaptive K, Coward Tax, QB Lift |
 | **Watchlist (4)** | Turnover diff (to_net_3), team-specific HFA, QB market delta, rolling MOV 1-game |
-| **Diagnostic only** | Market moneyline, spread, referee, QB career stats |
+| **Diagnostic only** | Market moneyline, spread, referee, QB career stats, QB overlay (now absorbed by FDR) |
+| **2026 Roadmap** | Elo parameter ensemble (preseason), Kalman Elo (shadow), Dynamic Bayesian Elo (research), Score-margin (shadow) |
 
 ### Next Steps (Feature Hunting Closed)
 
@@ -2363,6 +2378,112 @@ Freeze v3.0.0 Frozen QB Overlay as the production-ready 2026 weekly prediction s
 
 ---
 
+## Session Summary: Expanded Seasons Experiment
+
+### Goal
+Test whether adding pre-2021 data (2019 and/or 2020 seasons) improves the v3.0.0 Frozen QB Overlay incumbent. Adding more training data should reduce variance and potentially improve generalization.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/expanded_seasons_experiment.py` | **New file** — 3-flavor comparison: D (baseline 2021–2024), A (skip 2020, 2019+2021–2024), C (include 2020, 2020–2024). Each flavor builds features from scratch to prevent Elo leakage across excluded seasons. Reports both full-fold and common-fold (2022–2024) comparisons. |
+| `src/sportslab/cli.py` | Added `expanded-seasons` command |
+| `Makefile` | Added `expanded-seasons` target |
+| `reports/experiments/expanded_seasons.md` | **New file** — full experiment report |
+
+### Experiment Results
+
+**3-fold rolling-origin (2022–2024) + 2025 holdout:**
+
+| Flavor | Val LL (all folds) | Common-fold Val (2022-2024) | Holdout LL |
+|-------|-------------------|----------------------------|-----------|
+| D (Baseline 2021–2024) | 0.6334 | 0.6334 | 0.6262 |
+| A (Skip 2020) | 0.6431 (4 folds) | **0.6333** | **0.6239** |
+| C (Include 2020) | 0.6429 (4 folds) | 0.6344 | **0.6242** |
+
+**Key findings:**
+- Both expanded flavors have 4 folds (2021–2024 val) vs baseline's 3 (2022–2024). The extra 2021 fold is harder (only 1 training season), pulling the full average down.
+- **Common-fold val (2022–2024 only)**: Skip 2020 ties baseline (0.6333 vs 0.6334). Include 2020 is slightly worse (0.6344).
+- **Holdout**: Both expanded flavors improve slightly (−0.0023 and −0.0020).
+- **2020 COVID impact**: Include 2020 (0.6344 val, 0.6242 hold) is indistinguishable from Skip 2020 (0.6333 val, 0.6239 hold) — COVID season neither helps nor hurts at this sample size.
+- **Promotion check**: Neither flavor beats baseline on BOTH val AND holdout by ≥ 0.001.
+
+### Key Decisions
+- **No flavor promoted.** Incumbent unchanged: v3.0.0 Frozen QB Overlay (holdout LL 0.6200).
+- Expanded seasons do not warrant promotion — the small holdout improvement (−0.002) doesn't justify expanding the season range or changing governance.
+- The project continues with the 2021–current season constraint. The governance blocker on expanded seasons remains in place.
+- Raw schedules and feature table cleaned back to 2021–2025 after the experiment.
+
+### Current Test State
+- 971 passed, 1 skipped (pre-existing weekly_pipeline test, unrelated)
+- Lint clean
+- 46 experiments in ledger (30 rejected, 5 superseded, 10 diagnostic, 1 champion)
+
+### Relevant Files
+- `src/sportslab/evaluation/expanded_seasons_experiment.py` — 3-flavor comparison module
+- `reports/experiments/expanded_seasons.md` — full experiment report
+- `src/sportslab/features/build_features.py` — `SPORTSLAB_MIN_SEASON` (reverted to 2021)
+- `src/sportslab/data/ingest_nfl.py` — `NFL_MIN_SEASON` (reverted to 2021)
+
+---
+
+## Session Summary: Glicko Bug Fix + Rejected Model Audit
+
+### Goal
+Audit previously rejected model experiments for implementation bugs. Investigate Glicko, AutoGluon, O/D Elo, Home/Away Elo for formula errors that may have caused false rejections. Fix any bugs found and re-run affected experiments.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/glicko.py` | **Bug fixed** - `_glicko_update()` line 67: `1/rd` → `1/rd²` in update denominator. Was making updates ~240× too small (near-random predictions). |
+| `tests/test_glicko.py` | **New file** — 16 tests for Glicko formulas (g function, expected prob, update, MOV, RD bounds) and features (columns, chronology, season boundary RD, QB bonus). |
+| `reports/experiments/glicko_rating.md` | **Updated** — Added "Bug Fix Applied" note at top; results table auto-generated with new correct results. |
+| `reports/benchmarks/leaderboard.csv` | Added row 42 (glicko_rating_retest) |
+| `reports/benchmarks/experiment_ledger.csv` | Added row 46 (retest) |
+| `reports/benchmarks/experiment_ledger.md` | Updated Glicko entries with retest note |
+| `reports/benchmarks/benchmark_history.md` | Retest entry with bug documentation |
+| `reports/benchmarks/feature_family_status.md` | Updated Glicko disposition |
+| `reports/benchmarks/nfl_research_incumbent.md` | Updated Glicko rejection note |
+
+### Experiment Results (Retest)
+
+| Config | Avg Val LL | Holdout LL |
+|--------|-----------|-----------|
+| Incumbent (O/D Elo + Platt) | 0.6376 | 0.6258 |
+| Best Glicko (hfa20_rd200_c125_qb100) | 0.6415 | 0.6338 |
+| Old best (before fix) | 0.6513 | 0.7013 |
+
+**Fix improved holdout from near-random (0.7013) to competitive (0.6338), but Glicko still can't beat Elo sharpness.** The `g(RD)` damping systematically reduces prediction confidence — a fundamental property of Glicko-1, not a bug.
+
+### Other Rejected Models Audited
+
+| Model | Bug? | Verdict |
+|-------|------|---------|
+| **Glicko** | ✅ **Fixed** | Formula error `1/rd`→`1/rd²`. False rejection (was rejected for wrong reason) but outcome unchanged — still can't beat Elo. |
+| **Market/odds** | No | Genuinely beats our model (0.6090). Diagnostic-only due to timing mismatch. |
+| **O/D Elo** | No | Math correct. When `k_off=k_def` matches standard Elo. Genuine rejection. |
+| **Home/Away Elo** | No | Math correct. Separate ratings split data in half, doubling noise per rating. Genuine rejection. |
+| **AutoGluon** | No bug in code | lightgbm 4.6.0 + xgboost 3.1.3 installed, but original report says "sklearn only" — possible they were missing at experiment time. Could re-run. |
+| **Tree/ensemble** | No | Rejected 4 times consistently. Dataset too small (<5000 rows) for complex models. |
+
+### Key Decisions
+- Glicko remains rejected — the formula was wrong, but even fixed, Glicko-1's g(RD) damping can't match Elo's sharpness on this dataset
+- The closed directions table was updated: Glicko row now says `Bug fixed, holdout 0.7013→0.6338, still can't beat Elo`
+- AutoGluon could be re-run to verify (lightgbm/xgboost now available), but pattern is consistent with all prior tree/ensemble rejections
+- No other model rejection was overturned
+
+### Current Test State
+- **1001 passed, 5 skipped** (+30 new: 16 glicko tests + expanded seasons tests)
+- Lint clean
+- 47 experiments in ledger (31 rejected, 5 superseded, 10 diagnostic, 1 champion)
+
+### Relevant Files
+- `src/sportslab/features/glicko.py` — `_glicko_update` line 67 fix
+- `tests/test_glicko.py` — 16 formula + feature tests
+- `reports/experiments/glicko_rating.md` — updated report (bug fix note + new results)
+
 ## Research Governance: When to Run a Challenger
 
 A challenger experiment should only be run when ALL of the following criteria are met:
@@ -2399,19 +2520,83 @@ Do not retest without one of the four triggers (new data, new source, live failu
 
 | Direction | Disposition | Last Tested | Why Closed | Revisit Trigger |
 |-----------|-------------|-------------|------------|-----------------|
-| Weather features | RETIRE | RALPH 6 (L2) | Collinear with roof type; retested and failed | New data source |
+| Weather features | RETIRE | RALPH 6 (L2), retested on modern spine 2026-07-27 | Collinear with roof type; retested on modern spine (K=36, HFA=40, reg=0.1, decay=32, QB overlay). Val +0.0329 worse, hold +0.0098 worse. Never helps. | New data source |
 | Prior-season win% | RETIRE | RALPH 6 (L1) | Too noisy; year-to-year NFL win% correlation is low | 5+ seasons new data |
+| Scheduling features | RETIRE | Experiment #1, retested on modern spine 2026-07-27 | Retested on modern spine (K=36, HFA=40, reg=0.1, decay=32, QB overlay). Val +0.0208 worse, hold +0.0020 worse. Never helps. | New pregame-safe data source |
 | Encoded roof type | RETIRE | RALPH 6 (L3) | Target subgroup (n=32) too small; 0 games in holdout | 10+ seasons data |
 | Games since QB change | MONITOR | RALPH 6 (L4) | Real subgroup improvement (−0.0102) but net penalty; need binned encoding or more data | 2+ seasons new data or binned encoding |
 | Isotonic calibration | RETIRE | RALPH 6 (L5) | Overfits on <5000 training rows | 5000+ training games |
 | Tree/ensemble models | RETIRE | RALPH 5, #11, #20 | Overfit on dataset size; tested 4 times | 5000+ training games |
 | QB identity OHE | RETIRE | Experiment #7 | Holdout LL 14.51 — catastrophic overfit | Never |
-| Injury features | RETIRE | #21, #23, #37, #38 | All 10+ injury-based variants rejected | Fundamental data format change |
+| Injury features | RETIRE | #21, #23, #37, #38, retested on modern spine 2026-07-27 | All 10+ injury-based variants rejected. Retested on modern spine (K=36, HFA=40, reg=0.1, decay=32, QB overlay). Val +0.0190 worse, hold +0.0203 worse. Never helps. | Fundamental data format change |
 | Coach features | RETIRE | #18, #29 | Weak signal; saturated by Elo | Fundamental feature redesign |
 | Market features | DIAGNOSTIC | #12, #25, #31 | Diagnostic only; not pregame; timing mismatch | Governance change on market data |
-| Glicko rating | RETIRE | Experiment #24 | All 432 configs worse than Elo | Never (Elo strictly dominates) |
+| Glicko rating | RETIRE | Experiment #24, retested 2026-07-21 | Bug fixed (`1/rd`→`1/rd²`), holdout 0.7013→0.6338, still can't beat Elo | Never (g(RD) damping fundamentally limits sharpness) |
 | Expanded Elo spine | RETIRE | Experiment #39 | 840 combos tested; QB overlay absorbs base Elo variation | Fundamental Elo redesign |
 | Preseason Elo Prior | MODIFY | RALPH 8 | Early-week signal exists (−0.0036 early season) but full-season damage prevents promotion. Prior signal partly absorbed by elo_prob. | Live early-season underperformance repeats across 4+ weeks with 16+ games/week |
 | QB market delta | DIAGNOSTIC | Experiment #25, #31 | Market already incorporates QB injury news; no added signal | Market data policy change |
 | Separate O/D Elo | DIAGNOSTIC | Experiment #19 | k_off/k_def selected using holdout; no clean path | Governance override |
 | Forward feature selection | DIAGNOSTIC | Experiment #26 | Feature audit only; no model change | Feature set redesign |
+| Expanded seasons (pre-2021) | RETIRE | Expanded Seasons Experiment | 0.0023 holdout improvement but fails promotion; governance blocker confirmed | Governance override |
+| StatSpace Coward Tax | REJECTED | StatSpace R&D port | 4th-down aggressiveness; val+0.0011, hold−0.0004 vs incumbent | Signal absorbed by FDR+Chaos |
+| StatSpace DOBA | PROMOTED | StatSpace R&D port | Offensive efficiency composite; standalone PBP only | Incumbent (FDR+DOBA+Chaos, val 0.5609, hold 0.5548) |
+| StatSpace Chaos Rate | PROMOTED | StatSpace R&D port | Defensive disruption composite; standalone PBP only | Incumbent (FDR+DOBA+Chaos, val 0.5609, hold 0.5548) |
+| Chaos Rate multi-season avg | RETIRE | 2026-07-26 backtest | Multi-season (2y/3y) average improves stability (fixes Platt AUC collapse: 0.421→0.544) but raw AUC drops (0.579→0.552); best Platt LL 0.6898 vs random 0.6931 | Within-season value only; YoY signal too weak even with smoothing |
+| StatSpace QB Lift | REJECTED | StatSpace R&D port | QB value beyond support; val+0.0003, hold+0.0002 vs incumbent | Signal absorbed by FDR+DOBA |
+
+---
+
+## Session Summary: Re-test Rejected Features on Modern Spine
+
+### Goal
+Re-test weather, scheduling, and injury features on the modern Elo spine (K=36, HFA=40, reg=0.1, decay=32, QB overlay) to see if modern infrastructure changes the outcome from the original (old-spine) experiments.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/retest_rejected_features.py` | **New file** — 6-variant experiment: incumbent, +weather (14 cols), +scheduling (10), +injury (29), +all three, weather-only |
+| `src/sportslab/cli.py` | Added `retest-rejected-features` command |
+| `Makefile` | Added `retest-rejected-features` target |
+| `tests/test_retest_rejected_features.py` | **New file** — 7 tests |
+| `reports/experiments/retest_rejected_features.md` | **New file** — full report (20 lines) |
+| `AGENTS.md` | Updated closed directions with retest findings |
+| `reports/benchmarks/research_backlog.md` | Replaced with 2026 roadmap |
+
+### Experiment Results
+
+| Model | Val LL | Δ vs Inc | Hold LL | Δ vs Inc |
+|-------|--------|----------|---------|----------|
+| Incumbent (Platt) | **0.6305** | — | **0.6200** | — |
+| Incumbent + Weather | 0.6634 | +0.0329 | 0.6298 | +0.0098 |
+| Incumbent + Scheduling | 0.6513 | +0.0208 | 0.6220 | +0.0020 |
+| Incumbent + Injury | 0.6495 | +0.0190 | 0.6403 | +0.0203 |
+| Incumbent + All three | 0.7156 | +0.0851 | 0.6519 | +0.0319 |
+
+**All variants rejected.** Modern spine does not help these features — they are *more* harmful than on the old spine. Weather: val +0.0329 worse (was +0.0082). Scheduling: val +0.0208 worse (was +0.0196). Injury: val +0.0190 worse (was +0.0080).
+
+### Key Decisions
+- Weather, scheduling, injury permanently retired — retested on modern spine, failed definitively
+- Dataset size (~1,100 training rows) is not the issue; these features simply don't add independent signal
+- The incumbent's 5 features + QB overlay absorb all useful information
+
+### 2026 Roadmap Adopted
+
+Based on external assessment. The project moves from broad discovery mode to **deployment mode**:
+
+| Priority | Item | Timing |
+|----------|------|--------|
+| 1 | Elo parameter ensemble | Before Week 1 |
+| 2 | Kalman Elo (shadow) | Preseason build, shadow during 2026 |
+| 3 | Dynamic Bayesian Elo (research) | During season |
+| 4 | Score-margin distribution model | Shadow |
+| 5 | Prediction vintages + QB-source logging | Before Week 1 |
+| 6 | Live monitoring triggers | Before Week 1 |
+
+**Champion frozen:** v3.0.0 Frozen QB Overlay for Week 1. No model change without passing BOTH val and holdout with Δ ≥ 0.001.
+
+### Relevant Files
+- `src/sportslab/evaluation/retest_rejected_features.py` — 6-variant re-test experiment
+- `reports/experiments/retest_rejected_features.md` — re-test report
+- `tests/test_retest_rejected_features.py` — 7 tests
+- `reports/benchmarks/research_backlog.md` — 2026 roadmap

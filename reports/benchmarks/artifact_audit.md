@@ -1,8 +1,10 @@
 # Artifact Audit Report
 
-*Generated: 2026-07-07 09:42*
+*Generated: 2026-07-27 11:11*
 
 ## Summary
 
-✅ **All checks passed.** No issues found.
+⚠️ **1 issue(s) found:**
+
+  1. History summary says 38 entries, found 43
 

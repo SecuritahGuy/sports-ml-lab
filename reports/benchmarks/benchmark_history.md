@@ -367,18 +367,21 @@ Each entry includes:
 
 ---
 
-### 24. Glicko Rating System (432 configurations)
+### 24. Glicko Rating System (432 configurations) *[RETESTED 2026-07-21 — bug fix applied]*
 
 | Field | Value |
 |-------|-------|
 | **Model** | Glicko-1 rating system with per-team RD, g(RD) scaling, season-boundary RD growth, QB RD bonus |
 | **Selection** | Rolling-origin 3-fold grid search (4 HFA × 6 init_RD × 6 sys_c × 3 qb_bonus = 432) |
-| **Best val params** | HFA=50, init_RD=350, c=250, QB bonus=0 |
-| **Validation LL** | **0.6513** (worse than incumbent 0.6376) |
-| **Holdout LL** | **0.7013** (worse than incumbent 0.6258) |
-| **Decision** | **Rejected** — All 432 Glicko configs worse than O/D Elo+Platt on both validation and holdout. The g(RD) uncertainty factor systematically pulls predictions toward 0.5, reducing model confidence across the board. Even the best Glicko config (highest HFA=50, lowest uncertainty parameters) couldn't match standard Elo's predictive accuracy. |
+| **Bug found** | `_glicko_update` used `1/rd` instead of `1/rd²` in update denominator, making updates ~240× too small |
+| **Original val LL** | **0.6513** (worse than incumbent 0.6376) |
+| **Original holdout LL** | **0.7013** (near-random — bug-induced) |
+| **Retest val LL** | **0.6415** (worse than incumbent 0.6376) |
+| **Retest holdout LL** | **0.6338** (worse than incumbent 0.6258) |
+| **Best retest params** | HFA=20, init_RD=200, C=125, QB_bonus=100 |
+| **Decision** | **Still Rejected** — Fix improved holdout from 0.7013→0.6338, but Glicko still can't match standard Elo's sharpness on either val or holdout. The g(RD) damping systematically reduces prediction confidence. |
 | **Report** | `reports/experiments/glicko_rating.md` |
-| **Date** | 2026-06-23 |
+| **Date** | 2026-06-23 (original), 2026-07-21 (retest with fix) |
 
 ### 25. QB-Change Market-Delta Diagnostics
 
@@ -762,3 +765,139 @@ base Elo (swept: K, HFA, reg, decay)
 **Key takeaway:** The v3.0.0 Elo spine (K=36, HFA=40, reg=0.1, decay=32) is robust. Platt scaling + QB overlay absorbs base-Elo variation. No untuned Elo spine direction remains.
 
 **Report:** `reports/experiments/expanded_elo_spine.md`
+
+---
+
+### 47. StatSpace FDR (Fraud Detector Rating)
+
+**Experiment:** StatSpace branded-stat FDR composite — record strength, underlying quality (EPA, success rate, Elo, pythagorean), luck gap, close-game luck, turnover luck, schedule suspicion.
+
+**Decision:** ✅ PROMOTED (new incumbent)
+
+**Selection:** Fold-safe rolling-origin 3-fold (2021→2022, 2021-2022→2023, 2021-2023→2024). Platt fit per fold. FDR + QB overlay variant also tested.
+
+**Key results:**
+
+| Model | Avg Val LL | Holdout LL | Brier | AUC |
+|-------|-----------|-----------|-------|-----|
+| Platt + overlay (champion) | 0.6317 | 0.6228 | 0.2169 | 0.7067 |
+| **Platt + FDR (NEW INCUMBENT)** | **0.6203** | **0.6011** | **0.2078** | **0.7329** |
+| Platt + FDR + overlay (best possible) | 0.6172 | 0.5972 | 0.2065 | 0.7356 |
+
+- Δval = -0.0114 vs champion
+- Δhold = -0.0217 vs champion (biggest improvement in project history)
+- FDR beats market (no-vig) for the first time (0.6011 vs 0.6090)
+- QB overlay still adds small but real improvement on top of FDR (-0.0031 val, -0.0039 hold)
+
+**Key takeaway:** FDR captures all the dimensions (EPA, success rate, Elo, turnover luck, schedule) that previous individual feature families tested separately, in a single z-scored composite. This is the first time any football-only model beats the market benchmark.
+
+**Data scope:** nflverse PBP 2021-2025 (247k rows), schedule results, Elo ratings.
+
+**Report:** `reports/experiments/statspace_fdr.md`
+
+---
+
+### 48. StatSpace DOBA (Offensive Efficiency Composite)
+
+**Experiment:** StatSpace branded-stat DOBA — offensive efficiency composite (EPA/play, success rate, early-down, third-down, explosive rate, red zone, negative play rate, turnover rate, dependency penalty).
+
+**Decision:** ✅ PROMOTED (new incumbent, combined with FDR)
+
+**Selection:** Fold-safe rolling-origin 3-fold (2021→2022, 2021-2022→2023, 2021-2023→2024). Platt fit per fold.
+
+**Key results:**
+
+| Model | Avg Val LL | Holdout LL | Brier | AUC |
+|-------|-----------|-----------|-------|-----|
+| FDR (incumbent) | 0.6203 | 0.6011 | 0.2078 | 0.7329 |
+| DOBA only | 0.6068 | 0.6301 | 0.2196 | 0.7000 |
+| **FDR + DOBA (NEW INCUMBENT)** | **0.5853** | **0.5945** | **0.2052** | **0.7458** |
+
+- FDR+DOBA val: 0.5853 (Δ=−0.0350 vs FDR alone)
+- FDR+DOBA holdout: 0.5945 (Δ=−0.0066 vs FDR alone)
+- DOBA alone overfits (0.6034 val, 0.6241 holdout) but combined with FDR is stable
+- FDR+DOBA is the strongest football-only model in project history
+
+**Key takeaway:** FDR captures overall team quality (record vs underlying). DOBA adds offensive efficiency specifically. Together they separate offense from overall quality — a team with good offense but bad record has positive DOBA but negative FDR, and the model learns the right weighting.
+
+**Data scope:** nflverse PBP 2021-2025 (247k rows).
+
+**Report:** `reports/experiments/statspace_doba.md`
+
+### 49. StatSpace Chaos Rate (Defensive Disruption Composite)
+
+**Experiment:** StatSpace Chaos Rate — defensive disruption composite (defensive EPA/play allowed, success rate allowed, negative EPA forced rate, sack rate, turnover forced rate, explosive rate allowed, third/fourth-down stop rate, penalty first-down rate allowed).
+
+**Decision:** ✅ PROMOTED (new incumbent, all three StatSpace metrics combined)
+
+**Selection:** Fold-safe rolling-origin 3-fold (2021→2022, 2021-2022→2023, 2021-2023→2024). Platt fit per fold.
+
+**Key results:**
+
+| Model | Avg Val LL | Holdout LL | Brier | AUC |
+|-------|-----------|-----------|-------|-----|
+| FDR + DOBA (incumbent) | 0.5853 | 0.5945 | 0.2052 | 0.7458 |
+| Chaos only | 0.6416 | 0.6232 | 0.2169 | 0.7056 |
+| FDR + DOBA + Chaos (NEW INCUMBENT) | **0.5609** | **0.5548** | **0.1886** | **0.7871** |
+
+- FDR+DOBA+Chaos val: 0.5609 (Δ=−0.0244 vs FDR+DOBA)
+- FDR+DOBA+Chaos holdout: 0.5548 (Δ=−0.0397 vs FDR+DOBA)
+- Chaos alone is near-random (0.6416 val) but adds strong signal on top of FDR+DOBA
+- Largest single-experiment holdout improvement in project history (−0.0397)
+
+**Key takeaway:** FDR captures overall team quality, DOBA captures offensive efficiency, Chaos Rate captures defensive disruption. Together they create a tri-metric model where offense (DOBA) and defense (Chaos Rate) are independently measured on top of overall quality (FDR). The defensive disruption metric is especially additive — a team with strong defense but mediocre record gets pulled up by Chaos Rate more than FDR alone would suggest.
+
+**Data scope:** nflverse PBP 2021-2025 (247k rows).
+
+**Report:** `reports/experiments/statspace_chaos.md`
+
+### 50. StatSpace Coward Tax (4th-Down Aggressiveness)
+
+**Experiment:** StatSpace Coward Tax — 4th-down aggressiveness composite measuring WP left on the table by conservative decisions.
+
+**Decision:** ❌ REJECTED
+
+**Selection:** Fold-safe rolling-origin 3-fold (2021→2022, 2021-2022→2023, 2021-2023→2024). Platt fit per fold.
+
+**Key results:**
+
+| Model | Avg Val LL | Holdout LL | Brier | AUC |
+|-------|-----------|-----------|-------|-----|
+| FDR+DOBA+Chaos (incumbent) | **0.5609** | 0.5548 | 0.1886 | 0.7871 |
+| Incumbent + Coward Tax (agg_score) | 0.5620 | **0.5543** | 0.1883 | 0.7876 |
+| FDR+DOBA+Coward Tax (no Chaos) | 0.5872 | 0.5882 | 0.2024 | 0.7513 |
+
+- No variant beats incumbent on both val and holdout
+- Best variant (agg_score) has val worse (+0.0011) and holdout barely better (−0.0004)
+- Coward Tax on its own (without Chaos Rate) underperforms FDR+DOBA alone
+- 4th-down aggressiveness signal is too noisy or already absorbed by existing metrics
+
+**Key takeaway:** Coward Tax does not add independent predictive signal on top of FDR+DOBA+Chaos. The 4th-down decision patterns that correlate with future wins are already captured by the quality composites (FDR and Chaos Rate).
+
+**Report:** `reports/experiments/statspace_coward_tax.md`
+
+### 51. StatSpace QB Lift (QB Value Beyond Support)
+
+**Experiment:** StatSpace QB Lift — measures a QB's value beyond their supporting cast using EPA/dropback, CPOE, 3rd/4th-down EPA, scramble value, pressure avoidance, YAC dependency, sack rate, and garbage-time inflation.
+
+**Decision:** ❌ REJECTED
+
+**Selection:** Fold-safe rolling-origin 3-fold (2021→2022, 2021-2022→2023, 2021-2023→2024). Primary QB per team-season by highest lift index. Platt fit per fold.
+
+**Key results:**
+
+| Model | Avg Val LL | Holdout LL | Brier | AUC |
+|-------|-----------|-----------|-------|-----|
+| FDR+DOBA+Chaos (incumbent) | **0.5609** | **0.5548** | 0.1886 | 0.7871 |
+| Incumbent + QB Lift | 0.5612 | 0.5550 | 0.1886 | 0.7870 |
+| Incumbent + Support Score | 0.5645 | 0.5572 | 0.1892 | 0.7859 |
+| QB Lift only | 0.6329 | 0.6288 | 0.2180 | 0.7026 |
+
+- No variant beats incumbent. QB Lift on top of FDR+DOBA+Chaos: Δval=+0.0003, Δhold=+0.0002
+- QB Lift alone (0.6329 val) is barely better than random
+- Support dependency score also adds nothing
+- QB quality signal is fully captured by FDR + DOBA already
+
+**Key takeaway:** QB quality is already embedded in FDR and DOBA. A team with a great QB has better underlying EPA, success rate, and record — all of which feed into those composites. QB Lift adds no independent signal.
+
+**Report:** `reports/experiments/statspace_qb_lift.md`

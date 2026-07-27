@@ -8,7 +8,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Seasons tracked | 1 (2026) |
+| Seasons tracked | 0 () |
 | Graded weeks | 0 |
 | Graded games | 0 |
 | Incumbent model | Standard Elo + qb_changed + rolling_mov_3 + Platt |

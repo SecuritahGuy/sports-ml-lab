@@ -8,11 +8,11 @@ Output: data/features/nfl/player_values_2026.parquet
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
-ROSTER_CACHE = Path(__file__).resolve().parents[3] / "data" / "features" / "nfl" / "rosters_2026.parquet"
-OUTPUT_PATH = Path(__file__).resolve().parents[3] / "data" / "features" / "nfl" / "player_values_2026.parquet"
+BASE = Path(__file__).resolve().parents[3]
+ROSTER_CACHE = BASE / "data" / "features" / "nfl" / "rosters_2026.parquet"
+OUTPUT_PATH = BASE / "data" / "features" / "nfl" / "player_values_2026.parquet"
 
 POSITION_GROUP_MAP = {
     "QB": "qb",
@@ -43,7 +43,11 @@ def _compute_offensive_epa(pbp):
                 "off_epa": g["epa"].sum(),
                 "count": len(g),
                 "td": g["touchdown"].sum(),
-                "turnover": g["interception"].sum() + g["fumble_lost"].sum() if "fumble_lost" in g.columns else g["interception"].sum(),
+                "turnover": (
+                    g["interception"].sum() + g["fumble_lost"].sum()
+                    if "fumble_lost" in g.columns
+                    else g["interception"].sum()
+                ),
             })
 
     rusher = pbp[pbp["rush_attempt"] == 1].copy()
@@ -357,7 +361,8 @@ def compute_team_value_added(value_df, team_aggs):
         if col in result.columns:
             result[f"{pos}_delta"] = result[col] - 50.0
 
-    result["overall_delta"] = result[[f"{pos}_delta" for pos in POS_ORDER if f"{pos}_delta" in result.columns]].mean(axis=1)
+    delta_cols = [f"{pos}_delta" for pos in POS_ORDER if f"{pos}_delta" in result.columns]
+    result["overall_delta"] = result[delta_cols].mean(axis=1)
     return result
 
 
@@ -365,6 +370,8 @@ if __name__ == "__main__":
     values = compute_player_values()
     print(f"\nComputed {len(values)} player values")
     team_vals = aggregate_by_team(values)
-    print(f"\nTeam roster strength (top 10):")
-    print(team_vals[["team", "total_players", "total_value", "qb_avg_pctl", "skill_avg_pctl", "ol_avg_pctl", "front_avg_pctl"]].head(10).to_string())
+    print("\nTeam roster strength (top 10):")
+    cols = ["team", "total_players", "total_value", "qb_avg_pctl",
+            "skill_avg_pctl", "ol_avg_pctl", "front_avg_pctl"]
+    print(team_vals[cols].head(10).to_string())
     print(f"\nSaved to {OUTPUT_PATH}")

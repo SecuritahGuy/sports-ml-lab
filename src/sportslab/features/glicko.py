@@ -64,7 +64,7 @@ def _glicko_update(
         (new_rating, new_rd).
     """
     d2 = 1.0 / (Q * Q * g_opp * g_opp * expected * (1.0 - expected) + 1e-15)
-    update = (Q / (1.0 / rd + 1.0 / d2)) * g_opp * (actual - expected) * mov_mult
+    update = (Q / (1.0 / (rd * rd) + 1.0 / d2)) * g_opp * (actual - expected) * mov_mult
     new_rating = rating + update
     new_rd = np.sqrt(1.0 / (1.0 / (rd * rd) + 1.0 / d2))
     return new_rating, new_rd

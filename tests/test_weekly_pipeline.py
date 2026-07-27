@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from sportslab.evaluation.weekly_pipeline import (
     _compute_metrics,
@@ -176,13 +177,28 @@ class TestFunctionsExist:
         assert callable(season_report)
 
 
+def _find_future_season_week() -> tuple:
+    """Find (season, week) with future games (no result) in the feature table."""
+    ft_path = "data/features/nfl/feature_table.parquet"
+    ft = pd.read_parquet(ft_path)
+    future = ft[ft["home_score"].isna() & ft["model_eligible"].fillna(False)]
+    if not future.empty:
+        row = future.iloc[0]
+        return int(row["season"]), int(row["week"])
+    pytest.skip("No future games in feature table")
+
+
 class TestV3OverlayColumns:
     """Regression test: predict-week --mode dry_run output includes v3 overlay."""
 
     def test_dry_run_has_overlay_columns(self):
         """Verify dry_run snapshot contains all v3 overlay columns."""
-        result = predict_week(season=2026, week=1, mode="dry_run")
-        assert "snapshot" in result, "predict_week must return a snapshot path"
+        from pathlib import Path
+        if not Path("data/features/nfl/feature_table.parquet").exists():
+            pytest.skip("Feature table not available")
+        season, week = _find_future_season_week()
+        result = predict_week(season=season, week=week, mode="dry_run")
+        assert "snapshot" in result, f"predict_week({season} w{week}) must return a snapshot path"
         snap_path = result["snapshot"]
         df = pd.read_csv(snap_path)
 
@@ -206,7 +222,11 @@ class TestV3OverlayColumns:
 
     def test_overlay_changes_prob_when_gate_and_adj_nonzero(self):
         """When gate is active AND adjustments are non-zero, prob must differ."""
-        result = predict_week(season=2026, week=1, mode="dry_run")
+        from pathlib import Path
+        if not Path("data/features/nfl/feature_table.parquet").exists():
+            pytest.skip("Feature table not available")
+        season, week = _find_future_season_week()
+        result = predict_week(season=season, week=week, mode="dry_run")
         df = pd.read_csv(result["snapshot"])
 
         gated_with_adj = df[
@@ -222,7 +242,11 @@ class TestV3OverlayColumns:
 
     def test_overlay_preserves_prob_when_gate_inactive(self):
         """When gate is inactive, final prob must equal base prob."""
-        result = predict_week(season=2026, week=1, mode="dry_run")
+        from pathlib import Path
+        if not Path("data/features/nfl/feature_table.parquet").exists():
+            pytest.skip("Feature table not available")
+        season, week = _find_future_season_week()
+        result = predict_week(season=season, week=week, mode="dry_run")
         df = pd.read_csv(result["snapshot"])
 
         ungated = df[df["overlay_gate_active"] == 0]

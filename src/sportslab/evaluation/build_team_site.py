@@ -15,7 +15,6 @@ Output: site/ directory
 from datetime import datetime, timezone
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 BASE = Path(__file__).resolve().parents[3]
@@ -510,6 +509,77 @@ td.neutral { color: var(--warning); }
   color: var(--accent-model); white-space: nowrap;
 }
 
+/* ── Mobile Bottom Nav ── */
+.bottom-nav { display: none; }
+@media (max-width: 760px) {
+  .bottom-nav {
+    display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: rgba(11, 16, 24, 0.95); backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border-subtle);
+    justify-content: space-around; align-items: center; height: 56px;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .bottom-nav a {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    color: var(--text-muted); font-size: 0.6rem; text-decoration: none;
+    padding: 4px 8px; border-radius: var(--radius-sm); transition: color var(--transition);
+    font-weight: 500; letter-spacing: 0.2px;
+  }
+  .bottom-nav a:hover, .bottom-nav a.active { color: var(--accent-model); }
+  .bottom-nav a .nav-icon { font-size: 1.2rem; line-height: 1; }
+  body { padding-bottom: 56px; }
+  main.container { padding-bottom: 16px; }
+}
+
+/* ── Schedule Filter Bar ── */
+.filter-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 16px; padding: 10px 14px;
+  background: var(--surface-card); border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+}
+.filter-bar label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.filter-select {
+  background: var(--surface-page); border: 1px solid var(--border-subtle);
+  color: var(--text-primary); padding: 4px 10px; border-radius: var(--radius-sm);
+  font-size: 0.78rem; font-family: var(--font-sans);
+}
+.filter-select:focus { outline: none; border-color: var(--accent-model); }
+.filter-btn {
+  background: var(--surface-page); border: 1px solid var(--border-subtle);
+  color: var(--text-secondary); padding: 4px 12px; border-radius: var(--radius-sm);
+  font-size: 0.72rem; cursor: pointer; transition: all var(--transition);
+  font-family: var(--font-sans); white-space: nowrap;
+}
+.filter-btn:hover { background: var(--surface-raised); color: var(--text-primary); }
+.filter-btn.active { background: rgba(124, 231, 211, 0.1); border-color: var(--accent-model); color: var(--accent-model); }
+
+/* ── Win Distribution ── */
+.win-dist { margin-bottom: 24px; }
+.win-dist-row {
+  display: grid; grid-template-columns: 50px 1fr 30px;
+  align-items: center; gap: 6px; margin-bottom: 3px;
+}
+.win-dist-label { font-size: 0.72rem; color: var(--text-muted); text-align: right; }
+.win-dist-track { height: 12px; background: var(--surface-page); border-radius: 4px; overflow: hidden; }
+.win-dist-fill { height: 100%; border-radius: 4px; }
+.win-dist-count { font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono); text-align: right; }
+
+/* ── Games to Watch ── */
+.gtw-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px; margin-bottom: 24px;
+}
+.gtw-card {
+  background: var(--surface-card); border: 1px solid var(--border-card);
+  border-radius: var(--radius-md); padding: 12px 14px;
+  font-size: 0.82rem; transition: background var(--transition);
+}
+.gtw-card:hover { background: var(--surface-hover); }
+.gtw-card-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px; }
+.gtw-card-teams { font-weight: 600; margin-bottom: 2px; }
+.gtw-card-detail { color: var(--text-secondary); font-size: 0.75rem; }
+
 /* ── Footer ── */
 .site-footer {
   text-align: center; color: var(--text-muted); font-size: 0.78rem;
@@ -527,6 +597,9 @@ td.neutral { color: var(--warning); }
   .team-hero-stats { gap: 16px; }
   .hero-stat-value { font-size: 1.4rem; }
   .header-nav a { font-size: 0.75rem; padding: 6px 8px; }
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .week-selector { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 6px; }
+  .gtw-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
   .summary-grid { grid-template-columns: 1fr; }
@@ -540,29 +613,30 @@ td.neutral { color: var(--warning); }
 JS = r"""// Sports ML Lab — Client-side interactivity
 
 document.addEventListener('DOMContentLoaded', function () {
-  // Week selector with URL query string
+
+  // ── Bottom nav active state ──
+  const currentPath = window.location.pathname;
+  document.querySelectorAll('.bottom-nav a').forEach(a => {
+    const href = a.getAttribute('href');
+    if (href === '/' && (currentPath === '/' || currentPath === '')) a.classList.add('active');
+    else if (href !== '/' && currentPath.startsWith(href)) a.classList.add('active');
+  });
+
+  // ── Week selector ──
   const weekBtns = document.querySelectorAll('.week-selector-btn');
   const weekBlocks = document.querySelectorAll('.week-block');
-
   function selectWeek(wk) {
     weekBtns.forEach(b => b.classList.remove('active'));
-    weekBtns.forEach(b => {
-      if (b.dataset.week === wk) b.classList.add('active');
-    });
-    weekBlocks.forEach(b => {
-      b.style.display = b.dataset.week === wk ? 'block' : 'none';
-    });
+    weekBtns.forEach(b => { if (b.dataset.week === wk) b.classList.add('active'); });
+    weekBlocks.forEach(b => { b.style.display = b.dataset.week === wk ? 'block' : 'none'; });
   }
-
-  // Read initial week from URL
   const urlParams = new URLSearchParams(window.location.search);
   const initialWeek = urlParams.get('week');
-  if (initialWeek && document.querySelector(`[data-week="${initialWeek}"]`)) {
+  if (initialWeek && document.querySelector('[data-week="' + initialWeek + '"]')) {
     selectWeek(initialWeek);
   } else if (weekBtns.length > 0) {
     selectWeek(weekBtns[0].dataset.week);
   }
-
   weekBtns.forEach(btn => {
     btn.addEventListener('click', function () {
       const wk = this.dataset.week;
@@ -573,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // Position group collapsible
+  // ── Position group collapsible ──
   document.querySelectorAll('.position-header').forEach(hdr => {
     hdr.addEventListener('click', function () {
       const body = this.nextElementSibling;
@@ -584,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // Team search
+  // ── Team search ──
   const searchInput = document.getElementById('team-search');
   if (searchInput) {
     searchInput.addEventListener('input', function () {
@@ -596,7 +670,45 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // Rel time
+  // ── Schedule filters ──
+  function applyFilters() {
+    const teamFilter = document.getElementById('filter-team');
+    const confFilter = document.getElementById('filter-conf');
+    const filterClose = document.getElementById('filter-close');
+    const filterPrime = document.getElementById('filter-prime');
+    const filterQB = document.getElementById('filter-qb');
+    const teamVal = teamFilter ? teamFilter.value : '';
+    const confVal = confFilter ? confFilter.value : '';
+    const closeOnly = filterClose ? filterClose.classList.contains('active') : false;
+    const primeOnly = filterPrime ? filterPrime.classList.contains('active') : false;
+    const qbOnly = filterQB ? filterQB.classList.contains('active') : false;
+
+    document.querySelectorAll('.matchup-card').forEach(card => {
+      let show = true;
+      const team = card.dataset.team1 + '|' + card.dataset.team2;
+      if (teamVal && !team.includes(teamVal)) show = false;
+      if (confVal && card.dataset.conf !== confVal) show = false;
+      if (closeOnly) {
+        const diff = parseFloat(card.dataset.probDiff);
+        if (isNaN(diff) || diff > 0.06) show = false;
+      }
+      if (primeOnly && card.dataset.isprime !== '1') show = false;
+      if (qbOnly && card.dataset.hasqbchange !== '1') show = false;
+      card.style.display = show ? '' : 'none';
+    });
+  }
+
+  document.querySelectorAll('.filter-select').forEach(sel => {
+    sel.addEventListener('change', applyFilters);
+  });
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      this.classList.toggle('active');
+      applyFilters();
+    });
+  });
+
+  // ── Rel time ──
   const timestamps = document.querySelectorAll('[data-relative]');
   timestamps.forEach(el => {
     const d = new Date(el.dataset.relative.replace(' ', 'T') + 'Z');
@@ -631,10 +743,14 @@ def pick_team(prob, home, away):
     return away, 1 - prob, False
 
 def team_tier(wins):
-    if wins >= 10: return "contender"
-    if wins >= 9: return "playoff-mix"
-    if wins >= 8: return "competitive"
-    if wins >= 7: return "long-shot"
+    if wins >= 10:
+        return "contender"
+    if wins >= 9:
+        return "playoff-mix"
+    if wins >= 8:
+        return "competitive"
+    if wins >= 7:
+        return "long-shot"
     return "underdog"
 
 def gen_id(g):
@@ -711,7 +827,8 @@ def team_schedule(preds, team):
 
 def _week_date_range(games):
     dates = games["gameday"].dropna()
-    if len(dates) == 0: return ""
+    if len(dates) == 0:
+        return ""
     start = dates.min().strftime("%b %d")
     end = dates.max().strftime("%b %d")
     return f"{start} – {end}"
@@ -829,10 +946,10 @@ def _render_header(active_nav=""):
         ("standings.html", "Standings"),
         ("model.html", "Model"),
     ]
-    links_html = "".join(
-        f'<a href="{href}"{" class=\"active\"" if label == active_nav else ""}>{label}</a>'
-        for href, label in nav_links
-    )
+    def _link_html(href, label):
+        a_class = ' class="active"' if label == active_nav else ""
+        return f'<a href="{href}"{a_class}>{label}</a>'
+    links_html = "".join(_link_html(href, label) for href, label in nav_links)
     return f"""<header class="site-header">
 <div class="container header-inner">
 <div class="header-left">
@@ -855,6 +972,18 @@ Not betting advice. Data is preseason; accuracy improves as weekly starters are 
 <p style="margin-top:6px">Generated {ts.strftime("%Y-%m-%d %H:%M UTC")}</p>
 </div>
 </footer>"""
+
+def _render_bottom_nav(active_nav=""):
+    items = [
+        ("/", "🏠", "Home"),
+        ("schedule.html", "📅", "Schedule"),
+        ("standings.html", "🏆", "Standings"),
+        ("model.html", "⚙", "Model"),
+    ]
+    def _bn_link(href, icon, label):
+        active = ' active' if (label == active_nav or (active_nav == "" and href == "/")) else ''
+        return f'<a href="{href}" class="bn-item{active}"><span class="nav-icon">{icon}</span>{label}</a>'
+    return '<nav class="bottom-nav">' + "".join(_bn_link(h, i, lb) for h, i, lb in items) + "</nav>"
 
 def _render_model_banner():
     return """<div class="model-status">
@@ -884,6 +1013,7 @@ def render_page(title, body_html, active_nav="", extra_head=""):
 {body_html}
 </main>
 {_render_footer()}
+{_render_bottom_nav(active_nav)}
 <script src="assets/app.js"></script>
 </body>
 </html>"""
@@ -1029,6 +1159,46 @@ Tiers: Contender (10+) · Playoff Mix (9–10) · Competitive (8–9) · Long Sh
 
 # ── Schedule Page ──
 
+def _games_to_watch(preds):
+    """Return HTML for a Games to Watch section highlighting interesting matchups."""
+    all_games = preds.copy()
+    all_games["prob_conf"] = abs(all_games["incumbent_home_win_prob"] - 0.5)
+    all_games["pick"], all_games["pick_prob"], _ = zip(
+        *all_games.apply(lambda r: pick_team(r["incumbent_home_win_prob"], r["home_team"], r["away_team"]), axis=1)
+    )
+
+    closest = all_games.nsmallest(3, "prob_conf")
+    most_confident = all_games.nlargest(3, "prob_conf")
+    qb_changed = all_games[all_games.get("caution_qb_change", "").astype(str).str.strip().isin(("1", "1.0"))].head(3)
+
+    def _card(label, team1, team2, detail, extra=""):
+        c1 = TEAM_COLORS.get(team1, "#999")
+        c2 = TEAM_COLORS.get(team2, "#999")
+        return f"""<div class="gtw-card"{extra}>
+<div class="gtw-card-label">{label}</div>
+<div class="gtw-card-teams"><span style="color:{c1};font-weight:600">{team1}</span> @ <span style="color:{c2};font-weight:600">{team2}</span></div>
+<div class="gtw-card-detail">{detail}</div>
+</div>"""
+
+    cards = ""
+    for _, g in closest.iterrows():
+        diff_pct = abs(g["incumbent_home_win_prob"] - 0.5) * 100
+        cards += _card("Closest Matchup", g["away_team"], g["home_team"],
+            f"Model split: {g['pick']} {g['pick_prob']:.0%} (gap: {diff_pct:.1f}pp)")
+    for _, g in most_confident.iterrows():
+        conf_pct = max(g["incumbent_home_win_prob"], 1 - g["incumbent_home_win_prob"]) * 100
+        cards += _card("High Confidence", g["away_team"], g["home_team"],
+            f"{g['pick']} {g['pick_prob']:.0%} confident (model: {conf_pct:.0f}%)")
+    for _, g in qb_changed.iterrows():
+        cards += _card("QB Uncertainty", g["away_team"], g["home_team"],
+            "QB change flagged — starter unsettled")
+
+    if not cards:
+        return ""
+
+    return f"""<h3 style="font-size:1rem;margin-bottom:10px;margin-top:4px">Games to Watch</h3>
+<div class="gtw-grid">{cards}</div>"""
+
 def render_schedule(preds):
     weeks = sorted(preds["week"].unique())
 
@@ -1037,21 +1207,40 @@ def render_schedule(preds):
         for wk in weeks
     )
 
+    teams = sorted(set(preds["home_team"].tolist() + preds["away_team"].tolist()))
+    team_opts = "".join(f'<option value="{t}">{TEAM_NAMES.get(t, t)}</option>' for t in teams)
+
+    filter_bar = f"""<div class="filter-bar">
+<label>Team</label>
+<select class="filter-select" id="filter-team">
+<option value="">All teams</option>
+{team_opts}
+</select>
+<label>Conf</label>
+<select class="filter-select" id="filter-conf">
+<option value="">Both</option>
+<option value="AFC">AFC</option>
+<option value="NFC">NFC</option>
+</select>
+<button class="filter-btn" id="filter-close">Close games</button>
+<button class="filter-btn" id="filter-prime">Prime time</button>
+<button class="filter-btn" id="filter-qb">QB change</button>
+</div>"""
+
     sections = []
     for wk in weeks:
         games = preds[preds["week"] == wk].sort_values("gameday")
         date_range = _week_date_range(games)
-        rows = []
+        cards = []
         for _, g in games.iterrows():
             away = _h(g["away_team"])
             home = _h(g["home_team"])
             prob = g["incumbent_home_win_prob"]
-            bucket = _h(g.get("confidence_bucket", ""))
             away_c = TEAM_COLORS.get(away, "#999")
             home_c = TEAM_COLORS.get(home, "#999")
 
             pick, pick_prob, is_home_fav = pick_team(prob, home, away)
-            prob_class = "prob-fav" if prob >= 0.55 else ("prob-even" if prob >= 0.45 else "prob-dog")
+            prob_color = "#4ade80" if prob >= 0.55 else ("#facc15" if prob >= 0.45 else "#f87171")
 
             loc_badge = ""
             if str(g.get("caution_neutral", "")).strip() in ("1", "1.0"):
@@ -1060,39 +1249,47 @@ def render_schedule(preds):
                 loc_badge = '<span class="badge badge-home">Home</span>'
 
             cautions = ""
+            is_qb_change = False
             if str(g.get("caution_qb_change", "")).strip() in ("1", "1.0"):
-                cautions += '<span class="caution-flag">QB change</span>'
+                cautions += '<span class="caution-flag">QB chg</span>'
+                is_qb_change = True
             if str(g.get("caution_early_season", "")).strip() in ("1", "1.0"):
                 cautions += '<span class="caution-flag">Early</span>'
 
             day_str = g["gameday"].strftime("%a %b %d") if pd.notna(g["gameday"]) else ""
+            prob_diff = f"{abs(prob-0.5):.3f}"
+            gameday_dow = g["gameday"].strftime("%a") if pd.notna(g["gameday"]) else ""
+            is_prime = "1" if gameday_dow in ("Thu", "Mon") else "0"
 
-            rows.append(f"""<tr>
-<td style="color:var(--text-muted);font-size:0.78rem">{day_str}</td>
-<td class="team-col"><a href="teams/{away}.html" style="color:{away_c};font-weight:600">{away}</a></td>
-<td class="team-col"><a href="teams/{home}.html" style="color:{home_c};font-weight:600">{home}</a></td>
-<td>{loc_badge}</td>
-<td class="prob-bar {prob_class}">{prob:.0%}</td>
-<td style="font-weight:600">Model pick: {pick} ({pick_prob:.0%})</td>
-<td style="font-size:0.75rem;color:var(--text-muted)">{bucket}</td>
-<td>{cautions}</td>
-</tr>""")
+            away_conf = CONFERENCE.get(away, "NFL")
+            home_conf = CONFERENCE.get(home, "NFL")
+            conf_label = away_conf if away_conf == home_conf else "X"
+            cards.append(f"""<div class="matchup-card" data-week="{wk}" data-team1="{away}" data-team2="{home}" data-prob-diff="{prob_diff}" data-isprime="{is_prime}" data-hasqbchange="{1 if is_qb_change else 0}" data-conf="{conf_label}">
+<div class="matchup-date">{day_str}</div>
+<div class="matchup-teams">
+<div class="matchup-team"><span class="matchup-colors" style="background:{away_c}"></span><a href="teams/{away}.html" style="color:var(--text-primary);font-weight:600">{away}</a></div>
+<div class="matchup-vs">@</div>
+<div class="matchup-team"><span class="matchup-colors" style="background:{home_c}"></span><a href="teams/{home}.html" style="color:var(--text-primary);font-weight:600">{home}</a></div>
+</div>
+<div class="matchup-prob"><span style="color:{prob_color};font-weight:600">{prob:.0%}</span> home win</div>
+<div class="matchup-pick">Model: {pick} ({pick_prob:.0%})</div>
+<div class="matchup-meta">{loc_badge} {cautions}</div>
+</div>""")
 
         sections.append(f"""<div class="week-block" data-week="{wk}">
 <h3 style="font-size:1rem;margin-bottom:8px">Week {wk} <span style="color:var(--text-muted);font-weight:400;font-size:0.82rem">— {date_range}</span></h3>
-<div class="table-wrap">
-<table>
-<thead><tr><th>Date</th><th>Away</th><th>Home</th><th>Loc</th><th>Home Win%</th><th>Model Pick</th><th>Confidence</th><th></th></tr></thead>
-<tbody>{"".join(rows)}</tbody>
-</table>
-</div>
+<div class="matchup-grid">{"".join(cards)}</div>
 </div>""")
+
+    gtw_html = _games_to_watch(preds)
 
     html = f"""<div class="section-header">
 <h2>2026 Season Schedule</h2>
 </div>
 {_render_model_banner()}
+{gtw_html}
 <div class="week-selector">{week_btns}</div>
+{filter_bar}
 <div class="week-container">{"".join(sections)}</div>"""
     return render_page("Schedule", html, "Schedule")
 
@@ -1101,8 +1298,10 @@ def render_schedule(preds):
 def render_standings(stats):
     rank_deltas = compute_rank_deltas(stats)
     def _delta_html(delta):
-        if delta > 0: return f'<span style="color:var(--positive);font-size:0.7rem">↑{delta}</span>'
-        if delta < 0: return f'<span style="color:var(--negative);font-size:0.7rem">↓{abs(delta)}</span>'
+        if delta > 0:
+            return f'<span style="color:var(--positive);font-size:0.7rem">↑{delta}</span>'
+        if delta < 0:
+            return f'<span style="color:var(--negative);font-size:0.7rem">↓{abs(delta)}</span>'
         return ""
 
     def _div_table(div_teams, div_name):
@@ -1137,8 +1336,10 @@ def render_standings(stats):
 
     rank_deltas = compute_rank_deltas(stats)
     def _delta_html(delta):
-        if delta > 0: return f'<span style="color:var(--positive);font-size:0.7rem">↑{delta}</span>'
-        if delta < 0: return f'<span style="color:var(--negative);font-size:0.7rem">↓{abs(delta)}</span>'
+        if delta > 0:
+            return f'<span style="color:var(--positive);font-size:0.7rem">↑{delta}</span>'
+        if delta < 0:
+            return f'<span style="color:var(--negative);font-size:0.7rem">↓{abs(delta)}</span>'
         return ""
 
     # League table (top 16)
@@ -1340,7 +1541,8 @@ def render_team_page(team, preds, rosters, stats, player_values=None, team_value
         team_dep = departures.get(team, pd.DataFrame())
 
         def _render_moves(rows, is_incoming):
-            if len(rows) == 0: return '<p style="color:var(--text-muted);font-style:italic;font-size:0.82rem">None</p>'
+            if len(rows) == 0:
+                return '<p style="color:var(--text-muted);font-style:italic;font-size:0.82rem">None</p>'
             items = ""
             for _, r in rows.iterrows():
                 pname = _h(r.get("player_name", "?"))
@@ -1392,7 +1594,8 @@ def render_team_page(team, preds, rosters, stats, player_values=None, team_value
         sections = []
         for pos, label in POSITION_GROUPS.items():
             group = team_rost[team_rost.get("position", "") == pos]
-            if len(group) == 0: continue
+            if len(group) == 0:
+                continue
             players = []
             for _, p in group.iterrows():
                 pname = _h(p.get("full_name", p.get("player_name", "?")))
@@ -1417,7 +1620,39 @@ def render_team_page(team, preds, rosters, stats, player_values=None, team_value
 {"".join(sections)}
 </div>"""
 
-    body_html = hero_html + outlook_html + strength_html + sched_html + moves_html + roster_html
+    # Win Distribution (from schedule)
+    buckets_ord = ["<30%", "30-40%", "40-50%", "50-60%", "60-70%", "70-80%", "80%+"]
+    def _bucket(prob):
+        if prob < 0.30:
+            return "<30%"
+        if prob < 0.40:
+            return "30-40%"
+        if prob < 0.50:
+            return "40-50%"
+        if prob < 0.60:
+            return "50-60%"
+        if prob < 0.70:
+            return "60-70%"
+        if prob < 0.80:
+            return "70-80%"
+        return "80%+"
+    binned = sched["team_prob"].apply(_bucket).value_counts()
+    bar_color_map = {"<30%": "var(--negative)", "30-40%": "var(--warning)", "40-50%": "var(--warning)", "50-60%": "var(--positive)", "60-70%": "var(--positive)", "70-80%": "#4ade80", "80%+": "#22c55e"}
+    dist_rows = "".join(
+        f"""<div class="win-dist-row">
+<span class="win-dist-label">{b}</span>
+<div class="win-dist-track"><div class="win-dist-fill" style="width:{(binned.get(b, 0) / 17) * 100:.0f}%;background:{bar_color_map.get(b, 'var(--text-muted)')}"></div></div>
+<span class="win-dist-count">{int(binned.get(b, 0))}</span>
+</div>"""
+        for b in buckets_ord
+    )
+    dist_html = f"""<div class="win-dist">
+<h3 style="font-size:0.9rem;margin-bottom:8px">Win Probability Distribution</h3>
+<p style="color:var(--text-muted);font-size:0.75rem;margin-bottom:8px">How {name}'s 17 game probabilities are distributed</p>
+{dist_rows}
+</div>"""
+
+    body_html = hero_html + outlook_html + dist_html + strength_html + sched_html + moves_html + roster_html
     return render_page(f"{team} — {name}", body_html, "Teams")
 
 # ── Model Page ──
@@ -1523,7 +1758,7 @@ def build_site():
     player_values, team_values, additions, departures = load_player_values()
     if player_values is not None:
         print(f"  {len(player_values)} players with value scores")
-        print(f"  Additions/departures computed for 32 teams")
+        print("  Additions/departures computed for 32 teams")
     else:
         print("  No player values found — skipping roster strength display")
 
@@ -1566,8 +1801,8 @@ def build_site():
     print(f"  {len(preds)} games indexed")
     print(f"  {n_players} players in roster database")
     print(f"  {n_files} total files")
-    print(f"\nTo test locally:  python -m http.server 8080 -d site")
-    print(f"Cloudflare Pages: python src/sportslab/evaluation/build_team_site.py")
+    print("\nTo test locally:  python -m http.server 8080 -d site")
+    print("Cloudflare Pages: python src/sportslab/evaluation/build_team_site.py")
 
 main = build_site
 

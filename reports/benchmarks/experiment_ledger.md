@@ -47,7 +47,8 @@
 | 21 | Injury Features | 2026-06-23 | rejected | 0.6406 | 0.6514 |
 | 22 | Optuna Joint Elo Search | 2026-06-23 | rejected | 0.6342 | 0.6318 |
 | 23 | QB Injury Flag | 2026-06-23 | rejected | 0.6464 | 0.6255 |
-| 24 | Glicko Rating System | 2026-06-23 | rejected | 0.6513 | 0.7013 |
+| 24 | Glicko Rating System | 2026-06-23 | rejected | 0.6513 | 0.7013 | *(bug found — formula fixed 2026-07-21)* |
+| 46 | Glicko Rating System (retest) | 2026-07-21 | rejected | 0.6415 | 0.6338 | *(fix: 0.7013→0.6338, still can't beat Elo)* |
 | 25 | QB Market Delta | 2026-06-23 | diagnostic | 0.6052 | 0.6090 |
 | 26 | Forward Feature Selection | 2026-06-23 | diagnostic | 0.6334 | 0.6314 |
 | 27 | Combined Features (qb_changed + mov_3) | 2026-06-23 | superseded | 0.6334 | 0.6262 |
@@ -111,7 +112,7 @@ The 28 rejected experiments fall into these categories:
 
 | Rejection Pattern | Count | Examples |
 |------------------|-------|----------|
-| Both val and holdout worse | 13 | Scheduling, weather, EPA, Glicko, AutoGluon, injury features, team stats, expressive models, home/away Elo, comprehensive efficiency, QB features, residual blending, preseason Elo Prior |
+| Both val and holdout worse | 13 | Scheduling, weather, EPA, Glicko *(retested 2026-07-21, still worse)*, AutoGluon, injury features, team stats, expressive models, home/away Elo, comprehensive efficiency, QB features, residual blending, preseason Elo Prior |
 | Val worse, holdout better (val rejects) | 5 | Team HFA, prior_win_pct, games_since_change, roof_enc, weather_missing |
 | Val better/neutral, holdout worse (overfit) | 5 | Isotonic, Optuna search, QB-adjusted Elo V0, gated QB-adjusted V1, expanded Elo spine |
 | No improvement over incumbent | 2 | Confidence calibration (tied), coach-season regression (val 0.0006 better, holdout 0.0001 worse) |
@@ -120,7 +121,8 @@ The 28 rejected experiments fall into these categories:
 **Key insight**: 13/29 (45%) of rejected experiments degraded BOTH val and holdout. Only 2/28 were close enough to warrant a second look (coach-season reg, confidence calibration). The incumbent is at a Pareto frontier — changing it almost always makes both metrics worse.
 
 ### Distinct Signal Categories with Evidence
-- **Strongly rejected** (≥0.005 worse on both): Glicko, AutoGluon, scheduling, weather, EPA, team stats, comprehensive efficiency, home/away Elo, injury features
+- **Strongly rejected** (≥0.005 worse on both): AutoGluon, scheduling, weather, EPA, team stats, comprehensive efficiency, home/away Elo, injury features
+- **Strongly rejected on holdout, close on val**: Glicko *(retested 2026-07-21: val Δ=+0.0039, hold Δ=+0.0080)*
 - **Close but rejected** (<0.005 on at least one axis): coach-season reg, confidence calibration, isotonic, roof_enc, expanded Elo spine, O/D Elo (val)
 - **Mixed signal** (improves one axis but degrades the other): QB-adjusted Elo V0/V1, gated QB-adjusted, prior_win_pct, games_since_change, team HFA
 

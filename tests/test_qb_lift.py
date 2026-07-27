@@ -191,10 +191,11 @@ def test_compute_qb_lift_features_from_full_pbp():
     This test requires the actual PBP parquet files to be present.
     """
     from pathlib import Path
-    pbp_dir = "data/interim/nfl"
-    ft_path = "data/features/nfl/feature_table.parquet"
-    if not Path(pbp_dir).exists() or not Path(ft_path).exists():
-        pytest.skip("PBP or feature table not available in CI")
+    pbp_dir = Path("data/interim/nfl")
+    ft_path = Path("data/features/nfl/feature_table.parquet")
+    pbp_files = list(pbp_dir.glob("pbp_*.parquet"))
+    if not pbp_files or not ft_path.exists():
+        pytest.skip("PBP parquet files or feature table not available in CI")
 
     ft = pd.read_parquet(ft_path)
     result = compute_qb_lift_features(ft)

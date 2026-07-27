@@ -17,31 +17,32 @@
 
 | Date | Away | Home | Predicted Winner | Home Win Prob | Bucket | Cautions | Market vs Model |
 |---|---|---|---|---|---|---|---|
-| 2026-09-09 | NE | SEA | SEA | 0.613 | 60-65 | — | +0.024 |
-| 2026-09-13 | CHI | CAR | CHI | 0.434 | 50-55 | — | +0.015 |
-| 2026-09-13 | TB | CIN | CIN | 0.525 | 50-55 | — | +0.112 |
-| 2026-09-13 | NO | DET | DET | 0.642 | 60-65 | — | +0.091 |
-| 2026-09-13 | BUF | HOU | HOU | 0.554 | 55-60 | — | -0.065 |
-| 2026-09-13 | BAL | IND | BAL | 0.461 | 50-55 | — | -0.092 |
-| 2026-09-13 | CLE | JAX | JAX | 0.688 | 65-70 | — | +0.045 |
-| 2026-09-13 | ATL | PIT | PIT | 0.565 | 55-60 | — | +0.044 |
-| 2026-09-13 | NYJ | TEN | TEN | 0.525 | 50-55 | — | +0.078 |
-| 2026-09-13 | ARI | LAC | LAC | 0.717 | 70-80 | — | +0.106 |
-| 2026-09-13 | MIA | LV | MIA | 0.405 | 50-55 | Model-market disagreement | +0.204 |
-| 2026-09-13 | GB | MIN | MIN | 0.595 | 55-60 | — | -0.112 |
-| 2026-09-13 | WAS | PHI | PHI | 0.656 | 65-70 | — | +0.019 |
-| 2026-09-13 | DAL | NYG | DAL | 0.451 | 50-55 | — | +0.006 |
-| 2026-09-14 | DEN | KC | DEN | 0.350 | 50-55 | Model-market disagreement | +0.233 |
+| 2026-09-09 | NE | SEA | SEA | 0.613 | 60-65 | Early season (W1-4) | +0.024 |
+| 2026-09-10 | SF | LA | SF | 0.494 | 50-55 | Neutral site; Early season (W1-4) | +0.129 |
+| 2026-09-13 | CHI | CAR | CHI | 0.438 | 50-55 | Early season (W1-4) | +0.011 |
+| 2026-09-13 | TB | CIN | CIN | 0.527 | 50-55 | Early season (W1-4) | +0.104 |
+| 2026-09-13 | NO | DET | DET | 0.642 | 60-65 | Early season (W1-4) | +0.092 |
+| 2026-09-13 | BUF | HOU | HOU | 0.555 | 55-60 | Early season (W1-4) | -0.077 |
+| 2026-09-13 | BAL | IND | BAL | 0.464 | 50-55 | Early season (W1-4) | -0.086 |
+| 2026-09-13 | CLE | JAX | JAX | 0.687 | 65-70 | Early season (W1-4) | +0.085 |
+| 2026-09-13 | ATL | PIT | PIT | 0.566 | 55-60 | Early season (W1-4) | +0.043 |
+| 2026-09-13 | NYJ | TEN | TEN | 0.527 | 50-55 | Early season (W1-4) | +0.056 |
+| 2026-09-13 | ARI | LAC | LAC | 0.715 | 70-80 | Early season (W1-4) | +0.113 |
+| 2026-09-13 | MIA | LV | MIA | 0.410 | 50-55 | Early season (W1-4); Model-market disagreement | +0.227 |
+| 2026-09-13 | GB | MIN | MIN | 0.595 | 55-60 | Early season (W1-4) | -0.099 |
+| 2026-09-13 | WAS | PHI | PHI | 0.655 | 65-70 | Early season (W1-4) | +0.003 |
+| 2026-09-13 | DAL | NYG | DAL | 0.455 | 50-55 | Early season (W1-4) | -0.027 |
+| 2026-09-14 | DEN | KC | DEN | 0.355 | 50-55 | Early season (W1-4); Model-market disagreement | +0.238 |
 
 ## Highest-Confidence Games
 
 | Game | Prob | Predicted | Bucket | Cautions |
 |------|------|-----------|--------|----------|
-| ARI @ LAC | 0.717 | LAC | 70-80 | — |
-| CLE @ JAX | 0.688 | JAX | 65-70 | — |
-| WAS @ PHI | 0.656 | PHI | 65-70 | — |
-| NO @ DET | 0.642 | DET | 60-65 | — |
-| NE @ SEA | 0.613 | SEA | 60-65 | — |
+| ARI @ LAC | 0.715 | LAC | 70-80 | Early season (W1-4) |
+| CLE @ JAX | 0.687 | JAX | 65-70 | Early season (W1-4) |
+| WAS @ PHI | 0.655 | PHI | 65-70 | Early season (W1-4) |
+| NO @ DET | 0.642 | DET | 60-65 | Early season (W1-4) |
+| NE @ SEA | 0.613 | SEA | 60-65 | Early season (W1-4) |
 
 ## Games with Cautions
 
@@ -49,14 +50,29 @@ Games flagged for one or more caution conditions.
 
 | Game | Prob | Predicted | Cautions |
 |------|------|-----------|----------|
-| MIA @ LV | 0.405 | MIA | Model-market disagreement |
-| DEN @ KC | 0.350 | DEN | Model-market disagreement |
+| NE @ SEA | 0.613 | SEA | Early season (W1-4) |
+| SF @ LA | 0.494 | SF | Neutral site; Early season (W1-4) |
+| CHI @ CAR | 0.438 | CHI | Early season (W1-4) |
+| TB @ CIN | 0.527 | CIN | Early season (W1-4) |
+| NO @ DET | 0.642 | DET | Early season (W1-4) |
+| BUF @ HOU | 0.555 | HOU | Early season (W1-4) |
+| BAL @ IND | 0.464 | BAL | Early season (W1-4) |
+| CLE @ JAX | 0.687 | JAX | Early season (W1-4) |
+| ATL @ PIT | 0.566 | PIT | Early season (W1-4) |
+| NYJ @ TEN | 0.527 | TEN | Early season (W1-4) |
+| ARI @ LAC | 0.715 | LAC | Early season (W1-4) |
+| MIA @ LV | 0.410 | MIA | Early season (W1-4); Model-market disagreement |
+| GB @ MIN | 0.595 | MIN | Early season (W1-4) |
+| WAS @ PHI | 0.655 | PHI | Early season (W1-4) |
+| DAL @ NYG | 0.455 | DAL | Early season (W1-4) |
+| DEN @ KC | 0.355 | DEN | Early season (W1-4); Model-market disagreement |
 
 ## QB Starters
 
 | Game | Home QB | Away QB | Source |
 |------|---------|---------|--------|
 | NE @ SEA | nan | nan | oracle |
+| SF @ LA | nan | nan | oracle |
 | CHI @ CAR | nan | nan | oracle |
 | TB @ CIN | nan | nan | oracle |
 | NO @ DET | nan | nan | oracle |

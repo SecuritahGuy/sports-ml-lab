@@ -173,7 +173,7 @@ A closed family may be reopened only with an explicit research note explaining w
 | comprehensive_efficiency.md | Team EPA + PFR + Snap | REJECTED |
 | expressive_models.md | HGB, GB, RF on curated features | REJECTED |
 | autogluon.md | AutoML on 47 features | REJECTED |
-| glicko_rating.md | Glicko rating system | REJECTED |
+| glicko_rating.md | Glicko rating system | REJECTED *(fix applied 2026-07-21, still can't beat Elo)* |
 | decayed_elo.md | Exponential momentum | REJECTED |
 | residual_blending.md | Elo + week/rest blend | REJECTED |
 | calibration_improvements.md | Era-split Platt, shrinkage | REJECTED |

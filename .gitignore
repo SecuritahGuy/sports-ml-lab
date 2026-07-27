@@ -72,3 +72,6 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Cloudflare Pages site build output
+site/

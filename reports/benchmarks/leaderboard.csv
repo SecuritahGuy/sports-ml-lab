@@ -39,3 +39,12 @@ roster_overlay_foldsafe,incumbent_plus_position_group_availability_overlays_375_
 qb_roster_interaction,frozen_qb_overlay_plus_position_group_interaction_overlays_198_variants,fold_safe_rolling_origin_3fold,0.6305,0.6195,0.7103,0.2155,0.6630,rejected,reports/experiments/qb_roster_interaction.md,2026-06-30
 expanded_elo_spine,frozen_qb_overlay_plus_expanded_elo_k_hfa_reg_decay_840_combos,fold_safe_rolling_origin_3fold,0.6299,0.6302,0.6996,0.2203,0.6449,rejected,reports/experiments/expanded_elo_spine.md,2026-06-30
 preseason_elo_prior,prior_elo_raw_vs_reg10_vs_reg50_vs_diff_vs_decay,fold_safe_rolling_origin_3fold,0.6342,0.6282,0.7030,0.2191,0.6594,rejected,reports/experiments/preseason_elo_prior.md,2026-07-06
+glicko_rating_retest,glicko1_formula_bug_fixed_432_configs,rolling_origin_3fold,0.6415,0.6338,0.6919,0.2217,0.6377,rejected,reports/experiments/glicko_rating.md,2026-07-21
+statspace_fdr_platt,elo_qbchanged_mov3_plus_fdr,rolling_origin_3fold,0.6203,0.6011,0.7329,0.2078,0.6703,promoted,reports/experiments/statspace_fdr.md,2026-07-26
+statspace_fdr_platt_overlay,elo_qbchanged_mov3_fdr_plus_qb_overlay,rolling_origin_3fold,0.6172,0.5972,0.7356,0.2065,0.6775,promoted,reports/experiments/statspace_fdr.md,2026-07-26
+statspace_doba,elo_qbchanged_mov3_fdr_plus_doba,rolling_origin_3fold,0.5853,0.5945,0.7458,0.2052,0.6449,promoted,reports/experiments/statspace_doba.md,2026-07-26
+statspace_chaos,elo_qbchanged_mov3_fdr_doba_plus_chaos,rolling_origin_3fold,0.5609,0.5548,0.7871,0.1886,0.6884,promoted,reports/experiments/statspace_chaos.md,2026-07-26
+statspace_coward_tax,elo_qbchanged_mov3_fdr_doba_chaos_plus_coward_tax_aggscore,rolling_origin_3fold,0.5620,0.5543,0.7876,0.1883,0.6884,rejected,reports/experiments/statspace_coward_tax.md,2026-07-26
+statspace_qb_lift,elo_qbchanged_mov3_fdr_doba_chaos_plus_qb_lift_index,rolling_origin_3fold,0.5612,0.5550,0.7870,0.1886,0.6884,rejected,reports/experiments/statspace_qb_lift.md,2026-07-26
+dynamic_elo,dynamic_bayesian_elo_platt_qb_overlay,rolling_origin_3fold,0.6342,0.6229,0.687,0.222,0.663,rejected,reports/experiments/dynamic_elo.md,2026-07-27
+elo_ensemble,10_elo_configs_ensemble_platt_qb_overlay,rolling_origin_3fold,0.6303,0.6265,0.685,0.223,0.660,rejected,reports/experiments/elo_ensemble.md,2026-07-27

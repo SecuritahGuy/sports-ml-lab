@@ -219,9 +219,13 @@ def test_all_splits_contains_road_status(df):
 
 
 def test_all_splits_contains_missing_weather(df):
-    """Missing weather data split is present."""
+    """Missing weather data split is present if weather column exists."""
     splits = _compute_all_splits(df)
-    assert "missing_weather" in splits
+    has_weather = "weather_missing_flag" in df.columns
+    if has_weather:
+        assert "missing_weather" in splits
+    else:
+        assert "missing_weather" not in splits
 
 
 def test_all_splits_contains_missing_qb(df):

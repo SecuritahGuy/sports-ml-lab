@@ -203,6 +203,9 @@ qb-roster-interaction:
 expanded-elo-spine:
 	sportslab expanded-elo-spine
 
+elo-ensemble:
+	sportslab elo-ensemble
+
 expanded-seasons:
 	sportslab expanded-seasons
 
