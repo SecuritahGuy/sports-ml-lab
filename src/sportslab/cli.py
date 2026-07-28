@@ -53,12 +53,18 @@ from sportslab.evaluation.monitoring_report import generate_monitoring_report
 from sportslab.evaluation.no_qb_baseline import run_no_qb_baseline
 from sportslab.evaluation.optuna_elo_search import run_optuna_search
 from sportslab.evaluation.optuna_feature_selection_experiment import run_optuna_feature_selection
+from sportslab.evaluation.pi_ratings_experiment import run_pi_ratings_experiment
 from sportslab.evaluation.predict_future import run_predict_future
 from sportslab.evaluation.predict_incumbent import generate_incumbent_predictions
 from sportslab.evaluation.prediction_audit import (
     build_prediction_index,
     publish_predictions,
     run_prediction_audit,
+)
+from sportslab.evaluation.prediction_vintages import (
+    compare_vintages,
+    list_vintages,
+    vintage_diff_report,
 )
 from sportslab.evaluation.preseason_elo_prior_experiment import run_preseason_elo_experiment
 from sportslab.evaluation.qb_ablation import run_qb_ablation
@@ -71,11 +77,6 @@ from sportslab.evaluation.qb_injury_experiment import run_qb_injury_experiment
 from sportslab.evaluation.qb_magnitude_experiment import run_qb_magnitude_experiment
 from sportslab.evaluation.qb_market_delta import run_qb_market_delta_experiment
 from sportslab.evaluation.qb_roster_interaction_experiment import run_qb_roster_interaction
-from sportslab.evaluation.prediction_vintages import (
-    compare_vintages,
-    list_vintages,
-    vintage_diff_report,
-)
 from sportslab.evaluation.ralph6_challengers import run_ralph6_experiment
 from sportslab.evaluation.regularized_logistic_experiment import (
     run_regularized_logistic_experiment,
@@ -631,7 +632,6 @@ def compare_vintages_cmd(season, week, mode, output):
             {c.replace("prob_", "") for c in comp.columns if c.startswith("prob_")}
         )
         for _, row in comp.iterrows():
-            gid = row.get("game_id", "?")
             away = row.get("away_team", "?")
             home = row.get("home_team", "?")
             probs = " | ".join(
@@ -1246,6 +1246,41 @@ def kalman_elo_cmd(ft_path, output):
     click.echo(f"Kalman Elo report generated: {report_path}")
 
 
+@cli.command(name="pi-ratings")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/pi_ratings.md",
+    help="Output report path",
+)
+def pi_ratings_cmd(ft_path, output):
+    """Run Pi-Ratings bounded experiment.
+
+    Tests coupled home/away ratings with power-law MOV and asymmetric
+    home/away K-factors. Grid: 144 combos (bounded).
+    """
+    report_path = run_pi_ratings_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"Pi-Ratings report generated: {report_path}")
+
+
+@cli.command(name="pi-ratings-compare")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/pi_ratings_champion_comparison.md",
+    help="Output report path",
+)
+def pi_ratings_compare_cmd(ft_path, output):
+    """Standalone champion comparison: v3.0.0 vs Pi-Ratings best."""
+    from sportslab.evaluation.pi_ratings_champion_comparison import run_champion_comparison
+    report_path = run_champion_comparison(ft_path=ft_path, report_path=output)
+    click.echo(f"Champion comparison report: {report_path}")
+
+
 @cli.command(name="elo-ensemble")
 @click.option(
     "--ft-path", default="data/features/nfl/feature_table.parquet",
@@ -1260,6 +1295,26 @@ def elo_ensemble_cmd(ft_path, output):
     from sportslab.evaluation.elo_ensemble_experiment import run_elo_ensemble
     report_path = run_elo_ensemble(ft_path=ft_path, report_path=output)
     click.echo(f"Elo ensemble report generated: {report_path}")
+
+
+@cli.command(name="pi-statspace")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/pi_statspace.md",
+    help="Output report path",
+)
+def pi_statspace_cmd(ft_path, output):
+    """Test StatSpace features (FDR, DOBA, Chaos) on Pi-Ratings base.
+
+    Compares 5 model configs: current champion, Pi-only, Pi+FDR,
+    Pi+FDR+DOBA, Pi+FDR+DOBA+Chaos.
+    """
+    from sportslab.evaluation.pi_statspace_experiment import run_pi_statspace_experiment
+    report_path = run_pi_statspace_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"Pi-StatSpace report generated: {report_path}")
 
 
 @cli.command(name="retest-rejected-features")

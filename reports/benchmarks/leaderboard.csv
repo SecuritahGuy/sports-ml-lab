@@ -48,3 +48,5 @@ statspace_coward_tax,elo_qbchanged_mov3_fdr_doba_chaos_plus_coward_tax_aggscore,
 statspace_qb_lift,elo_qbchanged_mov3_fdr_doba_chaos_plus_qb_lift_index,rolling_origin_3fold,0.5612,0.5550,0.7870,0.1886,0.6884,rejected,reports/experiments/statspace_qb_lift.md,2026-07-26
 dynamic_elo,dynamic_bayesian_elo_platt_qb_overlay,rolling_origin_3fold,0.6342,0.6229,0.687,0.222,0.663,rejected,reports/experiments/dynamic_elo.md,2026-07-27
 elo_ensemble,10_elo_configs_ensemble_platt_qb_overlay,rolling_origin_3fold,0.6303,0.6265,0.685,0.223,0.660,rejected,reports/experiments/elo_ensemble.md,2026-07-27
+pi_ratings_v4,pi_ratings_alpha05_basek28_hkratio125_hfa30_reg0_platt_qb_overlay,standalone_champion_comparison,0.6260,0.5918,,,,promoted,reports/experiments/pi_ratings_champion_comparison.md,2026-07-28
+pi_statspace_v5,pi_ratings_alpha05_basek28_hkratio125_hfa30_reg0_fdr_doba_chaos_platt_qb_overlay,rolling_origin_3fold,0.5557,0.5532,0.7874,0.1886,0.6957,promoted,reports/experiments/pi_statspace.md,2026-07-28

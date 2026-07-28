@@ -1,6 +1,6 @@
-# Production Freeze Checklist — v3.0.0
+# Production Freeze Checklist — v5.0.0
 
-*Frozen: 2026-07-06*
+*Frozen: 2026-07-28*
 
 ---
 
@@ -8,18 +8,15 @@
 
 | Attribute | Value |
 |-----------|-------|
-| Model version | v3.0.0 |
-| Model label | Frozen QB Overlay |
-| Feature set | `elo_prob` + `home_qb_changed` + `away_qb_changed` + `home_rolling_mov_3` + `away_rolling_mov_3` |
-| Calibration | Platt (logistic on Elo prob + features) |
-| Holdout LL | 0.6200 |
-| Validation LL | 0.6305 (rolling-origin 3-fold) |
-| Holdout Brier | 0.2157 |
-| Holdout AUC | 0.7098 |
-| Holdout accuracy | 0.6630 |
-| Holdout ECE | 0.0628 |
-| Elo params | K=36, HFA=40, preseason_reg=0.1, decay_hl=32 |
-| QB overlay params | changed OR starts<17, cap=40, gamma=1.0 |
+| Model version | v5.0.0 |
+| Model label | Pi-StatSpace (Pi-Ratings + FDR + DOBA + Chaos) |
+| Feature set | `pi_prob` + `home_qb_changed` + `away_qb_changed` + `home_rolling_mov_3` + `away_rolling_mov_3` + `home_fdr_fraud_detector_rating` + `away_fdr_fraud_detector_rating` + `home_doba_doba_score` + `away_doba_doba_score` + `home_chaos_chaos_rate` + `away_chaos_chaos_rate` |
+| Calibration | Platt (logistic on pi_prob + StatSpace + features) |
+| Holdout LL | **0.5532** |
+| Validation LL | 0.5557 (rolling-origin 3-fold) |
+| Pi-Ratings params | α=0.5, base_k=28, hk_ratio=1.25, HFA=30, reg=0.0 |
+| StatSpace features | FDR + DOBA + Chaos Rate (team-season PBP composites) |
+| **Δ vs v4.0.0** | val=−0.0703, hold=−0.0386 |
 
 ---
 
@@ -59,6 +56,7 @@
 | Season report | `sportslab season-report --season <Y>` | After season ends |
 | Prediction audit | `sportslab prediction-audit --season <Y> --mode live` | After grading |
 | Model trust | `sportslab model-trust` | Weekly (after grading) |
+| Pi-StatSpace verify | `sportslab pi-statspace` | After feature table rebuild |
 | Data audit | `sportslab data-audit` | Before each prediction cycle |
 
 ---
@@ -83,7 +81,7 @@
 
 | Check | How to Run | Expected |
 |-------|-----------|----------|
-| Full test suite | `python -m pytest tests/` | 989+ passed, 0 failures |
+| Full test suite | `python -m pytest tests/` | 1127+ passed, 0 failures |
 | Lint | `ruff check src/ tests/` | All checks passed |
 | Data audit | `sportslab data-audit` | 0 issues (or feature table age warning) |
 | Artifact audit | `sportslab audit-artifacts` | All checks OK |
@@ -100,9 +98,10 @@
 | Retractable/open roof | n=32, Cal ECE=0.2141 | Low (tiny sample) |
 | QB-change games | LL gap vs market 0.1647 in earlier testing | Medium |
 | Missing weather | LL=0.6497 vs 0.6254 with data | Low |
-| Market gap | Market closes at 0.6090, incumbent 0.6200 | Informational |
+| Market gap | Market closes at 0.6090, incumbent now 0.5532 | Informational (beaten by 0.0558) |
 | QB source oracle bias | Backtest uses final actual starters | Documented (live mode blocks) |
 | Small training set | ~1,000 games (2021-2024) | Structural |
+| PBP dependency | FDR/DOBA/Chaos require nflverse PBP (~2-3 min load) | Operational |
 
 ---
 
@@ -121,10 +120,10 @@ If a weekly prediction must be rolled back:
 
 ## What Should NOT Be Changed During Weekly Operation
 
-- Model version (v3.0.0)
-- Feature set (5 features listed above)
-- Elo parameters (K=36, HFA=40, reg=0.1, decay=32)
-- QB overlay parameters (cap=40, gamma=1.0, gate=changed OR starts<17)
+- Model version (v5.0.0)
+- Feature set (5 features + 6 StatSpace columns listed above)
+- Pi-Ratings parameters (α=0.5, base_k=28, hk_ratio=1.25, HFA=30, reg=0.0)
+- StatSpace composite functions (FDR, DOBA, Chaos)
 - Platt calibration method
 - Promotion policy
 - Data policy (seasons, market, oracle QB)

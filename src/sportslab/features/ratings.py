@@ -242,6 +242,133 @@ def compute_od_elo_features(
     return out
 
 
+def compute_pi_ratings_features(
+    df: pd.DataFrame,
+    base_k: float = DEFAULT_K,
+    home_advantage: float = 0.0,
+    default_elo: float = DEFAULT_ELO,
+    preseason_regression: float = 0.0,
+    alpha: float = 1.0,
+    hk_ratio: float = 1.0,
+    mov_cap: float | None = None,
+    decay_half_life: float | None = None,
+) -> pd.DataFrame:
+    """Pi-Ratings: coupled home/away rating with nonlinear score-error updates.
+
+    Each team has a single pi rating. Two innovations vs standard Elo:
+      1. Power-law MOV:  mov = |margin|^alpha  (alpha != 1 means nonlinear)
+      2. Asymmetric K:   k_home = base_k * hk_ratio,
+                         k_away = base_k * (2 - hk_ratio)
+                         (hk_ratio != 1 creates home/away coupling)
+
+    When alpha=1 and hk_ratio=1, this reduces to standard capped_linear Elo.
+
+    Args:
+        df: Schedule DataFrame with season, week, gameday, home_team, away_team,
+            home_score, away_score, home_win.
+        base_k: Base K-factor.
+        home_advantage: Home-field advantage in Elo points.
+        default_elo: Starting Elo for new teams.
+        preseason_regression: Fraction of regression toward default_elo each
+            offseason. Applied to all teams.
+        alpha: Power-law exponent on |margin|. alpha=1 is linear,
+            alpha<1 compresses blowouts, alpha>1 amplifies them.
+        hk_ratio: Home K / base_k ratio. hk_ratio=1 means symmetric updates.
+            hk_ratio>1 means home learns faster than away.
+        mov_cap: Maximum MOV multiplier (None = no cap). Applied after power-law.
+        decay_half_life: Half-life in games for exponential decay toward
+            default_elo.
+
+    Returns:
+        DataFrame with columns: home_pi_pre, away_pi_pre, pi_diff, pi_prob,
+        pi_mov_mult, pi_home_k, pi_away_k.
+    """
+    out = df.copy().sort_values(["season", "week", "gameday"]).reset_index(drop=True)
+    ratings: dict[str, float] = {}
+    prev_season: int | None = None
+
+    if decay_half_life is not None and decay_half_life > 0:
+        decay_factor = 2.0 ** (-1.0 / decay_half_life)
+    else:
+        decay_factor = None
+
+    # Compute K for home and away
+    k_home = base_k * hk_ratio
+    k_away = base_k * (2.0 - hk_ratio)
+
+    home_pre: list[float] = []
+    away_pre: list[float] = []
+    pi_diff: list[float] = []
+    pi_prob: list[float] = []
+    pi_mov: list[float] = []
+    pi_k_h: list[float] = []
+    pi_k_a: list[float] = []
+
+    for _, row in out.iterrows():
+        home: str = row["home_team"]
+        away: str = row["away_team"]
+        season: int = row["season"]
+
+        # Preseason regression at season boundary
+        if prev_season is not None and season > prev_season and preseason_regression > 0:
+            for team in list(ratings.keys()):
+                r = ratings[team]
+                ratings[team] = default_elo + (1.0 - preseason_regression) * (r - default_elo)
+        prev_season = season
+
+        h_r = ratings.get(home, default_elo)
+        a_r = ratings.get(away, default_elo)
+
+        home_pre.append(h_r)
+        away_pre.append(a_r)
+        pi_diff.append(h_r - a_r)
+        pi_prob.append(_effective_expected(h_r, a_r, hfa=home_advantage))
+
+        # Compute power-law MOV multiplier
+        hs = float(row.get("home_score", 0))
+        as_ = float(row.get("away_score", 0))
+        margin = abs(hs - as_)
+        if margin < 1:
+            mov = 1.0
+        else:
+            mov = margin ** alpha
+        if mov_cap is not None:
+            mov = min(mov, mov_cap)
+        pi_mov.append(mov)
+        pi_k_h.append(k_home)
+        pi_k_a.append(k_away)
+
+        # Update
+        home_win = row["home_win"]
+        if pd.isna(home_win):
+            actual = 0.5
+        else:
+            actual = float(home_win)
+        expected = _effective_expected(h_r, a_r, hfa=home_advantage)
+        error = actual - expected
+
+        home_update = k_home * error * mov
+        away_update = k_away * error * mov
+
+        ratings[home] = h_r + home_update
+        ratings[away] = a_r - away_update
+
+        # Decay toward mean
+        if decay_factor is not None:
+            ratings[home] = default_elo + (ratings[home] - default_elo) * decay_factor
+            ratings[away] = default_elo + (ratings[away] - default_elo) * decay_factor
+
+    out["home_pi_pre"] = home_pre
+    out["away_pi_pre"] = away_pre
+    out["pi_diff"] = pi_diff
+    out["pi_prob"] = pi_prob
+    out["pi_mov_mult"] = pi_mov
+    out["pi_home_k"] = pi_k_h
+    out["pi_away_k"] = pi_k_a
+
+    return out
+
+
 def compute_elo_features(
     df: pd.DataFrame,
     k_factor: float = DEFAULT_K,

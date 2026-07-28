@@ -1,35 +1,74 @@
 # NFL Research Incumbent
 
-*Last updated: 2026-07-26*
+*Last updated: 2026-07-28*
 
-**Short name:** Standard Elo + qb_changed + rolling_mov_3 + FDR + DOBA + Chaos Rate + Platt
+## Overall Champion (Pi-Ratings + StatSpace PBP Composites)
 
-## Football-Only Research Incumbent
+**Short name:** Pi-Ratings + rolling_mov_3 + qb_changed + FDR + DOBA + Chaos Rate + Platt
 
-**Model:** Standard Elo (K=36, HFA=40, reg=0.1, decay=32, qb_bonus=0.2) + rolling_mov_3 + qb_changed + StatSpace FDR (Fraud Detector Rating) + StatSpace DOBA (sustainable offensive efficiency) + StatSpace Chaos Rate (defensive disruption composite) + Platt calibration
+**Model:** Pi-Ratings (α=0.5 power-law MOV, base_k=28, hk_ratio=1.25, HFA=30, reg=0.0) + rolling_mov_3 + qb_changed + StatSpace FDR (Fraud Detector Rating) + StatSpace DOBA (sustainable offensive efficiency) + StatSpace Chaos Rate (defensive disruption composite) + Platt calibration
 
-*FDR is a team-season composite blending record strength, underlying quality (EPA, success rate, Elo), luck gap, close-game luck, turnover luck, and schedule suspicion. DOBA is a team-season composite blending offensive EPA/play, success rate, early-down efficiency, third/fourth-down efficiency, explosive rate, red zone efficiency, negative play rate, turnover rate, and dependency penalty. Chaos Rate is a defensive disruption composite blending defensive EPA/play allowed, success rate allowed, negative EPA forced rate, sack rate, turnover forced rate, explosive rate allowed, third/fourth-down stop rate, and penalty first-down rate allowed. Together they capture overall team quality, offensive efficiency, and defensive disruption.*
+Pi-Ratings is a coupled home/away rating system with power-law MOV (`|margin|^α` where α=0.5 compresses blowouts via square root) and asymmetric home/away K (hk_ratio=1.25 gives home teams faster updates). When α=1.0 and hk_ratio=1.0, this reduces to standard capped_linear Elo.
+
+*FDR, DOBA, and Chaos Rate are team-season PBP composites capturing overall team quality, offensive efficiency, and defensive disruption. See `reports/experiments/pi_statspace.md` for details.*
 
 | Attribute | Value |
 |-----------|-------|
-| **Model** | Standard Elo + QB-change season regression + Platt + `home_qb_changed` + `away_qb_changed` + `home_rolling_mov_3` + `away_rolling_mov_3` + `home_fdr_fraud_detector_rating` + `away_fdr_fraud_detector_rating` + `home_doba_doba_score` + `away_doba_doba_score` + `home_chaos_rate` + `away_chaos_rate` |
-| **K-factor** | 36 |
-| **HFA** | 40 |
-| **Preseason regression** | 0.1 (base) + 0.2 for teams with QB change |
-| **Elo MOV multiplier** | None (standard point-differential) |
-| **Decay half-life** | 32 games |
-| **Base features** | `home_qb_changed`, `away_qb_changed`, `home_rolling_mov_3`, `away_rolling_mov_3`, FDR, DOBA, Chaos Rate |
-| **FDR data source** | nflverse PBP (nflreadpy) + schedule results + Elo ratings |
-| **DOBA data source** | nflverse PBP (nflreadpy) |
-| **Chaos Rate data source** | nflverse PBP (nflreadpy) |
-| **Selection method** | Fold-safe rolling-origin 3-fold validation (Platt fit per fold) |
-| **Avg validation log loss** | **0.5609** |
-| **2025 holdout log loss** | **0.5548** |
+| **Avg validation log loss** | **0.5557** |
+| **2025 holdout log loss** | **0.5532** |
 | **2025 holdout Brier** | 0.1886 |
-| **2025 holdout AUC** | 0.7871 |
-| **2025 holdout accuracy** | 0.6884 |
-| **Report** | `reports/experiments/statspace_chaos.md` |
-| **Selection date** | 2026-07-26 |
+| **2025 holdout AUC** | 0.7874 |
+| **Δvs old champion** | val=−0.0053, hold=−0.0016 |
+| **Selection date** | 2026-07-28 |
+| **Report** | `reports/experiments/pi_statspace.md` |
+
+## Football-Only Champion (Pi-Ratings v4.0.0)
+
+**Short name:** Pi-Ratings + qb_changed + rolling_mov_3 + QB overlay + Platt
+
+**Model:** Pi-Ratings (α=0.5 power-law MOV, base_k=28, hk_ratio=1.25, HFA=30, reg=0.0) + Platt(`home_qb_changed`, `away_qb_changed`, `home_rolling_mov_3`, `away_rolling_mov_3`) + frozen QB overlay (gate: changed OR starts<17, cap=40, gamma=1.0)
+
+Pi-Ratings is a coupled home/away rating system with two innovations vs standard Elo:
+1. Power-law MOV: `mov = |margin|^alpha` where α=0.5 compresses blowouts via square root
+2. Asymmetric K: `k_home = base_k × hk_ratio`, `k_away = base_k × (2 − hk_ratio)` where hk_ratio=1.25 gives home teams faster updates
+
+When α=1.0 and hk_ratio=1.0, this reduces to standard capped_linear Elo.
+
+| Attribute | Value |
+|-----------|-------|
+| **α (power-law MOV)** | 0.5 |
+| **base_k** | 28 |
+| **hk_ratio** | 1.25 |
+| **HFA** | 30 |
+| **Preseason regression** | 0.0 |
+| **Features** | `home_qb_changed`, `away_qb_changed`, `home_rolling_mov_3`, `away_rolling_mov_3` |
+| **QB overlay** | Gate: changed OR starts<17, cap=40, gamma=1.0 |
+| **Calibration** | Platt per fold (logistic fit on pi_prob + features) |
+| **Selection method** | Standalone champion comparison vs v3.0.0 in same pipeline |
+| **Avg validation log loss** | **0.6260** |
+| **2025 holdout log loss** | **0.5918** |
+| **Δ vs v3.0.0** | val=−0.0046, hold=−0.0022 |
+| **Selection date** | 2026-07-28 |
+| **Report** | `reports/experiments/pi_ratings_champion_comparison.md` |
+
+**Note:** StatSpace composites have been tested on the Pi-Ratings base (see `reports/experiments/pi_statspace.md`). They improve Pi-Ratings by the same pattern as standard Elo — the composites are feature-orthogonal to the rating system.
+
+## Superseded Models (Clean Promotions)
+
+| Model | Challenge | Holdout LL at Promotion | Beat |
+|-------|-----------|------------------------|------|
+| **Pi-Ratings + FDR + DOBA + Chaos (overall champion)** | 0.5557 val, **0.5532 holdout** | **0.5532** | Standard Elo+FDR+DOBA+Chaos 0.5548 |
+| **Standard Elo + qb_changed + mov3 + FDR + DOBA + Chaos** | 0.5609 val, **0.5548 holdout** | **0.5548** | FDR + DOBA 0.5945 |
+| Standard Elo + qb_changed + mov3 + FDR + DOBA | 0.5853 val, 0.5945 holdout | **0.5945** | FDR + QB overlay 0.5972 |
+| Standard Elo + qb_changed + mov3 + FDR | 0.6203 val, 0.6011 holdout | **0.6011** | Frozen QB overlay 0.6228 |
+| Frozen QB overlay v3.0.0 | 0.6317 val, 0.6228 holdout | **0.6228** | Pi-Ratings v4.0.0 (below) |
+| **Pi-Ratings v4.0.0 (football-only champion)** | 0.6260 val, **0.5918 holdout** | **0.5918** | Frozen QB overlay 0.6228 |
+| Standard Elo + qb_changed + mov3 + Platt | 0.6334 val, 0.6262 holdout | **0.6262** | Season reg Elo 0.6285 |
+| Season reg Elo + Platt | 0.6315 val, 0.6285 holdout | **0.6285** | Decayed Elo 0.6298 |
+| Decayed Elo (K=36) + Platt | 0.6321 val, 0.6298 holdout | **0.6298** | MOV Elo 0.6373 |
+| MOV Elo (K=36) + Platt | 0.6363 val, 0.6373 holdout | **0.6373** | Rolling-origin Elo 0.6395 |
+| Rolling-origin Elo (K=40, reg=0.25) + Platt | 0.6363 val, 0.6395 holdout | **0.6395** | Tuned Elo 0.6616 |
+| Original tuned Elo (K=32, HFA=25) | 0.65 val, 0.6616 holdout | **0.6616** | First promoted |
 
 ## Held-Out-Informed Diagnostics
 
@@ -39,30 +78,6 @@
 | Market (no-vig closing moneyline) | 0.6052 | **0.6090** | Diagnostic only — near-kickoff timing |
 | Spread→prob | 0.6076 | 0.6092 | Diagnostic only |
 | Separate O/D Elo (k_off=52, k_def=20) + Platt | 0.6376 | 0.6258 | Holdout-informed parameter selection |
-
-## Holdout-Informed Diagnostics
-
-These models used 2025 holdout performance for parameter selection and are NOT clean football-only benchmarks. They are diagnostic references for the improvement ceiling.
-
-| Model | Validation LL | Holdout LL | Notes |
-|-------|--------------|------------|-------|
-| Separate O/D Elo (k_off=52, k_def=20) + Platt | 0.6376 | **0.6258** | k_off/k_def selected using holdout — not a clean promotion |
-| Standard Elo + Platt (incumbent) | 0.6368 | 0.6285 | Clean; previous incumbent |
-
-## Superseded Models (Clean Promotions)
-
-| Model | Challenge | Holdout LL at Promotion | Beat |
-|-------|-----------|------------------------|------|
-| **Standard Elo + qb_changed + mov3 + FDR + DOBA + Chaos (current)** | 0.5853 val, **0.5548 holdout** | **0.5548** | FDR + DOBA 0.5945 |
-| Standard Elo + qb_changed + mov3 + FDR + DOBA | 0.5853 val, 0.5945 holdout | **0.5945** | FDR + QB overlay 0.5972 |
-| Standard Elo + qb_changed + mov3 + FDR | 0.6203 val, 0.6011 holdout | **0.6011** | Frozen QB overlay 0.6228 |
-| Frozen QB overlay v3.0.0 | 0.6317 val, 0.6228 holdout | **0.6228** | Qb_changed + mov3 0.6262 |
-| Standard Elo + qb_changed + mov3 + Platt | 0.6334 val, 0.6262 holdout | **0.6262** | Season reg Elo 0.6285 |
-| Season reg Elo + Platt | 0.6315 val, 0.6285 holdout | **0.6285** | Decayed Elo 0.6298 |
-| Decayed Elo (K=36) + Platt | 0.6321 val, 0.6298 holdout | **0.6298** | MOV Elo 0.6373 |
-| MOV Elo (K=36) + Platt | 0.6363 val, 0.6373 holdout | **0.6373** | Rolling-origin Elo 0.6395 |
-| Rolling-origin Elo (K=40, reg=0.25) + Platt | 0.6363 val, 0.6395 holdout | **0.6395** | Tuned Elo 0.6616 |
-| Original tuned Elo (K=32, HFA=25) | 0.65 val, 0.6616 holdout | **0.6616** | First promoted |
 
 ## Defeated Challengers
 
@@ -95,7 +110,7 @@ substantially outperform market odds.
 
 | Model | Holdout LL |
 |-------|-----------|
-| **Football-only incumbent (Elo + qb_changed + mov3 + FDR + DOBA + Chaos + Platt)** | **0.5548** |
+| **Overall champion (Standard Elo + FDR + DOBA + Chaos + Platt)** | **0.5548** |
 | Market (no-vig) | 0.6090 |
 | Spread→prob | 0.6092 |
 | Elo + Market (logit) | 0.6119 |

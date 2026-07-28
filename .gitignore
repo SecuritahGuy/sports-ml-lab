@@ -73,5 +73,12 @@ venv/
 .DS_Store
 Thumbs.db
 
+# AutoML
+AutogluonModels/
+
 # Cloudflare Pages site build output
 site/
+
+# Generated build artifacts
+reports/figures/
+reports/team_profiles.csv

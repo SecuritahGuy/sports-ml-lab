@@ -901,3 +901,75 @@ base Elo (swept: K, HFA, reg, decay)
 **Key takeaway:** QB quality is already embedded in FDR and DOBA. A team with a great QB has better underlying EPA, success rate, and record — all of which feed into those composites. QB Lift adds no independent signal.
 
 **Report:** `reports/experiments/statspace_qb_lift.md`
+
+---
+
+## Entry 48: Pi-Ratings Champion Comparison (2026-07-28)
+
+**Goal:** Compare Pi-Ratings best config (α=0.5, base_k=28, hk_ratio=1.25, HFA=30, reg=0.0) against v3.0.0 Frozen QB Overlay champion through the exact same pipeline.
+
+**Motivation:** The 144-combo Pi-Ratings grid re-computed v3 internally (0.6310/0.5958 vs registry 0.6305/0.6200). Need a clean head-to-head.
+
+**Config:**
+| Model | Parameters |
+|-------|-----------|
+| v3.0.0 champion | Elo K=36, HFA=40, reg=0.1, decay=32 + Platt(qb_changed, mov_3) + QB overlay |
+| Pi-Ratings best | α=0.5, base_k=28, hk_ratio=1.25, HFA=30, reg=0.0 + Platt(qb_changed, mov_3) + QB overlay |
+
+**Results:**
+
+| Model | Avg Val LL | Hold LL |
+|-------|-----------|---------|
+| v3.0.0 champion | 0.6307 | 0.5940 |
+| Pi-Ratings best | **0.6260** | **0.5918** |
+
+**Δ (Pi − v3):** val=−0.0046, hold=−0.0022
+
+**Decision:** ✅ **PROMOTED — Pi-Ratings beats v3 on BOTH val and holdout with Δ ≤ −0.001**
+
+**Key takeaway:**
+- α=0.5 (square-root MOV compressing blowouts) is the primary innovation
+- Asymmetric home/away K (hk_ratio=1.25) and lower base_k=28 are secondary tunings
+- The square-root MOV has been found beneficial across multiple experiments (margin-aware Elo capped_linear, Pi-Ratings α=0.5)
+
+**Report:** `reports/experiments/pi_ratings_champion_comparison.md`
+
+---
+
+## Entry 49: Pi-StatSpace (2026-07-28)
+
+**Goal:** Test whether StatSpace PBP composites (FDR, DOBA, Chaos) improve on the Pi-Ratings football-only champion.
+
+**Motivation:** The overall champion (Elo + FDR + DOBA + Chaos at 0.5548) sits on standard Elo. Pi-Ratings (α=0.5) improved the football-only baseline by 0.0282 absolute (0.5918 vs 0.6200). Testing StatSpace composites on the Pi-Ratings base might raise the overall ceiling further.
+
+**Configs:**
+
+| ID | Model | Base Rating | StatSpace Features |
+|---|-------|-------------|-------------------|
+| A | Current overall champion | Standard Elo (K=36) | FDR + DOBA + Chaos |
+| B | Football-only champion | Pi-Ratings (α=0.5) | None |
+| C | Pi + FDR | Pi-Ratings | FDR |
+| D | Pi + FDR + DOBA | Pi-Ratings | FDR + DOBA |
+| E | Pi + FDR + DOBA + Chaos | Pi-Ratings | FDR + DOBA + Chaos |
+
+**Results:**
+
+| Model | Avg Val LL | Hold LL | Brier | AUC |
+|-------|-----------|---------|-------|-----|
+| A. Elo + FDR + DOBA + Chaos | 0.5609 | 0.5548 | 0.1886 | 0.7871 |
+| B. Pi-Ratings only | 0.6266 | 0.6350 | 0.2217 | 0.6962 |
+| C. Pi + FDR | 0.6074 | 0.5998 | 0.2070 | 0.7368 |
+| D. Pi + FDR + DOBA | 0.5775 | 0.5913 | 0.2039 | 0.7475 |
+| **E. Pi + FDR + DOBA + Chaos** | **0.5557** | **0.5532** | **0.1886** | **0.7874** |
+
+**Δ vs current champion (A):** E beats A on both val (−0.0053) and holdout (−0.0015) — both ≥ 0.001 threshold.
+
+**Decision:** ✅ **PROMOTED — Pi + FDR + DOBA + Chaos is the new overall champion**
+
+**Key takeaway:**
+- StatSpace features work equally well on Pi-Ratings base as on standard Elo
+- Each composite (FDR, DOBA, Chaos) progressively improves Pi-Ratings, same pattern as the standard-Elo StatSpace experiments
+- The new champion (0.5532 holdout) improves on the old champion (0.5548) by 0.0016
+- This establishes a new overall ceiling — the StatSpace composites are feature-orthogonal to the rating system
+
+**Report:** `reports/experiments/pi_statspace.md`

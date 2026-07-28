@@ -2600,3 +2600,159 @@ Based on external assessment. The project moves from broad discovery mode to **d
 - `reports/experiments/retest_rejected_features.md` — re-test report
 - `tests/test_retest_rejected_features.py` — 7 tests
 - `reports/benchmarks/research_backlog.md` — 2026 roadmap
+
+---
+
+## Session Summary: Pi-Ratings + Prediction Vintages (2026 Week 1 Prep)
+
+### Goal
+Build Prediction Vintages (per-game prediction snapshots with QB source tracking) and Pi-Ratings (coupled home/away ratings with nonlinear score-error updates) before 2026 Week 1.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/ratings.py` | Added `compute_pi_ratings_features()` — power-law MOV, asymmetric home/away K, cap, decay, preseason regression |
+| `src/sportslab/evaluation/pi_ratings_experiment.py` | **New/rewritten** — 144-combo grid (4α × 3base_k × 3hk_ratio × 2HFA × 2reg), fold-safe Platt + QB overlay, report writer |
+| `src/sportslab/evaluation/prediction_vintages.py` | **New** — vintage comparison module (list, load, compare, markdown diff report) |
+| `src/sportslab/evaluation/weekly_pipeline.py` | Added `--vintage` flag to predict-week/grade-week, snapshot machinery for vintage |
+| `src/sportslab/cli.py` | Added `pi-ratings`, `list-vintages`, `compare-vintages` commands |
+| `Makefile` | Added `pi-ratings`, `list-vintages`, `compare-vintages` targets |
+| `tests/test_pi_ratings.py` | **New** — 18 tests for feature function, grid constants, CLI importability |
+| `tests/test_prediction_vintages.py` | **New** — 18 tests for list/load/compare/markdown |
+| `reports/experiments/pi_ratings.md` | **New** — full experiment report (223 lines) |
+
+### Experiment Results (Pi-Ratings)
+
+**Ranking: v3.0.0 incumbent recomputed: val=0.6310, hold=0.5958**
+
+**Top 5 by validation LL:**
+
+| α | base_k | hk_ratio | HFA | reg | Val LL | Δval | Hold LL | Δhold |
+|---|--------|----------|-----|-----|--------|------|---------|-------|
+| 0.5 | 28 | 1.25 | 30 | 0.0 | 0.6261 | −0.0049 | 0.5936 | −0.0022 |
+| 0.5 | 28 | 1.25 | 40 | 0.0 | 0.6263 | −0.0048 | 0.5939 | −0.0019 |
+| 0.5 | 28 | 1.25 | 30 | 0.1 | 0.6263 | −0.0048 | 0.5936 | −0.0022 |
+| 0.5 | 28 | 1.25 | 40 | 0.1 | 0.6264 | −0.0047 | 0.5940 | −0.0018 |
+| 0.5 | 28 | 1.0 | 30 | 0.1 | 0.6269 | −0.0042 | 0.5890 | −0.0068 |
+
+**24 candidates beat v3 on both val and holdout with Δ ≥ 0.001.**
+
+**Key pattern:** All 24 winners use α=0.5 (square-root MOV compressing blowouts). No non-α=0.5 config beats v3 on both. The square-root transformation is the primary innovation — asymmetric home/away K (hk_ratio) and base_k are secondary tunings.
+
+**Best α=0.5 config:** base_k=28, hk_ratio=1.25, HFA=30, reg=0.0 → val=0.6261, hold=0.5936.
+
+### Key Decisions
+- **Pi-Ratings NOT yet promoted** — reported as candidate with strong pattern (α=0.5 dominates). Re-computed v3 baseline differs from registry (0.6310/0.5958 vs 0.6305/0.6200) — need standalone champion-comparison experiment before promoting.
+- **Prediction Vintages** — operational feature ready for 2026 Week 1. Committed & pushed (b37d65f).
+- All 144 combos tested, α=1.0/hk_ratio=1.0 (standard Elo equivalent) underperforms α=0.5 across the board.
+- α=0.5 MOV compresses blowouts via square root — consistent with the margin-aware Elo finding that capped_linear with cap=2.0 was optimal.
+
+### Current Test State
+- **1099 passed, 1 skipped** (was 1001 — +18 pi_ratings + 18 prediction_vintages + 62 pre-existing)
+- Lint clean (ruff)
+
+### Relevant Files (New)
+- `src/sportslab/features/ratings.py` — `compute_pi_ratings_features()` (~80 lines)
+- `src/sportslab/evaluation/pi_ratings_experiment.py` — 144-combo grid experiment (~280 lines)
+- `src/sportslab/evaluation/prediction_vintages.py` — vintage comparison module (~180 lines)
+- `tests/test_pi_ratings.py` — 18 tests
+- `tests/test_prediction_vintages.py` — 18 tests
+- `reports/experiments/pi_ratings.md` — full experiment report
+
+### Champion Comparison Results
+
+**✅ Pi-Ratings beats v3.0.0 on BOTH val and holdout with Δ ≥ 0.001 — PROMOTED**
+
+| Model | Avg Val LL | Hold LL |
+|-------|-----------|---------|
+| v3.0.0 champion | 0.6307 | 0.5940 |
+| Pi-Ratings best | **0.6260** | **0.5918** |
+| Δ (Pi − v3) | **−0.0046** | **−0.0022** |
+
+**Best config:** α=0.5, base_k=28, hk_ratio=1.25, HFA=30, reg=0.0. All winners (24/144 combos) use α=0.5 — square-root MOV is the primary innovation.
+
+### Key Decisions
+- **Pi-Ratings v4.0.0 is the new football-only champion** (holdout 0.5918)
+- StatSpace PBP composites (FDR, DOBA, Chaos at 0.5548) have NOT been tested on Pi-Ratings base — they currently sit on standard Elo
+- Frozen QB Overlay v3.0.0 (0.6200) moved to superseded
+- Benchmark registry, production freeze, and release metadata all updated
+
+### Current Test State
+- **1127+ passed** (was 1099 — +25 champion comparison tests)
+- Lint clean
+
+### Relevant Files (New)
+- `src/sportslab/evaluation/pi_ratings_champion_comparison.py` — standalone comparison module
+- `tests/test_pi_ratings_champion_comparison.py` — 25 tests
+- `reports/experiments/pi_ratings_champion_comparison.md` — comparison report
+- `reports/releases/release_v4.0.0.md` — release metadata
+- `docs/production_freeze.md` — updated to v4.0.0
+- `reports/benchmarks/nfl_research_incumbent.md` — updated
+
+### Next Steps
+1. **Test StatSpace features (FDR, DOBA, Chaos) on Pi-Ratings base** — these composites currently sit on standard Elo; Pi-Ratings may raise the ceiling further
+2. Prepare for 2026 Week 1 — prediction vintages operational, monitoring ready
+
+---
+
+## Session Summary: Pi-StatSpace Champion
+
+### Goal
+Test whether StatSpace PBP composites (FDR, DOBA, Chaos) improve on the Pi-Ratings football-only champion (v4.0.0, holdout 0.5918).
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/pi_statspace_experiment.py` | **New file** — 5-model comparison (champion, Pi-only, Pi+FDR, Pi+FDR+DOBA, Pi+FDR+DOBA+Chaos), PBP loading shared across bases |
+| `src/sportslab/cli.py` | Added `pi-statspace` command |
+| `Makefile` | Added `pi-statspace` target |
+| `tests/test_pi_statspace.py` | **New file** — 7 tests for fold structure, imports, report generation |
+| `reports/experiments/pi_statspace.md` | **New file** — full experiment report |
+| `reports/benchmarks/leaderboard.csv` | Row 52 (pi_statspace_v5, promoted) |
+| `reports/benchmarks/benchmark_history.md` | Entry 49 (Pi-StatSpace, promoted) |
+| `reports/benchmarks/nfl_research_incumbent.md` | Updated overall champion to Pi-Ratings + StatSpace |
+| `reports/benchmarks/experiment_ledger.csv` | Row 56 (pi_statspace_v5) |
+| `reports/benchmarks/experiment_ledger.md` | Updated summary and frontier |
+| `reports/releases/release_v5.0.0.md` | **New file** — release metadata |
+| `docs/production_freeze.md` | Updated to v5.0.0 |
+
+### Experiment Results
+
+| Model | Avg Val LL | Hold LL | Brier | AUC |
+|-------|-----------|---------|-------|-----|
+| A. Elo + FDR + DOBA + Chaos | 0.5609 | 0.5548 | 0.1886 | 0.7871 |
+| B. Pi-Ratings only | 0.6266 | 0.6350 | 0.2217 | 0.6962 |
+| C. Pi + FDR | 0.6074 | 0.5998 | 0.2070 | 0.7368 |
+| D. Pi + FDR + DOBA | 0.5775 | 0.5913 | 0.2039 | 0.7475 |
+| **E. Pi + FDR + DOBA + Chaos** | **0.5557** | **0.5532** | **0.1886** | **0.7874** |
+
+**Δ vs A (old champion):** E beats A on both val (−0.0053) and holdout (−0.0016) — both ≥ 0.001 threshold. **PROMOTED.**
+
+### Bug Fix
+- `pi_statspace_experiment.py`: StatSpace features were computed in a `for label, df in [("elo", df_elo), ("pi", df_pi)]` loop using `df = compute_fdr_features(...)` which rebinds the loop variable without updating the original `df_elo`/`df_pi` names (since `merge_team_season_metrics` returns a new DataFrame). Fixed by explicitly assigning back to `df_elo` and `df_pi` after each computation.
+
+### Key Decisions
+- **Pi + FDR + DOBA + Chaos promoted as v5.0.0 overall champion** (holdout 0.5532)
+- StatSpace composites are feature-orthogonal to the rating system — same pattern of improvements on both standard Elo and Pi-Ratings
+- Each composite (FDR, DOBA, Chaos) progressively improves Pi-Ratings, same as the standard-Elo experiments
+- The new champion (0.5532) beats the old champion (0.5548) by 0.0016 on holdout
+- Pi-Ratings v4.0.0 (holdout 0.5918) moved to superseded as football-only champion
+
+### Current Test State
+- ~1130+ tests expected (7 new pi_statspace tests + pre-existing)
+- Lint clean
+- 47 experiments in ledger (47: 2 promoted, 6 superseded, 29 rejected, 10 diagnostic)
+
+### Relevant Files
+- `src/sportslab/evaluation/pi_statspace_experiment.py` — 5-model comparison experiment
+- `tests/test_pi_statspace.py` — 7 tests
+- `reports/experiments/pi_statspace.md` — full report
+- `reports/releases/release_v5.0.0.md` — release metadata
+- `docs/production_freeze.md` — updated to v5.0.0
+
+### Next Steps
+1. Any model must beat **Pi-Ratings + FDR + DOBA + Chaos (holdout LL 0.5532)** to become the new overall champion
+2. No remaining untested feature directions — research frontiers are exhausted at current sample size
+3. Prepare for 2026 Week 1 — weekly pipeline operational, monitoring ready

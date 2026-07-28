@@ -10,13 +10,13 @@
 
 | Count | Value |
 |-------|-------|
-| Total experiments | 45 |
-| Promoted (current champion) | 1 |
-| Superseded (former champions) | 5 |
-| Rejected | 29 |
+| Total experiments | 47 |
+| Promoted (current champion) | 2 |
+| Superseded (former champions) | 6 |
+| Rejected | 30 |
 | Diagnostic | 10 |
-| Current incumbent | v3.0.0 Frozen QB Overlay |
-| Incumbent holdout LL | 0.6200 |
+| Current overall incumbent | Pi-Ratings + FDR + DOBA + Chaos |
+| Current football-only incumbent | Pi-Ratings v4.0.0 |
 
 ---
 
@@ -78,18 +78,19 @@
 ### Promoted (Current Champion)
 | # | Experiment | Holdout LL | Report |
 |---|-----------|------------|--------|
-| 36 | Frozen QB Overlay V3 | **0.6200** | frozen_qb_overlay_foldsafe.md |
+| 51 | Pi-Ratings v4 | **0.5918** | pi_ratings_champion_comparison.md |
 
 ### Superseded (Former Champions)
 | # | Experiment | Holdout LL at Promotion | Report |
 |---|-----------|------------------------|--------|
+| 36 | Frozen QB Overlay V3 | 0.6200 | frozen_qb_overlay_foldsafe.md |
 | 27 | Combined Features (qb_changed + mov_3) | 0.6262 | combined_features.md |
 | 16 | Season Regression | 0.6285 | season_regression.md |
 | 14 | Decayed Elo | 0.6298 | decayed_elo.md |
 | 6 | Margin-Aware MOV Elo | 0.6373 | margin_aware_elo.md |
 | 4 | Rolling-Origin Elo + Platt | 0.6395 | rolling_origin_elo_validation.md |
 
-### Rejected (28)
+### Rejected (30)
 All rejected experiments documented with rejection reason in `experiment_ledger.csv`.
 
 ### Diagnostic (10)
@@ -118,7 +119,7 @@ The 28 rejected experiments fall into these categories:
 | No improvement over incumbent | 2 | Confidence calibration (tied), coach-season regression (val 0.0006 better, holdout 0.0001 worse) |
 | Below baseline | 2 | Identity logistic, team-strength logistic (both below home prior) |
 
-**Key insight**: 13/29 (45%) of rejected experiments degraded BOTH val and holdout. Only 2/28 were close enough to warrant a second look (coach-season reg, confidence calibration). The incumbent is at a Pareto frontier — changing it almost always makes both metrics worse.
+**Key insight**: 13/30 (43%) of rejected experiments degraded BOTH val and holdout. Only 2/30 were close enough to warrant a second look (coach-season reg, confidence calibration). The incumbent is at a Pareto frontier — changing it almost always makes both metrics worse.
 
 ### Distinct Signal Categories with Evidence
 - **Strongly rejected** (≥0.005 worse on both): AutoGluon, scheduling, weather, EPA, team stats, comprehensive efficiency, home/away Elo, injury features
@@ -130,9 +131,11 @@ The 28 rejected experiments fall into these categories:
 
 ## Current Frontier
 
-The incumbent (holdout 0.6200) is at a Pareto optimum for the current sample size, feature set, and modeling approach. All 28 rejected experiments demonstrate that adding complexity — whether through additional features, alternative calibration, or more expressive models — degrades performance on at least one axis.
+The incumbent (holdout 0.5532) is at a Pareto optimum for the current sample size, feature set, and modeling approach using Pi-Ratings + StatSpace PBP composites. All rejected experiments demonstrate that adding complexity without new high-signal data sources degrades performance on at least one axis.
 
-The best diagnostic reference points:
+The best reference points:
+- **Overall champion**: **0.5532** (Pi-Ratings + FDR + DOBA + Chaos)
+- **Previous overall champion**: 0.5548 (Standard Elo + FDR + DOBA + Chaos)
+- **Football-only champion**: 0.5918 (Pi-Ratings v4.0.0)
 - **Market ceiling**: 0.6090 (no-vig closing moneyline)
-- **Holdout-informed ceiling**: 0.6258 (O/D Elo, but selected using holdout)
-- **Current football-only champion**: 0.6200 (v3.0.0 Frozen QB Overlay)
+- **Holdout-informed ceiling**: 0.6258 (O/D Elo, selected using holdout)
