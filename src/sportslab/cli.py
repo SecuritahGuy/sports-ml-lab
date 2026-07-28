@@ -71,6 +71,11 @@ from sportslab.evaluation.qb_injury_experiment import run_qb_injury_experiment
 from sportslab.evaluation.qb_magnitude_experiment import run_qb_magnitude_experiment
 from sportslab.evaluation.qb_market_delta import run_qb_market_delta_experiment
 from sportslab.evaluation.qb_roster_interaction_experiment import run_qb_roster_interaction
+from sportslab.evaluation.prediction_vintages import (
+    compare_vintages,
+    list_vintages,
+    vintage_diff_report,
+)
 from sportslab.evaluation.ralph6_challengers import run_ralph6_experiment
 from sportslab.evaluation.regularized_logistic_experiment import (
     run_regularized_logistic_experiment,
@@ -534,11 +539,19 @@ def predict_future_cmd(input, output, qb_input, season, week, mode):
 @click.option("--output", type=str, default=None, help="Override snapshot output path")
 @click.option("--mode", type=click.Choice(["live", "dry_run", "rehearsal"]),
               default="live", help="Snapshot mode (default: live)")
-def predict_week_cmd(season, week, qb_input, auto_qb, weekly_qb, output, mode):
+@click.option("--vintage", type=click.Choice(["early", "final-injury", "locked"]),
+              default="locked", help="Vintage label (default: locked)")
+def predict_week_cmd(season, week, qb_input, auto_qb, weekly_qb, output, mode,
+                     vintage):
     """Generate predictions + snapshot + report for a single week.
 
     Fits Elo on all historical data (2021+), predicts the specified
     week, saves a timestamped snapshot and generates a weekly report.
+
+    Use --vintage to label predictions as 'early', 'final-injury', or
+    'locked' (default). Run multiple times with different vintages to
+    capture prediction drift over the week, then use 'compare-vintages'
+    to see how predictions changed.
 
     In live mode (default), oracle QB data is blocked. Provide --qb-input
     for a manual CSV, --auto-qb for depth chart snapshot (67% accurate),
@@ -554,7 +567,7 @@ def predict_week_cmd(season, week, qb_input, auto_qb, weekly_qb, output, mode):
         weekly_qb = False
     predict_week(season=season, week=week, qb_input=qb_input,
                  snapshot_path=output, mode=mode, auto_qb=auto_qb,
-                 weekly_qb=weekly_qb)
+                 weekly_qb=weekly_qb, vintage=vintage)
 
 
 @cli.command(name="grade-week")
@@ -562,18 +575,77 @@ def predict_week_cmd(season, week, qb_input, auto_qb, weekly_qb, output, mode):
 @click.option("--week", type=int, required=True, help="Week number (1-22)")
 @click.option("--snapshot", type=str, default=None,
               help="Snapshot CSV path (auto-detected if not provided)")
+@click.option("--vintage", type=click.Choice(["early", "final-injury", "locked"]),
+              default="locked", help="Vintage label to grade (default: locked)")
 @click.option("--force", is_flag=True, default=False,
               help="Bypass manifest guardrail and checksum verification")
-def grade_week_cmd(season, week, snapshot, force):
+def grade_week_cmd(season, week, snapshot, vintage, force):
     """Grade a completed week's predictions against actual results.
 
     Loads the prediction snapshot, merges actual results from the
     feature table, computes metrics, and appends to prediction history.
 
+    Use --vintage to grade a specific prediction vintage (early,
+    final-injury, locked).
+
     By default only grades manifest-registered snapshots (prevents
     retroactive grading). Use --force to bypass this guardrail.
     """
-    grade_week(season=season, week=week, snapshot=snapshot, force=force)
+    grade_week(season=season, week=week, snapshot=snapshot, vintage=vintage,
+               force=force)
+
+
+@cli.command(name="list-vintages")
+@click.option("--season", type=int, required=True, help="Season year")
+@click.option("--week", type=int, required=True, help="Week number (1-22)")
+@click.option("--mode", type=click.Choice(["live", "dry_run", "rehearsal"]),
+              default="live", help="Snapshot mode (default: live)")
+def list_vintages_cmd(season, week, mode):
+    """List all prediction vintages for a given week."""
+    list_vintages(season, week, mode=mode, verbose=True)
+
+
+@cli.command(name="compare-vintages")
+@click.option("--season", type=int, required=True, help="Season year")
+@click.option("--week", type=int, required=True, help="Week number (1-22)")
+@click.option("--mode", type=click.Choice(["live", "dry_run", "rehearsal"]),
+              default="live", help="Snapshot mode (default: live)")
+@click.option("--output", type=str, default=None,
+              help="Output path for markdown diff report")
+def compare_vintages_cmd(season, week, mode, output):
+    """Compare prediction vintages for a given week.
+
+    Shows per-game probability drift across early-week, final-injury,
+    and locked predictions. Use --output to generate a markdown report.
+    """
+    import pandas as pd
+    if output:
+        report = vintage_diff_report(season, week, mode=mode, output_path=output)
+        print(report)
+    else:
+        comp = compare_vintages(season, week, mode=mode)
+        if comp is None:
+            return
+        print(f"\n=== Vintage Comparison: {season} Week {week} ({mode}) ===")
+        vintage_list = sorted(
+            {c.replace("prob_", "") for c in comp.columns if c.startswith("prob_")}
+        )
+        for _, row in comp.iterrows():
+            gid = row.get("game_id", "?")
+            away = row.get("away_team", "?")
+            home = row.get("home_team", "?")
+            probs = " | ".join(
+                f"{v}: {row[f'prob_{v}']*100:.1f}%"
+                for v in vintage_list if f"prob_{v}" in comp.columns
+            )
+            drift_parts = []
+            for i in range(len(vintage_list) - 1):
+                dc = f"drift_{vintage_list[i]}_to_{vintage_list[i + 1]}"
+                if dc in comp.columns:
+                    d = row.get(dc, float("nan"))
+                    if pd.notna(d):
+                        drift_parts.append(f"  Δ={d*100:+.1f}pp")
+            print(f"  {away} @ {home:3s}  {probs}{''.join(drift_parts)}")
 
 
 @cli.command(name="season-report")

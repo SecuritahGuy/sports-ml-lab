@@ -50,6 +50,7 @@ from sportslab.features.build_features import (
 # ── Snapshot modes ──
 LIVE_MODES = ["live"]
 VALID_MODES = ["live", "dry_run", "rehearsal"]
+VALID_VINTAGES = ["early", "final-injury", "locked"]
 
 # ── Paths ──
 SNAPSHOT_DIR = Path("reports/predictions/snapshots")
@@ -98,14 +99,16 @@ def _write_manifest(manifest: Dict) -> None:
     MANIFEST_PATH.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
-def _snapshot_id(season: int, week: int, ts: str, mode: str = "live") -> str:
-    return f"week_{season}_{week:02d}_{mode}_{ts}"
+def _snapshot_id(season: int, week: int, ts: str, mode: str = "live",
+                 vintage: str = "locked") -> str:
+    return f"week_{season}_{week:02d}_{vintage}_{mode}_{ts}"
 
 
-def _snapshot_path(season: int, week: int, mode: str = "live") -> Path:
+def _snapshot_path(season: int, week: int, mode: str = "live",
+                   vintage: str = "locked") -> Path:
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
     ts = _timestamp()
-    return SNAPSHOT_DIR / f"{_snapshot_id(season, week, ts, mode)}.csv"
+    return SNAPSHOT_DIR / f"{_snapshot_id(season, week, ts, mode, vintage)}.csv"
 
 
 def _file_checksum(path: Path) -> str:
@@ -114,15 +117,24 @@ def _file_checksum(path: Path) -> str:
     return f"sha256:{h.hexdigest()[:16]}"
 
 
+def _validate_vintage(vintage: str) -> None:
+    """Raise ValueError if vintage is not valid."""
+    if vintage not in VALID_VINTAGES:
+        raise ValueError(
+            f"Invalid vintage '{vintage}'. Must be one of {VALID_VINTAGES}."
+        )
+
+
 def _register_snapshot(
     path: Path, season: int, week: int, qb_source: str,
-    n_games: int, mode: str = "live",
+    n_games: int, mode: str = "live", vintage: str = "locked",
 ) -> str:
     """Add a snapshot entry to the manifest.
 
-    Supersedes any prior entry for the same season/week/mode.
+    Supersedes any prior entry for the same season/week/mode/vintage.
     """
     _validate_mode(mode)
+    _validate_vintage(vintage)
     manifest = _read_manifest()
     sid = path.stem
     entry = {
@@ -130,6 +142,7 @@ def _register_snapshot(
         "path": str(path),
         "season": season,
         "week": week,
+        "vintage": vintage,
         "mode": mode,
         "status": "initial",
         "created_at": _iso_now(),
@@ -152,10 +165,11 @@ def _register_snapshot(
         "grade_metrics": None,
         "graded_at": None,
     }
-    # Supersede any prior entry for same season/week/mode
+    # Supersede any prior entry for same season/week/mode/vintage
     for s in manifest["snapshots"]:
         if (s["season"] == season and s["week"] == week
-                and s.get("mode", "live") == mode):
+                and s.get("mode", "live") == mode
+                and s.get("vintage", "locked") == vintage):
             s["status"] = "superseded"
     manifest["snapshots"].append(entry)
     _write_manifest(manifest)
@@ -163,15 +177,19 @@ def _register_snapshot(
 
 
 def _get_snapshot_from_manifest(
-    season: int, week: int, mode: str = "live",
+    season: int, week: int, mode: str = "live", vintage: Optional[str] = None,
 ) -> Optional[Dict]:
-    """Get the latest non-superseded snapshot entry for a season/week/mode."""
+    """Get the latest non-superseded snapshot entry for a season/week/mode.
+
+    If vintage is None, returns the latest across all vintages (backward compat).
+    """
     manifest = _read_manifest()
     matches = [
         s for s in manifest["snapshots"]
         if s["season"] == season and s["week"] == week
         and s.get("mode", "live") == mode
         and s.get("status", "initial") != "superseded"
+        and (vintage is None or s.get("vintage", "locked") == vintage)
     ]
     if not matches:
         return None
@@ -179,12 +197,13 @@ def _get_snapshot_from_manifest(
 
 
 def _update_manifest_grade(season: int, week: int, metrics: Dict,
-                           mode: str = "live") -> None:
+                           mode: str = "live", vintage: str = "locked") -> None:
     """Mark a snapshot as graded in the manifest."""
     manifest = _read_manifest()
     for s in manifest["snapshots"]:
         if (s["season"] == season and s["week"] == week
                 and s.get("mode", "live") == mode
+                and s.get("vintage", "locked") == vintage
                 and s.get("status", "initial") != "superseded"):
             s["graded"] = True
             s["status"] = "graded"
@@ -211,6 +230,7 @@ def predict_week(
     mode: str = "live",
     auto_qb: bool = False,
     weekly_qb: bool = False,
+    vintage: str = "locked",
 ) -> Dict[str, str]:
     """Predict a single week, save snapshot + report + manifest entry.
 
@@ -223,12 +243,14 @@ def predict_week(
             In 'live' mode, oracle QB data is blocked (--qb-input required).
         auto_qb: If True, auto-source QB data from nflreadpy depth_charts.
         weekly_qb: If True, use week-over-week tracking (more accurate).
+        vintage: Vintage label — 'early', 'final-injury', or 'locked' (default).
 
     Returns:
         Dict with snapshot and report paths.
     """
     _validate_season(season, "predict_week")
     _validate_mode(mode)
+    _validate_vintage(vintage)
 
     # Auto-source QB data (weekly tracking or depth chart snapshot)
     if (auto_qb or weekly_qb) and not qb_input:
@@ -276,7 +298,7 @@ def predict_week(
 
     from sportslab.evaluation.predict_future import predict_future
 
-    out = snapshot_path or str(_snapshot_path(season, week, mode=mode))
+    out = snapshot_path or str(_snapshot_path(season, week, mode=mode, vintage=vintage))
     pred_result = predict_future(
         season=season,
         week=week,
@@ -294,7 +316,7 @@ def predict_week(
     n_games = len(snap_df)
 
     # Register in manifest with mode metadata
-    _register_snapshot(Path(out), season, week, qb_source, n_games, mode=mode)
+    _register_snapshot(Path(out), season, week, qb_source, n_games, mode=mode, vintage=vintage)
     print(f"  Manifest: {MANIFEST_PATH}")
 
     # Generate weekly report
@@ -395,6 +417,7 @@ def grade_week(
     snapshot: Optional[str] = None,
     mode: str = "live",
     force: bool = False,
+    vintage: str = "locked",
 ) -> Dict:
     """Grade a completed week's predictions.
 
@@ -409,15 +432,18 @@ def grade_week(
         mode: Snapshot mode — only grades snapshots matching this mode.
         force: If True, bypass checksum verification and allow grading
                from a provided snapshot path without manifest entry.
+        vintage: Vintage label to grade — 'early', 'final-injury', or
+                 'locked' (default).
 
     Returns:
         Dict with metrics and history path.
     """
     _validate_season(season, "grade_week")
     _validate_mode(mode)
+    _validate_vintage(vintage)
 
-    # Guardrail: find snapshot via manifest (filtered by mode)
-    manifest_entry = _get_snapshot_from_manifest(season, week, mode=mode)
+    # Guardrail: find snapshot via manifest (filtered by mode + vintage)
+    manifest_entry = _get_snapshot_from_manifest(season, week, mode=mode, vintage=vintage)
 
     if snapshot:
         snap_path = Path(snapshot)
@@ -476,7 +502,7 @@ def grade_week(
         raise ValueError("No graded games found.")
 
     # Update manifest
-    _update_manifest_grade(season, week, metrics, mode=mode)
+    _update_manifest_grade(season, week, metrics, mode=mode, vintage=vintage)
 
     # Append to history
     history = _read_history()

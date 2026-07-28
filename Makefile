@@ -5,7 +5,8 @@ qb-gated-experience qb-depth-experiment turnover-experiment situational-micro \
 predict-week grade-week season-report prediction-audit rehearsal-season prediction-index publish-predictions \
 data-audit preseason-fire-drill live-preflight \
 build-qb-adjustments qb-adjusted-elo roster-strength regularized-logistic \
-qb-lift model-trust ralph6 team-site team-site-serve monitoring-report score-margin
+qb-lift model-trust ralph6 team-site team-site-serve monitoring-report score-margin \
+list-vintages compare-vintages
 
 # ── Install ──
 install:
@@ -270,6 +271,13 @@ team-site:
 	sportslab build-team-site
 
 team-site-serve: team-site
+
+# ── Vintages ──
+list-vintages:
+	sportslab list-vintages $(SEASON_ARG) $(WEEK_ARG)
+
+compare-vintages:
+	sportslab compare-vintages $(SEASON_ARG) $(WEEK_ARG) $(if $(OUTPUT),--output $(OUTPUT),)
 
 # Refresh: ingest scores → rebuild features → repredict → rebuild site
 # Usage: make refresh WEEK=1  (grade week 1, predict weeks 2-18)
