@@ -483,7 +483,7 @@ Each entry includes:
 
 ## Summary Statistics
 
-| Total experiments | 38 |
+| Total experiments | 43 |
 |------------------|-----|
 | Promoted (clean) | 6 |
 | Rejected | 23 |
@@ -973,3 +973,29 @@ base Elo (swept: K, HFA, reg, decay)
 - This establishes a new overall ceiling — the StatSpace composites are feature-orthogonal to the rating system
 
 **Report:** `reports/experiments/pi_statspace.md`
+
+---
+
+## Score-Margin Distribution Model (Shadow) — 2026-08-06
+
+**Models:** Margin OLS (margin = pi_diff + qb_change_diff + rolling_mov_3_diff), σ from residuals, win prob = Φ(μ/σ), vs modern Platt incumbent.
+
+| Fold | Platt Incumbent | Margin OLS |
+|------|----------------|------------|
+| 2022 | 0.6414 | **0.6230** |
+| 2023 | 0.6530 | **0.6525** |
+| 2024 | **0.6092** | 0.6115 |
+| 2025 hold | 0.6325 | **0.6321** |
+
+**Avg val:** Incumbent 0.6345, Margin OLS **0.6290**
+**Holdout:** Incumbent 0.6325, Margin OLS **0.6321**
+
+**Decision:** 🏷️ **DIAGNOSTIC (shadow only — no promotion pressure)**
+
+**Key takeaway:**
+- Margin OLS beats Platt on avg validation (0.6290 vs 0.6345) and holdout (0.6321 vs 0.6325)
+- Decisive on Fold 1 (2022, 0.6230 vs 0.6414) — early-season strength where Platt is weakest
+- Ties/loses folds 3-4; σ constant at ~13.2-14.4 (no heteroscedasticity yet)
+- No promotion — requires running as a true v5.0.0 challenger with StatSpace features to assess real ceiling
+
+**Report:** `reports/experiments/score_margin_model.md`

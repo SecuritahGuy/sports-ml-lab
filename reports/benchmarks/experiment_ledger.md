@@ -2,7 +2,7 @@
 
 *Machine-readable: `experiment_ledger.csv`*
 
-*Generated: 2026-07-06*
+*Generated: 2026-07-28*
 
 ---
 
@@ -10,10 +10,10 @@
 
 | Count | Value |
 |-------|-------|
-| Total experiments | 47 |
+| Total experiments | 48 |
 | Promoted (current champion) | 2 |
 | Superseded (former champions) | 6 |
-| Rejected | 30 |
+| Rejected | 31 |
 | Diagnostic | 10 |
 | Current overall incumbent | Pi-Ratings + FDR + DOBA + Chaos |
 | Current football-only incumbent | Pi-Ratings v4.0.0 |

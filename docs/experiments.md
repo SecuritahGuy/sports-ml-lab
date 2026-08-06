@@ -63,6 +63,15 @@ All 39 experiments conducted during feature research (2026-06).
 | feature_selection | diagnostic | 0.6334 | 0.6314 |
 | optuna_feature_selection | diagnostic | 0.6334 | 0.6347 |
 | frozen_qb_overlay_v2 | diagnostic | 0.6238 | 0.6200 |
+| player_recovery_curves | diagnostic | 0.6282 | 0.6305 |
+| score_margin_shadow | diagnostic | 0.6290 | 0.6321 |
+
+
+### Research in Progress
+
+| Direction | Signal | Status | Report |
+|-----------|--------|--------|--------|
+| Player recovery curves | −0.0172 LL on 72 returning-player games (p=0.054) | Marginal — QBs bounce, WRs/TEs deficit. Expanded to 9 seasons (755 events) didn't change holdout. | [diagnostics report](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/recovery_diagnostics.md) |
 
 
 ---

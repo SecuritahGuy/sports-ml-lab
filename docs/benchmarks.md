@@ -79,7 +79,15 @@
 | feature_selection | diagnostic | 0.6334 | 0.6314 | — | [feature_selection.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/feature_selection.md) |
 | optuna_feature_selection | diagnostic | 0.6334 | 0.6347 | — | [optuna_feature_selection.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/optuna_feature_selection.md) |
 | frozen_qb_overlay_v2 | diagnostic | 0.6238 | 0.6200 | 0.7098 | [frozen_qb_overlay.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/frozen_qb_overlay.md) |
+| player_recovery_curves_5y | diagnostic | 0.6282 | 0.6305 | 0.6996 | [player_recovery_experiment.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/player_recovery_experiment.md) |
+| player_recovery_curves_9y | diagnostic | 0.6277 | 0.6305 | — | [expanded](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/player_recovery_experiment_expanded.md) |
 
+
+### Research in Progress
+
+| Direction | Subgroup Signal | p-value | Status | Report |
+| --- | --- | --- | --- | --- |
+| Player recovery curves | −0.0172 LL on 72 games with returning players | 0.054 (just above significance) | Marginal signal — QBs bounce (+), WRs/TEs deficit (−). Expanded to 9 seasons (755 events, +78%) but val improved only 0.0005 (0.6282→0.6277). Historical return events (2016-2019) don't affect 2025 holdout. Needs better per-player metrics (snap%, position-specific efficiency). | [recovery_diagnostics.md](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/recovery_diagnostics.md) / [expanded](https://github.com/SecuritahGuy/sports-ml-lab/blob/main/reports/experiments/recovery_diagnostics_expanded.md) |
 
 ### Market-Aware Diagnostics
 

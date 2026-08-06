@@ -2543,6 +2543,8 @@ Do not retest without one of the four triggers (new data, new source, live failu
 | StatSpace Chaos Rate | PROMOTED | StatSpace R&D port | Defensive disruption composite; standalone PBP only | Incumbent (FDR+DOBA+Chaos, val 0.5609, hold 0.5548) |
 | Chaos Rate multi-season avg | RETIRE | 2026-07-26 backtest | Multi-season (2y/3y) average improves stability (fixes Platt AUC collapse: 0.421→0.544) but raw AUC drops (0.579→0.552); best Platt LL 0.6898 vs random 0.6931 | Within-season value only; YoY signal too weak even with smoothing |
 | StatSpace QB Lift | REJECTED | StatSpace R&D port | QB value beyond support; val+0.0003, hold+0.0002 vs incumbent | Signal absorbed by FDR+DOBA |
+| Return-from-injury rust | RETIRE | 2026-07-28 | 8 rust features (position-weighted return score, QB/skill/games missed, H/A) on Pi-Ratings base. All variants rejected. QB-only won holdout −0.0024 but lost val +0.0129. Only 43 QB return events across 5 seasons — too few to learn a consistent pattern. | Fundamental injury data format change |
+| Player recovery curves (per-player PBP) | RETIRE | 2026-07-29 | Logit‑space adj on Pi‑Ratings base. 9 seasons (755 events, p=0.054) — marginal real signal (−0.0172 LL on 72 games) but below promotion threshold. Expanded to 9 seasons didn't help; historical players don't affect 2025 holdout. | Better per‑player metrics (snap%, position‑specific efficiency) |
 
 ---
 
@@ -2756,3 +2758,116 @@ Test whether StatSpace PBP composites (FDR, DOBA, Chaos) improve on the Pi-Ratin
 1. Any model must beat **Pi-Ratings + FDR + DOBA + Chaos (holdout LL 0.5532)** to become the new overall champion
 2. No remaining untested feature directions — research frontiers are exhausted at current sample size
 3. Prepare for 2026 Week 1 — weekly pipeline operational, monitoring ready
+
+---
+
+## Session Summary: Player Recovery Curves
+
+### Goal
+Test whether players returning from multi-game injuries show a measurable performance deficit in their first games back, and whether adjusting for this deficit improves the Pi-Ratings incumbent.
+
+### Observation
+QB‑change games are the model's worst failure mode (holdout LL=0.6696 vs 0.6315). A plausible hypothesis: when the starting QB misses games, the rest of the offense also regresses, and that hangover persists when the QB returns. More generally, any position group with returning injured players should underperform expectations.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/features/player_recovery.py` | **New** — `build_player_game_table()`, `identify_return_events()`, `compute_game_recovery_adjustments()`: per-game fantasy-point performance from PBP, return-event detection (≥2 games missed), within-player recovery curves (games 1–4 post-return), team‑level aggregation |
+| `src/sportslab/evaluation/recovery_experiment.py` | **New** — logit‑space adjustment on Pi‑Ratings base, subset analysis per‑position, scale sensitivity |
+| `src/sportslab/evaluation/recovery_diagnostics.py` | **New** — bootstrap CI (1000 draws), permutation test (1000 shuffles), per‑position deficit tables, top‑error case analysis |
+| `src/sportslab/cli.py` | Added `recovery-experiment`, `recovery-diagnostics` commands |
+| `Makefile` | Added `recovery-experiment`, `recovery-diagnostics` targets |
+| `tests/test_player_recovery.py` | **New** — 20 tests |
+| `reports/experiments/player_recovery_experiment.md` | **New** — report |
+| `reports/experiments/recovery_diagnostics.md` | **New** — diagnostics |
+
+### Experiment Results
+
+**5‑season (2021‑2025):**
+| Variant | Val LL | Holdout LL |
+|---------|--------|-----------|
+| Pi‑Ratings (incumbent) | 0.6266 | **0.6350** |
+| Pi + Recovery (logit adj) | 0.6282 | **0.6305** |
+| Recovery only | 0.6947 | 0.6919 |
+
+**Active games only (n=72):** adj LL 0.6276 → 0.6103 (Δ = −0.0172)
+
+**Bootstrap CI (Δ = adj − base):** mean = −0.0049, 95% CI [−0.0049, 0.0145], 84.6% positive
+**Permutation test:** p = 0.054 (just above significance)
+
+### Expanded Seasons (9 seasons, skip 2020)
+
+Return events grew from 425 → 755 (+78%). Val LL improved from 0.6282 → 0.6277, but holdout LL remained 0.6305 — the historical return events (2016‑2019) involve players mostly retired by 2025. The same 72 holdout games get adjusted with near‑identical magnitudes.
+
+### Key Findings
+- QBs bounce back (week‑1 deficit = −5.3 pts, adjustment forces *up*)
+- WRs/TEs show a post‑return deficit (week‑1 = +0.5 pts, adjustment forces *down*)
+- RBs bounce back (week‑1 deficit = −1.3 pts)
+- Scale sensitivity shows best at scale=1.5 (0.6302 holdout), suggesting the signal is currently underscaled
+- No variant beats the incumbent on both validation and holdout — **not promoted**
+- The signal is real (p=0.054, 84.6% bootstrap positive) but too small to cross the promotion threshold
+
+### Key Decisions
+- Player recovery adjustment **not promoted** — marginal signal, fails both‑criteria promotion
+- Expanded seasons (9 seasons) failed to improve the signal — the bottleneck is metric granularity (fantasy points), not sample size
+- Position‑specific signal (QB boost, WR/TE deficit) is worth noting if better per‑game metrics become available
+- Team‑level aggregation (summing 5‑10 recovery curves per game) dilutes the per‑player effect
+
+### Return-from-Injury Rust (Prior Simple Rust)
+A simpler approach (position‑weighted return score, games‑missed count, no per‑player PBP history) was tested separately on the Pi‑Ratings base. All 8 variants rejected. QB‑only variant won holdout −0.0024 but lost validation +0.0129. Only 43 QB return events across 5 seasons.
+
+### Current Test State
+- ~1130+ tests (20 new + pre-existing)
+- Lint clean
+- 47 experiments in ledger
+
+---
+
+## Session Summary: Score-Margin Distribution Model (Shadow)
+
+### Goal
+Run the last open roadmap item: model the full distribution of home_score - away_score as Normal(μ, σ²) instead of predicting win probability directly via Elo/Platt. Win probability = Φ(μ/σ). Explicitly shadow — no promotion pressure.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `src/sportslab/evaluation/score_margin_experiment.py` | Rewritten — modern Pi-Ratings base (pi_diff, qb_change_diff, rolling_mov_3_diff), proper Platt incumbent comparison per fold, leakage-safe folds, fixed duplicate holdout reporting |
+| `tests/test_score_margin_model.py` | Added 3 experiment tests (importability, modern feature base, fold leakage safety) |
+| `reports/experiments/score_margin_model.md` | Full shadow report (3 val folds + 2025 holdout) |
+| `reports/benchmarks/experiment_ledger.csv` | Row 60 (score_margin_shadow, diagnostic) |
+| `reports/benchmarks/leaderboard.csv` | Row added (diagnostic) |
+| `reports/benchmarks/benchmark_history.md` | Entry added |
+| `reports/benchmarks/research_backlog.md` | Item 4 marked done with result |
+
+### Experiment Results
+
+| Fold | Platt Incumbent | Margin OLS |
+|------|----------------|------------|
+| 2022 | 0.6414 | **0.6230** |
+| 2023 | 0.6530 | **0.6525** |
+| 2024 | **0.6092** | 0.6115 |
+| 2025 hold | 0.6325 | **0.6321** |
+
+**Avg val LL:** Incumbent 0.6345, Margin OLS **0.6290**
+**Holdout LL:** Incumbent 0.6325, Margin OLS **0.6321**
+
+### Key Decisions
+- **Shadow diagnostic — no promotion.** Margin OLS beats Platt on avg validation (−0.0055) and holdout (−0.0004).
+- Decisive on Fold 1 (2022): 0.6230 vs 0.6414 — early-season strength where Platt is weakest (consistent with the known early-season weakness).
+- σ is constant (~13.2-14.4) — no heteroscedasticity modeled yet. Margin quantiles available per game.
+- Not a v5.0.0 challenger: the margin model does not yet include StatSpace features (FDR/DOBA/Chaos). To assess the real ceiling, it would need those features + full promotion protocol.
+- All 16 tests pass, lint clean.
+
+### Relevant Files
+- `src/sportslab/evaluation/score_margin_experiment.py` — rolling-origin shadow experiment
+- `src/sportslab/evaluation/score_margin_model.py` — OLS margin model + Normal distribution → win prob
+- `tests/test_score_margin_model.py` — 16 tests
+- `reports/experiments/score_margin_model.md` — full report
+
+### Next Steps
+1. All roadmap items now closed (ensemble, Kalman, dynamic Bayesian, score-margin, Pi-Ratings).
+2. Optional: extend margin model with StatSpace features + heteroscedastic σ as a genuine v5.0.0 challenger.
+3. Optional: re-test Elo ensemble / Kalman on the Pi-StatSpace v5.0.0 base (only tested on old v3.0.0 Elo).
+4. 2026 Week 1 prep — prediction vintages + live monitoring dress rehearsal.

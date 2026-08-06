@@ -76,4 +76,5 @@ the repo. Run `make test` (650+ tests) to validate the entire pipeline.
 | Total experiments | 39 |
 | Promoted / superseded | 7 |
 | Rejected | 24 |
-| Diagnostic | 8 |
+| Diagnostic | 9 |
+| Research in Progress | 1 |

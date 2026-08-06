@@ -54,7 +54,7 @@ Represent each team's latent strength as a probability distribution evolving ove
 
 **Guardrail:** Keep model very small — do not add dozens of covariates. Test 4 variants: (1) dynamic strength only, (2) + fixed HFA, (3) + binary QB-change, (4) + gated QB-starts.
 
-### 4. Score-Margin Distribution Model (Shadow)
+### 4. Score-Margin Distribution Model (Shadow) — ✅ DONE 2026-08-06
 
 Rather than predicting home win directly, predict the distribution of final scoring margin. Derive win probability from P(M > 0).
 
@@ -62,7 +62,9 @@ Rather than predicting home win directly, predict the distribution of final scor
 
 **Why it adds value:** Can learn expected margin, game-level uncertainty, tail behavior, and differences between a 1-point and 10-point favorite. Also provides a path to future spread prediction.
 
-**Initial version:** Elo difference + HFA + rolling MOV diff + QB-change indicators → predicted margin + heteroscedastic variance. Derive win probability, calibrate with fold-safe Platt.
+**Initial version:** Pi-Ratings diff + qb_change_diff + rolling MOV diff → predicted margin + fixed σ from residuals. Derive win probability = Φ(μ/σ), compared against fold-safe Platt.
+
+**Result (shadow, no promotion):** Margin OLS (val 0.6290, holdout 0.6321) slightly beats the comparable Platt incumbent (val 0.6345, holdout 0.6325). Beats Platt decisively on Fold 1 (2022: 0.6230 vs 0.6414) — early-season strength — but ties/loses other folds. Report: `reports/experiments/score_margin_model.md`.
 
 ### 5. Hierarchical Bradley–Terry (Research Validation)
 

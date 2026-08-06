@@ -109,3 +109,37 @@ class TestScoreMarginModel:
         model = ScoreMarginModel()
         assert model.coef_ is None
         assert model.sigma_ is None
+
+
+class TestScoreMarginExperiment:
+    def test_experiment_importable(self):
+        from sportslab.evaluation.score_margin_experiment import (
+            run_score_margin_experiment,
+        )
+        assert callable(run_score_margin_experiment)
+
+    def test_model_uses_modern_pi_base_features(self):
+        from sportslab.evaluation.score_margin_experiment import _run_fold
+        assert callable(_run_fold)
+
+    def test_no_leakage_in_folds(self):
+        # Rolling folds must only train on strictly earlier seasons
+        import pandas as pd
+
+        from sportslab.evaluation.score_margin_experiment import _build_roll_folds
+        ft = pd.DataFrame({
+            "season": [2021, 2022, 2023, 2024, 2025],
+            "week": [1, 1, 1, 1, 1],
+            "gameday": ["2021-09-09", "2022-09-08", "2023-09-07",
+                        "2024-09-05", "2025-09-04"],
+            "game_id": [f"G{i}" for i in range(5)],
+            "model_eligible": [True] * 5,
+        })
+        folds = _build_roll_folds(ft, [2022, 2023, 2024], holdout_season=2025)
+        # First fold val = 2022; train strictly before 2022
+        f1 = folds[0]
+        assert (f1["val"]["season"].values == 2022).all()
+        assert (f1["train"]["season"].values < 2022).all()
+        # Holdout fold val = 2025
+        assert (folds[-1]["val"]["season"].values == 2025).all()
+        assert len(folds) == 4

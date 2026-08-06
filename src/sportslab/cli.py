@@ -1317,6 +1317,28 @@ def pi_statspace_cmd(ft_path, output):
     click.echo(f"Pi-StatSpace report generated: {report_path}")
 
 
+@cli.command(name="return-from-injury")
+@click.option(
+    "--ft-path", default="data/features/nfl/feature_table.parquet",
+    help="Feature table path",
+)
+@click.option(
+    "--output", default="reports/experiments/return_from_injury.md",
+    help="Output report path",
+)
+def return_from_injury_cmd(ft_path, output):
+    """Test return-from-injury rust features against incumbent.
+
+    Uses nflreadpy injury reports to track multi-week absences and
+    computes team-level rust scores. Tests as logit-space features.
+    """
+    from sportslab.evaluation.return_from_injury_experiment import (
+        run_return_from_injury_experiment,
+    )
+    report_path = run_return_from_injury_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"Return-from-injury report generated: {report_path}")
+
+
 @cli.command(name="retest-rejected-features")
 @click.option(
     "--ft-path", default="data/features/nfl/feature_table.parquet",
@@ -1378,3 +1400,55 @@ def score_margin_experiment_cmd(ft_path, output):
     from sportslab.evaluation.score_margin_experiment import run_score_margin_experiment
     report_path = run_score_margin_experiment(ft_path=ft_path, report_path=output)
     click.echo(f"Score-margin report: {report_path}")
+
+
+@cli.command(name="player-recovery-analysis")
+@click.option("--output", default="reports/experiments/player_recovery.md",
+              help="Output report path")
+@click.option("--min-games-out", default=2, type=int,
+              help="Minimum consecutive games out to count as injury")
+def player_recovery_cmd(output, min_games_out):
+    """Run player-level injury recovery curve analysis.
+
+    Builds per-game player performance from PBP, matches to injury
+    return events, and models recovery trajectories by position.
+    """
+    from sportslab.features.player_recovery import run_recovery_analysis
+    report_path = run_recovery_analysis(
+        seasons=[2021, 2022, 2023, 2024, 2025],
+        min_games_out=min_games_out,
+        report_path=output,
+    )
+    click.echo(f"Player recovery analysis: {report_path}")
+
+
+@cli.command(name="recovery-experiment")
+@click.option("--ft-path", default="data/features/nfl/feature_table.parquet",
+              help="Feature table path")
+@click.option("--output", default="reports/experiments/player_recovery_experiment.md",
+              help="Output report path")
+def recovery_experiment_cmd(ft_path, output):
+    """Test player recovery features against incumbent.
+
+    Uses PBP-derived recovery curves to compute logit-space adjustments
+    for teams with returning players.
+    """
+    from sportslab.evaluation.recovery_experiment import run_recovery_experiment
+    report_path = run_recovery_experiment(ft_path=ft_path, report_path=output)
+    click.echo(f"Recovery experiment report: {report_path}")
+
+
+@cli.command(name="recovery-diagnostics")
+@click.option("--ft-path", default="data/features/nfl/feature_table.parquet",
+              help="Feature table path")
+@click.option("--output", default="reports/experiments/recovery_diagnostics.md",
+              help="Output report path")
+def recovery_diagnostics_cmd(ft_path, output):
+    """Diagnose recovery feature rejection.
+
+    Runs bootstrap CI, permutation test, scale sensitivity,
+    and subset analysis on the recovery features.
+    """
+    from sportslab.evaluation.recovery_diagnostics import run_recovery_diagnostics
+    report_path = run_recovery_diagnostics(ft_path=ft_path, report_path=output)
+    click.echo(f"Recovery diagnostics report: {report_path}")

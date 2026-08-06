@@ -67,6 +67,19 @@ Every rejected experiment below was tested on rolling-origin validation and 2025
 | 6 | **Public dashboard improvements** | Add interactive visualizations, season-over-season calibration plots, confidence calibration per bucket. | Low |
 | 7 | **Optional DVOA / manual external benchmark** | Only if licensing is clean and data pipeline is reproducible. Not a priority until QB-change and market-delta paths are exhausted. | Future |
 
+## 5. Score-Margin Shadow Result (2026-08-06)
+
+Modeled the full margin distribution (pi_diff + qb_change_diff + rolling_mov_3_diff → Normal(μ, σ), win prob = Φ(μ/σ)) as a shadow experiment.
+
+| Fold | Platt Incumbent | Margin OLS |
+|------|----------------|------------|
+| 2022 | 0.6414 | **0.6230** |
+| 2023 | 0.6530 | **0.6525** |
+| 2024 | **0.6092** | 0.6115 |
+| 2025 hold | 0.6325 | **0.6321** |
+
+Margin OLS beats Platt on avg val (0.6290 vs 0.6345). **Diagnostic only — no promotion.** σ is constant (~13.5); extending with StatSpace features + heteroscedastic σ would be the genuine v5.0.0 challenger path.
+
 ---
 
 *This roadmap is updated after each major experiment. Current incumbent: v3.0.0 (holdout LL 0.6200).*

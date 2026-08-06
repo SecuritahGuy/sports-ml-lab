@@ -17,32 +17,32 @@
 
 | Date | Away | Home | Predicted Winner | Home Win Prob | Bucket | Cautions | Market vs Model |
 |---|---|---|---|---|---|---|---|
-| 2026-09-09 | NE | SEA | SEA | 0.613 | 60-65 | Early season (W1-4) | +0.024 |
-| 2026-09-10 | SF | LA | SF | 0.494 | 50-55 | Neutral site; Early season (W1-4) | +0.129 |
-| 2026-09-13 | CHI | CAR | CHI | 0.438 | 50-55 | Early season (W1-4) | +0.011 |
+| 2026-09-09 | NE | SEA | SEA | 0.612 | 60-65 | Early season (W1-4) | +0.019 |
+| 2026-09-10 | SF | LA | SF | 0.463 | 50-55 | Neutral site; Early season (W1-4); Model-market disagreement | +0.159 |
+| 2026-09-13 | CHI | CAR | CHI | 0.438 | 50-55 | Early season (W1-4) | -0.010 |
 | 2026-09-13 | TB | CIN | CIN | 0.527 | 50-55 | Early season (W1-4) | +0.104 |
-| 2026-09-13 | NO | DET | DET | 0.642 | 60-65 | Early season (W1-4) | +0.092 |
-| 2026-09-13 | BUF | HOU | HOU | 0.555 | 55-60 | Early season (W1-4) | -0.077 |
-| 2026-09-13 | BAL | IND | BAL | 0.464 | 50-55 | Early season (W1-4) | -0.086 |
-| 2026-09-13 | CLE | JAX | JAX | 0.687 | 65-70 | Early season (W1-4) | +0.085 |
-| 2026-09-13 | ATL | PIT | PIT | 0.566 | 55-60 | Early season (W1-4) | +0.043 |
-| 2026-09-13 | NYJ | TEN | TEN | 0.527 | 50-55 | Early season (W1-4) | +0.056 |
-| 2026-09-13 | ARI | LAC | LAC | 0.715 | 70-80 | Early season (W1-4) | +0.113 |
-| 2026-09-13 | MIA | LV | MIA | 0.410 | 50-55 | Early season (W1-4); Model-market disagreement | +0.227 |
-| 2026-09-13 | GB | MIN | MIN | 0.595 | 55-60 | Early season (W1-4) | -0.099 |
-| 2026-09-13 | WAS | PHI | PHI | 0.655 | 65-70 | Early season (W1-4) | +0.003 |
-| 2026-09-13 | DAL | NYG | DAL | 0.455 | 50-55 | Early season (W1-4) | -0.027 |
-| 2026-09-14 | DEN | KC | DEN | 0.355 | 50-55 | Early season (W1-4); Model-market disagreement | +0.238 |
+| 2026-09-13 | NO | DET | DET | 0.659 | 65-70 | Early season (W1-4) | +0.074 |
+| 2026-09-13 | BUF | HOU | HOU | 0.514 | 50-55 | Early season (W1-4) | -0.036 |
+| 2026-09-13 | BAL | IND | BAL | 0.361 | 50-55 | Early season (W1-4) | +0.017 |
+| 2026-09-13 | CLE | JAX | JAX | 0.685 | 65-70 | Early season (W1-4) | +0.086 |
+| 2026-09-13 | ATL | PIT | PIT | 0.562 | 55-60 | Early season (W1-4) | +0.042 |
+| 2026-09-13 | NYJ | TEN | TEN | 0.526 | 50-55 | Early season (W1-4) | +0.046 |
+| 2026-09-13 | ARI | LAC | LAC | 0.759 | 70-80 | Early season (W1-4) | +0.068 |
+| 2026-09-13 | MIA | LV | MIA | 0.492 | 50-55 | Early season (W1-4) | +0.145 |
+| 2026-09-13 | GB | MIN | MIN | 0.557 | 55-60 | Early season (W1-4) | -0.061 |
+| 2026-09-13 | WAS | PHI | PHI | 0.680 | 65-70 | Early season (W1-4) | -0.022 |
+| 2026-09-13 | DAL | NYG | DAL | 0.437 | 50-55 | Early season (W1-4) | -0.009 |
+| 2026-09-14 | DEN | KC | DEN | 0.358 | 50-55 | Early season (W1-4); Model-market disagreement | +0.235 |
 
 ## Highest-Confidence Games
 
 | Game | Prob | Predicted | Bucket | Cautions |
 |------|------|-----------|--------|----------|
-| ARI @ LAC | 0.715 | LAC | 70-80 | Early season (W1-4) |
-| CLE @ JAX | 0.687 | JAX | 65-70 | Early season (W1-4) |
-| WAS @ PHI | 0.655 | PHI | 65-70 | Early season (W1-4) |
-| NO @ DET | 0.642 | DET | 60-65 | Early season (W1-4) |
-| NE @ SEA | 0.613 | SEA | 60-65 | Early season (W1-4) |
+| ARI @ LAC | 0.759 | LAC | 70-80 | Early season (W1-4) |
+| CLE @ JAX | 0.685 | JAX | 65-70 | Early season (W1-4) |
+| WAS @ PHI | 0.680 | PHI | 65-70 | Early season (W1-4) |
+| NO @ DET | 0.659 | DET | 65-70 | Early season (W1-4) |
+| NE @ SEA | 0.612 | SEA | 60-65 | Early season (W1-4) |
 
 ## Games with Cautions
 
@@ -50,43 +50,43 @@ Games flagged for one or more caution conditions.
 
 | Game | Prob | Predicted | Cautions |
 |------|------|-----------|----------|
-| NE @ SEA | 0.613 | SEA | Early season (W1-4) |
-| SF @ LA | 0.494 | SF | Neutral site; Early season (W1-4) |
+| NE @ SEA | 0.612 | SEA | Early season (W1-4) |
+| SF @ LA | 0.463 | SF | Neutral site; Early season (W1-4); Model-market disagreement |
 | CHI @ CAR | 0.438 | CHI | Early season (W1-4) |
 | TB @ CIN | 0.527 | CIN | Early season (W1-4) |
-| NO @ DET | 0.642 | DET | Early season (W1-4) |
-| BUF @ HOU | 0.555 | HOU | Early season (W1-4) |
-| BAL @ IND | 0.464 | BAL | Early season (W1-4) |
-| CLE @ JAX | 0.687 | JAX | Early season (W1-4) |
-| ATL @ PIT | 0.566 | PIT | Early season (W1-4) |
-| NYJ @ TEN | 0.527 | TEN | Early season (W1-4) |
-| ARI @ LAC | 0.715 | LAC | Early season (W1-4) |
-| MIA @ LV | 0.410 | MIA | Early season (W1-4); Model-market disagreement |
-| GB @ MIN | 0.595 | MIN | Early season (W1-4) |
-| WAS @ PHI | 0.655 | PHI | Early season (W1-4) |
-| DAL @ NYG | 0.455 | DAL | Early season (W1-4) |
-| DEN @ KC | 0.355 | DEN | Early season (W1-4); Model-market disagreement |
+| NO @ DET | 0.659 | DET | Early season (W1-4) |
+| BUF @ HOU | 0.514 | HOU | Early season (W1-4) |
+| BAL @ IND | 0.361 | BAL | Early season (W1-4) |
+| CLE @ JAX | 0.685 | JAX | Early season (W1-4) |
+| ATL @ PIT | 0.562 | PIT | Early season (W1-4) |
+| NYJ @ TEN | 0.526 | TEN | Early season (W1-4) |
+| ARI @ LAC | 0.759 | LAC | Early season (W1-4) |
+| MIA @ LV | 0.492 | MIA | Early season (W1-4) |
+| GB @ MIN | 0.557 | MIN | Early season (W1-4) |
+| WAS @ PHI | 0.680 | PHI | Early season (W1-4) |
+| DAL @ NYG | 0.437 | DAL | Early season (W1-4) |
+| DEN @ KC | 0.358 | DEN | Early season (W1-4); Model-market disagreement |
 
 ## QB Starters
 
 | Game | Home QB | Away QB | Source |
 |------|---------|---------|--------|
-| NE @ SEA | nan | nan | oracle |
-| SF @ LA | nan | nan | oracle |
-| CHI @ CAR | nan | nan | oracle |
-| TB @ CIN | nan | nan | oracle |
-| NO @ DET | nan | nan | oracle |
-| BUF @ HOU | nan | nan | oracle |
-| BAL @ IND | nan | nan | oracle |
-| CLE @ JAX | nan | nan | oracle |
-| ATL @ PIT | nan | nan | oracle |
-| NYJ @ TEN | nan | nan | oracle |
-| ARI @ LAC | nan | nan | oracle |
-| MIA @ LV | nan | nan | oracle |
-| GB @ MIN | nan | nan | oracle |
-| WAS @ PHI | nan | nan | oracle |
-| DAL @ NYG | nan | nan | oracle |
-| DEN @ KC | nan | nan | oracle |
+| NE @ SEA | 00-0034869 | 00-0039851 | live_pregame |
+| SF @ LA | nan | 00-0037834 | live_pregame |
+| CHI @ CAR | 00-0039150 | 00-0039918 | live_pregame |
+| TB @ CIN | 00-0036442 | 00-0034855 | live_pregame |
+| NO @ DET | 00-0033106 | 00-0040743 | live_pregame |
+| BUF @ HOU | 00-0039163 | 00-0034857 | live_pregame |
+| BAL @ IND | 00-0035710 | 00-0034796 | live_pregame |
+| CLE @ JAX | 00-0036971 | 00-0033537 | live_pregame |
+| ATL @ PIT | 00-0023459 | 00-0036212 | live_pregame |
+| NYJ @ TEN | 00-0040676 | 00-0030565 | live_pregame |
+| ARI @ LAC | 00-0036355 | 00-0033119 | live_pregame |
+| MIA @ LV | 00-0029604 | 00-0038128 | live_pregame |
+| GB @ MIN | 00-0035228 | 00-0036264 | live_pregame |
+| WAS @ PHI | 00-0036389 | 00-0039910 | live_pregame |
+| DAL @ NYG | 00-0040691 | 00-0033077 | live_pregame |
+| DEN @ KC | 00-0033873 | 00-0039732 | live_pregame |
 
 ## Caveats
 
